@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lazy Vibe Planner",
+  title: "Lazy Vibers Recipe",
   description: "Ubah ide menjadi blueprint software yang bisa langsung dikerjakan.",
 };
 

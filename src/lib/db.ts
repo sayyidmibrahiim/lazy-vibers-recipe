@@ -4,7 +4,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { Doc, Project, ProjectStatus, Question } from "./types";
 
-const globalForDb = globalThis as unknown as { __lvpDb?: DatabaseSync };
+const globalForDb = globalThis as unknown as { __lvrDb?: DatabaseSync };
 
 function openDb(): DatabaseSync {
   const file = process.env.DATABASE_PATH ?? path.join(process.cwd(), "data", "planner.db");
@@ -58,8 +58,8 @@ function openDb(): DatabaseSync {
 }
 
 export function getDb(): DatabaseSync {
-  if (!globalForDb.__lvpDb) globalForDb.__lvpDb = openDb();
-  return globalForDb.__lvpDb;
+  if (!globalForDb.__lvrDb) globalForDb.__lvrDb = openDb();
+  return globalForDb.__lvrDb;
 }
 
 type ProjectRow = {
@@ -135,7 +135,7 @@ export function createProject(name: string, idea: string): string {
   return id;
 }
 
-export function registerLvpProject(
+export function registerLvrProject(
   folderPath: string,
   name: string,
   idea: string,

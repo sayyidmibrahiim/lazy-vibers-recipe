@@ -1,23 +1,23 @@
 # Glossary
 
-Konteks tunggal: pipeline LVP — mengubah ide mentah menjadi blueprint lengkap yang bisa dikerjakan agent harness manapun, lalu menjadi produk jadi.
+Konteks tunggal: pipeline LVR — mengubah ide mentah menjadi blueprint lengkap yang bisa dikerjakan agent harness manapun, lalu menjadi produk jadi.
 
 ## Language
 
-**LVP**:
-Lazy Vibe Planner. Nama proyek/pipeline ini. Semua skill memakai prefix `lvp-`.
-_Avoid_: lazy-vibers, LVP tools, planner
+**LVR**:
+Lazy Vibers Recipe. Nama proyek/pipeline ini. Semua skill memakai prefix `lvr-`.
+_Avoid_: lazy-vibers, LVR tools, planner
 
 **Section**:
 Tahap interview/pipeline yang berurutan dan bernomor (S0 intake, S1 context awal, S2 kondisi, S3 data & privasi, S4 fitur, S5 deep research, S6 feasibility loop, S7 scope lock, S8 milestone plan, S9 doc generation, S10 build). Satu Section punya satu tujuan keputusan.
 _Avoid_: step, fase, tahapan (pakai "Section" + nomor)
 
 **Section Record**:
-File `.lvp/docs/sections/SN-*.md` hasil satu Section — checkpoint materi mentah yang nanti dikompilasi S9 menjadi dokumen bundle final.
+File `.lvr/docs/sections/SN-*.md` hasil satu Section — checkpoint materi mentah yang nanti dikompilasi S9 menjadi dokumen bundle final.
 _Avoid_: notes, draft, log
 
 **Conductor**:
-Model orkestrasi `/lvp-init-new-idea`: skill eksternal di-load saat Section yang membutuhkannya mulai, ditutup saat selesai. Skill tidak pernah menumpuk di konteks.
+Model orkestrasi `/lvr-init-new-idea`: skill eksternal di-load saat Section yang membutuhkannya mulai, ditutup saat selesai. Skill tidak pernah menumpuk di konteks.
 _Avoid_: router, orchestrator, loader
 
 **Checkpoint**:
@@ -25,11 +25,11 @@ Penulisan state ke disk pada batas peristiwa (jawaban tercatat, Section selesai,
 _Avoid_: save, autosave
 
 **State**:
-Snapshot kondisi pipeline pada satu titik waktu, tersimpan sebagai `.lvp/state.json`. Satu-satunya sumber kebenaran; CLI dan UI adalah pembaca/penulisnya.
+Snapshot kondisi pipeline pada satu titik waktu, tersimpan sebagai `.lvr/state.json`. Satu-satunya sumber kebenaran; CLI dan UI adalah pembaca/penulisnya.
 _Avoid_: database (sebagai istilah untuk state), session
 
 **Journal**:
-Log kejadian append-only `.lvp/journal.ndjson`. Tidak pernah ditimpa; State bisa direkonstruksi darinya.
+Log kejadian append-only `.lvr/journal.ndjson`. Tidak pernah ditimpa; State bisa direkonstruksi darinya.
 _Avoid_: history, log (sendirian)
 
 **Blueprint Bundle**:
@@ -37,7 +37,7 @@ Folder output akhir pipeline yang siap dikerjakan harness manapun: AGENTS.md, do
 _Avoid_: blueprint (sendirian), docs, output
 
 **Builder Kit**:
-Subset Blueprint Bundle yang ditujukan untuk agent builder: AGENTS.md, DECISIONS.md, milestones, verification.md, assumptions.md, salinan lvp-principles.md.
+Subset Blueprint Bundle yang ditujukan untuk agent builder: AGENTS.md, DECISIONS.md, milestones, verification.md, assumptions.md, salinan lvr-principles.md.
 _Avoid_: builder docs, scaffold
 
 **Feasibility Loop**:
@@ -57,7 +57,7 @@ Daftar kondisi terukur yang harus benar agar Milestone dinyatakan selesai, beser
 _Avoid_: definition of done, checklist (sendirian)
 
 **Constitution**:
-File `lvp-principles.md`: prinsip wajib yang di-load semua skill LVP (evidence-first, anti-yes-man, recheck sebelum setuju, no-slop, boleh bilang tidak tahu).
+File `lvr-principles.md`: prinsip wajib yang di-load semua skill LVR (evidence-first, anti-yes-man, recheck sebelum setuju, no-slop, boleh bilang tidak tahu).
 _Avoid_: rules, policy, system prompt
 
 **Capability Registry**:
@@ -65,23 +65,23 @@ Katalog skill/plugin/MCP eksternal yang sudah diverifikasi (kualitas, lisensi, a
 _Avoid_: skill list, marketplace
 
 **Recheck**:
-Audit adversarial (`/lvp-recheck-plan`) atas Blueprint Bundle yang sudah jadi: setiap keputusan, harga, milestone, dan tautan antar-file diperiksa ulang, bukti basi di-refresh dengan sumber terbaru, temuan dicatat sebagai `RC-NN` dengan severity, lalu perbaikan yang dikonfirmasi diterapkan di tempat. Bukan lint yang memuji.
+Audit adversarial (`/lvr-recheck-plan`) atas Blueprint Bundle yang sudah jadi: setiap keputusan, harga, milestone, dan tautan antar-file diperiksa ulang, bukti basi di-refresh dengan sumber terbaru, temuan dicatat sebagai `RC-NN` dengan severity, lalu perbaikan yang dikonfirmasi diterapkan di tempat. Bukan lint yang memuji.
 _Avoid_: review (sendirian), QA pass, sanity check
 
 **Impact Analysis**:
-Peta dampak `/lvp-add-feature`: setiap baris matriks menyebut file bundle yang berubah, aksi (`edit`/`append`/`none`), dan bagian atau baris persisnya. Fitur tanpa impact analysis tidak boleh masuk bundle.
+Peta dampak `/lvr-add-feature`: setiap baris matriks menyebut file bundle yang berubah, aksi (`edit`/`append`/`none`), dan bagian atau baris persisnya. Fitur tanpa impact analysis tidak boleh masuk bundle.
 _Avoid_: diff, changelist
 
 **Build Loop**:
-Siklus `/lvp-build` per milestone: pilih milestone pertama yang belum `verified`, implementasi, jalankan prosedur verifikasi yang tercatat apa adanya, tangkap output nyata, catat ke `VERIFICATION.md`, set state, lanjut. Dua kegagalan maksimum, lalu berhenti dengan laporan.
+Siklus `/lvr-build` per milestone: pilih milestone pertama yang belum `verified`, implementasi, jalankan prosedur verifikasi yang tercatat apa adanya, tangkap output nyata, catat ke `VERIFICATION.md`, set state, lanjut. Dua kegagalan maksimum, lalu berhenti dengan laporan.
 _Avoid_: run, execution, CI (bukan istilah untuk siklus ini)
 
 **Brand Kit**:
-Output terpisah `/lvp-personal-brand` di folder `brand/`: `BRAND.md`, `LINKEDIN-PROFILE.md`, `CONTENT-PLAN.md`. Hanya jalan setelah semua milestone `verified` dan deployment live. Setiap klaim berasal dari bukti bundle atau halaman live; tidak pernah posting ke platform.
+Output terpisah `/lvr-personal-brand` di folder `brand/`: `BRAND.md`, `LINKEDIN-PROFILE.md`, `CONTENT-PLAN.md`. Hanya jalan setelah semua milestone `verified` dan deployment live. Setiap klaim berasal dari bukti bundle atau halaman live; tidak pernah posting ke platform.
 _Avoid_: marketing kit, personal branding files (sebagai bagian bundle)
 
 **Booster**:
-Skill eksternal terverifikasi yang menjadi dependensi LVP, dua tier: **core** (wajib — menjamin kualitas output) dan **enhancer** (menambah kualitas). Di-install otomatis di awal sesi bila belum ada; kalau terhalang (harness melarang install, offline, API key tidak ada), pipeline menawarkan pilihan ke user: dibantu install penuh, lanjut dengan output ditandai terbatas, atau berhenti. Konten skill berlisensi NC dipakai sebagai dependensi runtime, tidak pernah di-vendor ke repo LVP.
+Skill eksternal terverifikasi yang menjadi dependensi LVR, dua tier: **core** (wajib — menjamin kualitas output) dan **enhancer** (menambah kualitas). Di-install otomatis di awal sesi bila belum ada; kalau terhalang (harness melarang install, offline, API key tidak ada), pipeline menawarkan pilihan ke user: dibantu install penuh, lanjut dengan output ditandai terbatas, atau berhenti. Konten skill berlisensi NC dipakai sebagai dependensi runtime, tidak pernah di-vendor ke repo LVR.
 _Avoid_: plugin, add-on, optional skill
 
 **Designer-filled**:
@@ -89,11 +89,11 @@ Status keputusan yang diambil proaktif oleh Conductor karena penting tetapi tida
 _Avoid_: silent default, auto-assume, best practice (sebagai alasan)
 
 **Handoff**:
-Proses dan skill (`/lvp-handoff`): memverifikasi Blueprint Bundle bebas gap, memastikan kompatibilitas lintas harness, dan menyusun entry prompt untuk builder.
+Proses dan skill (`/lvr-handoff`): memverifikasi Blueprint Bundle bebas gap, memastikan kompatibilitas lintas harness, dan menyusun entry prompt untuk builder.
 _Avoid_: deliver, export
 
 **Folder Gate**:
-Pemeriksaan wajib di awal `/lvp-init-new-idea`: folder kosong → lanjut di tempat; folder berisi project lain → buat subfolder baru bernama slug ide; folder project existing → tolak init dan rekomendasikan skill yang tepat.
+Pemeriksaan wajib di awal `/lvr-init-new-idea`: folder kosong → lanjut di tempat; folder berisi project lain → buat subfolder baru bernama slug ide; folder project existing → tolak init dan rekomendasikan skill yang tepat.
 _Avoid_: safety check, preflight
 
 **User Language**:

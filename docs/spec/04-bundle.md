@@ -1,6 +1,6 @@
 # Spec 04 — Blueprint Bundle
 
-The bundle is the product. It is generated at S9 (and maintained by v1 skills), lives in the project folder next to `.lvp/`, and must be **self-sufficient**: any harness, with no LVP skills installed, can build the product from it.
+The bundle is the product. It is generated at S9 (and maintained by v1 skills), lives in the project folder next to `.lvr/`, and must be **self-sufficient**: any harness, with no LVR skills installed, can build the product from it.
 
 ## File list (v0)
 
@@ -44,11 +44,11 @@ The 20-file list above is fixed. The v1 skills change the bundle by editing thos
 
 | Skill | Bundle effect | Side artifacts (never in the bundle) |
 |---|---|---|
-| `/lvp-handoff` | regenerates `blueprint.json`, refreshes the entry prompt | `HANDOFF-PROMPT.md` |
-| `/lvp-recheck-plan` | fixes confirmed findings in place; regenerates `blueprint.json` when stale | `.lvp/recheck/RECHECK-<date>.md` |
-| `/lvp-add-feature` | appends the requirement, flow, scope, milestone, verification, decision, assumption, research, and cost rows | `.lvp/docs/sections/S4-additions.md` |
-| `/lvp-build` | appends the build log to `VERIFICATION.md`; never edits a requirement or an acceptance criterion | `brand/` (next row), `state.milestones[].verified` |
-| `/lvp-personal-brand` | none — the bundle is read-only here | `brand/BRAND.md`, `brand/LINKEDIN-PROFILE.md`, `brand/CONTENT-PLAN.md` |
+| `/lvr-handoff` | regenerates `blueprint.json`, refreshes the entry prompt | `HANDOFF-PROMPT.md` |
+| `/lvr-recheck-plan` | fixes confirmed findings in place; regenerates `blueprint.json` when stale | `.lvr/recheck/RECHECK-<date>.md` |
+| `/lvr-add-feature` | appends the requirement, flow, scope, milestone, verification, decision, assumption, research, and cost rows | `.lvr/docs/sections/S4-additions.md` |
+| `/lvr-build` | appends the build log to `VERIFICATION.md`; never edits a requirement or an acceptance criterion | `brand/` (next row), `state.milestones[].verified` |
+| `/lvr-personal-brand` | none — the bundle is read-only here | `brand/BRAND.md`, `brand/LINKEDIN-PROFILE.md`, `brand/CONTENT-PLAN.md` |
 
 Rules: existing ids are never renumbered; earlier `VERIFICATION.md` entries and `DECISIONS.md` rows are never rewritten; `blueprint.json` stays derived; parked features keep a requirements row and a scope row, and require no milestone.
 
@@ -69,8 +69,8 @@ Rules: existing ids are never renumbered; earlier `VERIFICATION.md` entries and 
   "capabilities": [ { "name": "...", "kind": "skill|mcp|plugin", "license": "MIT",
                       "nc": false, "install": "npx skills add ..." } ],
   "pointers": { "agents": "AGENTS.md", "overview": "OVERVIEW.md",
-                "verification": "VERIFICATION.md", "state": ".lvp/state.json" }
+                "verification": "VERIFICATION.md", "state": ".lvr/state.json" }
 }
 ```
 
-Rules: `blueprint.json` is a **derived** file — regenerate, never hand-edit; `.lvp/state.json` remains the pipeline's own source of truth.
+Rules: `blueprint.json` is a **derived** file — regenerate, never hand-edit; `.lvr/state.json` remains the pipeline's own source of truth.

@@ -46,7 +46,7 @@ export default function Home() {
             <span className="grid size-7 place-items-center border border-ink/70 font-mono text-[10px] font-medium">
               LV
             </span>
-            <span className="text-sm font-semibold tracking-tight">Lazy Vibe Planner</span>
+            <span className="text-sm font-semibold tracking-tight">Lazy Vibers Recipe</span>
           </Link>
           <span className="label text-ink/65">Local workbench / v0.1</span>
         </div>
@@ -118,7 +118,7 @@ export default function Home() {
                       </span>
                       {project.folderPath ? (
                         <span className="label rounded border border-blueprint/30 bg-blueprint/5 px-1.5 py-0.2 text-[9px] text-blueprint">
-                          LVP
+                          LVR
                         </span>
                       ) : null}
                     </span>
@@ -149,7 +149,7 @@ export default function Home() {
 
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-          <span className="label text-ink/65">Lazy Vibe Planner</span>
+          <span className="label text-ink/65">Lazy Vibers Recipe</span>
           <span className="label text-ink/65">Berjalan lokal</span>
         </div>
       </footer>

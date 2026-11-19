@@ -44,7 +44,7 @@ Each Section has: **purpose**, **question strategy**, **booster routing**, **out
 - Booster: Mom Test + user-story/Gherkin patterns (pm-skills). Fallback: internal bank.
 - Mechanics: per feature — name, who uses it, step-by-step happy path (the "klik tombol ini → selesai" script), edge cases the user cares about. Features get IDs `F-01…`.
 - Output: `S4-fitur.md`; feeds `SPEC/requirements.md` + `USER_FLOWS.md`.
-- Post-lock additions: recorded by `/lvp-add-feature` in `S4-additions.md` (append-only); S4 itself is never re-run.
+- Post-lock additions: recorded by `/lvr-add-feature` in `S4-additions.md` (append-only); S4 itself is never re-run.
 - Exit: user explicitly says enough; feature list has no "and whatever else" placeholders.
 
 ## S5 — Deep research
@@ -85,4 +85,4 @@ Each Section has: **purpose**, **question strategy**, **booster routing**, **out
 
 ## S10 — Build (out of v0)
 
-Not executed by v0. The bundle must be sufficient for any builder: `/lvp-handoff` produces the entry prompt; MILESTONES.md + VERIFICATION.md drive the loop. An optional `/lvp-build` skill (v1) may execute it; the pipeline never *requires* it.
+Not executed by v0. The bundle must be sufficient for any builder: `/lvr-handoff` produces the entry prompt; MILESTONES.md + VERIFICATION.md drive the loop. An optional `/lvr-build` skill (v1) may execute it; the pipeline never *requires* it.

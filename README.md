@@ -1,4 +1,4 @@
-# Lazy Vibe Planner
+# Lazy Vibers Recipe
 
 Turn a raw idea into a verified Blueprint Bundle that any AI agent can build.
 
@@ -6,11 +6,11 @@ Turn a raw idea into a verified Blueprint Bundle that any AI agent can build.
 
 This repo holds two related things.
 
-The LVP skills are portable agent skills for the LVP pipeline. The pipeline interviews a non-technical owner through sections S0 to S9. The result is a verified Blueprint Bundle of 20 files that any AI agent can build from.
+The LVR skills are portable agent skills for the LVR pipeline. The pipeline interviews a non-technical owner through sections S0 to S9. The result is a verified Blueprint Bundle of 20 files that any AI agent can build from.
 
 The web MVP is a local Next.js app. You write an idea and answer four interview questions. The app then generates five markdown documents: PRD, requirements, data model, API contract, and architecture. Generation runs through an OpenAI-compatible LLM proxy. The app is single-user and has no auth.
 
-The web MVP is an early prototype. The LVP skills are the complete pipeline, and they run on any harness that reads a SKILL.md file.
+The web MVP is an early prototype. The LVR skills are the complete pipeline, and they run on any harness that reads a SKILL.md file.
 
 ## How the pipeline works
 
@@ -18,17 +18,17 @@ Each skill is one folder with a SKILL.md file and its own references. The table 
 
 | Skill | What it does | Result |
 |---|---|---|
-| `/lvp-init-new-idea` | Runs the Folder Gate and the interview S0–S9 (intake, context, conditions, data and privacy, features, deep research, feasibility loop, scope lock, milestone plan, compile) | A Blueprint Bundle of 20 files in the project folder |
-| `/lvp-continue` | Resumes a run or rebuilds the state from the journal | A restored state and an offer of the next step |
-| `/lvp-handoff` | Lints all 20 bundle files, emits `blueprint.json`, and writes the builder stubs | A bundle ready for any builder harness |
-| `/lvp-recheck-plan` | Runs the adversarial audit R1–R6 | A RECHECK report and applied fixes |
-| `/lvp-add-feature` | Adds one post-lock feature through a mini-pipeline | An updated bundle, append-only |
-| `/lvp-build` | Executes the milestones and runs each verification procedure | A build log with verified milestones |
-| `/lvp-personal-brand` | Builds a brand kit after the milestones are verified | Three files in `brand/` |
+| `/lvr-init-new-idea` | Runs the Folder Gate and the interview S0–S9 (intake, context, conditions, data and privacy, features, deep research, feasibility loop, scope lock, milestone plan, compile) | A Blueprint Bundle of 20 files in the project folder |
+| `/lvr-continue` | Resumes a run or rebuilds the state from the journal | A restored state and an offer of the next step |
+| `/lvr-handoff` | Lints all 20 bundle files, emits `blueprint.json`, and writes the builder stubs | A bundle ready for any builder harness |
+| `/lvr-recheck-plan` | Runs the adversarial audit R1–R6 | A RECHECK report and applied fixes |
+| `/lvr-add-feature` | Adds one post-lock feature through a mini-pipeline | An updated bundle, append-only |
+| `/lvr-build` | Executes the milestones and runs each verification procedure | A build log with verified milestones |
+| `/lvr-personal-brand` | Builds a brand kit after the milestones are verified | Three files in `brand/` |
 
 ## State and rebuild guarantee
 
-One folder is one product. Every project folder holds a `.lvp/` folder. It stores `state.json`, the append-only `journal.ndjson`, and the Section Records. The journal records every answer with its verbatim question and answer text. If `state.json` is damaged, `/lvp-continue` rebuilds it by replaying the journal. The skills never degrade in silence.
+One folder is one product. Every project folder holds a `.lvr/` folder. It stores `state.json`, the append-only `journal.ndjson`, and the Section Records. The journal records every answer with its verbatim question and answer text. If `state.json` is damaged, `/lvr-continue` rebuilds it by replaying the journal. The skills never degrade in silence.
 
 ## Install the skills
 

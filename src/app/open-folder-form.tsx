@@ -18,7 +18,7 @@ export function OpenFolderForm() {
     setError(null);
 
     try {
-      const response = await fetch("/api/lvp/open", {
+      const response = await fetch("/api/lvr/open", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ folderPath: path }),
@@ -43,9 +43,9 @@ export function OpenFolderForm() {
     >
       <div className="flex items-center justify-between border-b border-line pb-3">
         <label htmlFor="folderPath" className="label text-blueprint">
-          Buka Folder LVP Lokal
+          Buka Folder LVR Lokal
         </label>
-        <span className="label text-ink/65">.lvp/</span>
+        <span className="label text-ink/65">.lvr/</span>
       </div>
 
       <p className="mt-3 text-xs leading-5 text-ink/65">

@@ -1,6 +1,6 @@
 # Decisions
 
-The append-only decision log. It mirrors `decisions[]` in `.lvp/state.json` — same ids, same statuses, nothing missing on either side. New decisions add rows; existing rows are never rewritten. All decisions were made on 2026-11-07 (the whole planning run). Statuses: `user_confirmed` = the user said it aloud; `designer_filled` = filled proactively by the planner because a non-technical owner could not have known to ask — shown for correction and listed in `ASSUMPTIONS.md`.
+The append-only decision log. It mirrors `decisions[]` in `.lvr/state.json` — same ids, same statuses, nothing missing on either side. New decisions add rows; existing rows are never rewritten. All decisions were made on 2026-11-07 (the whole planning run). Statuses: `user_confirmed` = the user said it aloud; `designer_filled` = filled proactively by the planner because a non-technical owner could not have known to ask — shown for correction and listed in `ASSUMPTIONS.md`.
 
 | ID | Decision | Rationale | Alternatives considered | Date | Status |
 |---|---|---|---|---|---|

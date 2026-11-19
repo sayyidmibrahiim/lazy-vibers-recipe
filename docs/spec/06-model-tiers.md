@@ -1,6 +1,6 @@
 # Spec 06 — Model Tiers, Context Guards, Self-Recovery
 
-LVP must complete the full pipeline on **any** model the harness offers — frontier, flash, open-weight, or local small. The pipeline's memory lives in `.lvp/` (disk), never in the context window; the window is a workbench that gets reloaded from disk, not a warehouse (ADR-0006).
+LVR must complete the full pipeline on **any** model the harness offers — frontier, flash, open-weight, or local small. The pipeline's memory lives in `.lvr/` (disk), never in the context window; the window is a workbench that gets reloaded from disk, not a warehouse (ADR-0006).
 
 ## Verified context landscape (2026-11-08, primary sources)
 
@@ -30,7 +30,7 @@ Caveats baked into rules: harness overhead (system prompt + tool defs + skills) 
 
 ## Context guard (input side)
 
-Signals the Conductor watches: repeated instruction-following failures, forgetting rules stated earlier, tool-call confusion. Response, in order: (1) checkpoint immediately (`context_guard_triggered`), (2) drop to stricter reload discipline, (3) if unresolved → stop cleanly and hand to `/lvp-continue` (fresh window, disk intact). Never push through with degraded attention — silent quality loss is worse than stopping.
+Signals the Conductor watches: repeated instruction-following failures, forgetting rules stated earlier, tool-call confusion. Response, in order: (1) checkpoint immediately (`context_guard_triggered`), (2) drop to stricter reload discipline, (3) if unresolved → stop cleanly and hand to `/lvr-continue` (fresh window, disk intact). Never push through with degraded attention — silent quality loss is worse than stopping.
 
 ## Truncation self-recovery (output side)
 
@@ -43,4 +43,4 @@ Small max-output is the more common failure (long bundle files on T2/T3).
 
 ## Cross-model resume
 
-`model_profile.tier` lives in `state.json`. On `/lvp-continue`, a tier change (bigger model resumed a small-model session or vice versa) → journal `tier_changed`, re-apply this spec's rules for the new tier, warn the user if downgrading (probe re-runs). Any model finishes what any model started — that is the contract.
+`model_profile.tier` lives in `state.json`. On `/lvr-continue`, a tier change (bigger model resumed a small-model session or vice versa) → journal `tier_changed`, re-apply this spec's rules for the new tier, warn the user if downgrading (probe re-runs). Any model finishes what any model started — that is the contract.

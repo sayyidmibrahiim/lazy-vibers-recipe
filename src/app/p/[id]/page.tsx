@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getDocs, getProject, getQuestions } from "@/lib/db";
-import { readLvpProject } from "@/lib/lvp-fs";
-import { LvpProjectClient } from "./lvp-client";
+import { readLvrProject } from "@/lib/lvr-fs";
+import { LvrProjectClient } from "./lvr-client";
 import { ProjectClient } from "./project-client";
 
 export const dynamic = "force-dynamic";
@@ -18,9 +18,9 @@ export default async function ProjectPage({
   if (!project) notFound();
 
   if (project.folderPath) {
-    const detail = readLvpProject(project.folderPath);
+    const detail = readLvrProject(project.folderPath);
     if (detail) {
-      return <LvpProjectClient detail={detail} />;
+      return <LvrProjectClient detail={detail} />;
     }
   }
 

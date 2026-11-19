@@ -18,7 +18,7 @@ Local-only Next.js 16 app: idea -> 4 interview questions -> 5 generated markdown
 - Tailwind v4 is wired as a Turbopack loader rule in `next.config.ts` (`@tailwindcss/turbopack`); there is no postcss or tailwind config. Keep Turbopack (default in Next 16) and do not add a PostCSS setup.
 - Use theme tokens from `@theme inline` in `src/app/globals.css` (`paper`, `card`, `ink`, `line`, `blueprint`, `rust`) via classes like `text-ink/65`, `border-line`. No raw hex or default gray palette.
 - `src/lib/llm.ts` reads `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY` at module load: restart the dev server after changing `.env.local`. `DATABASE_PATH` is read on first DB access.
-- `src/lib/db.ts` is a `globalThis.__lvpDb` singleton, WAL mode, schema created inline with `CREATE TABLE IF NOT EXISTS`. No migration system: a schema change does not reach an existing `data/planner.db` (gitignored, holds real local projects). Add an idempotent migration rather than telling users to delete it.
+- `src/lib/db.ts` is a `globalThis.__lvrDb` singleton, WAL mode, schema created inline with `CREATE TABLE IF NOT EXISTS`. No migration system: a schema change does not reach an existing `data/planner.db` (gitignored, holds real local projects). Add an idempotent migration rather than telling users to delete it.
 - DB columns are snake_case, JSON is camelCase; timestamps are epoch ms. Row converters in `db.ts` own that mapping.
 
 ## Blueprint pipeline invariants
@@ -51,6 +51,6 @@ Default five-role vocabulary used as-is: `needs-triage`, `needs-info`, `ready-fo
 
 Single-context: `GLOSSARY.md` at the repo root + `docs/adr/`. See `docs/agents/domain.md`.
 
-### LVP pipeline
+### LVR pipeline
 
-The skills under `skills/` (entry: `skills/lvp-init-new-idea/SKILL.md`) are the LVP interview pipeline; their contracts and constitution are specified in `docs/spec/` (start at `00-overview.md`, skill contracts in `03-skills.md`). Install/uninstall docs live in `skills/README.md`; do not edit skill folders without syncing their `references/` snapshots with `docs/spec/`.
+The skills under `skills/` (entry: `skills/lvr-init-new-idea/SKILL.md`) are the LVR interview pipeline; their contracts and constitution are specified in `docs/spec/` (start at `00-overview.md`, skill contracts in `03-skills.md`). Install/uninstall docs live in `skills/README.md`; do not edit skill folders without syncing their `references/` snapshots with `docs/spec/`.

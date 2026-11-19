@@ -202,7 +202,7 @@ body {
   border: 1px solid color-mix(in srgb, var(--color-ink) 16%, transparent);
 }
 
-@keyframes lvp-pulse {
+@keyframes lvr-pulse {
   0%,
   100% {
     opacity: 0.25;
@@ -215,10 +215,10 @@ body {
 }
 
 .status-dot {
-  animation: lvp-pulse 1.2s ease-in-out infinite;
+  animation: lvr-pulse 1.2s ease-in-out infinite;
 }
 
-@keyframes lvp-rise {
+@keyframes lvr-rise {
   from {
     opacity: 0;
     transform: translateY(6px);
@@ -230,7 +230,7 @@ body {
 }
 
 .rise {
-  animation: lvp-rise 0.28s ease-out both;
+  animation: lvr-rise 0.28s ease-out both;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -23,9 +23,9 @@ Boosters are external, verified skills/MCPs treated as **essential dependencies*
 | Playwright MCP | `microsoft/playwright-mcp` | MIT | S10 verification (when build runs) |
 | agents.md spec | `agentsmd/agents.md` | (spec text, permissive) | S9 |
 
-NC-licensed candidates (e.g. `deanpeters/Product-Manager-Skills`, CC BY-NC-SA 4.0) are **allowed as runtime dependencies only** (install at runtime, credit, never copy content into LVP files) and are flagged in CAPABILITIES.md with the commercialization reminder (ADR-0001).
+NC-licensed candidates (e.g. `deanpeters/Product-Manager-Skills`, CC BY-NC-SA 4.0) are **allowed as runtime dependencies only** (install at runtime, credit, never copy content into LVR files) and are flagged in CAPABILITIES.md with the commercialization reminder (ADR-0001).
 
-## Bootstrap check (start of `/lvp-init-new-idea`, after Folder Gate)
+## Bootstrap check (start of `/lvr-init-new-idea`, after Folder Gate)
 
 1. Read `boosters[]` from `state.json` (fresh project → all `missing`).
 2. For each core booster: detect presence (harness skill list, known install paths). Missing → install:

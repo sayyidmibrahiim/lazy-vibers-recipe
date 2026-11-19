@@ -1,30 +1,30 @@
-# LVP Pipeline Core — Spec Overview
+# LVR Pipeline Core — Spec Overview
 
 Version: v0 draft (F1). Date: 2026-11-08. Decisions referenced: ADR-0001..0005, `GLOSSARY.md`.
 
-## What LVP is
+## What LVR is
 
-LVP (Lazy Vibe Planner) is a pipeline that turns a raw idea from a **non-technical user** into a complete, industry-grade blueprint bundle that **any AI agent harness** (Claude Code, Codex, Gemini CLI, zcode, Antigravity, Cursor) can execute to build the product. One folder = one idea = one product.
+LVR (Lazy Vibers Recipe) is a pipeline that turns a raw idea from a **non-technical user** into a complete, industry-grade blueprint bundle that **any AI agent harness** (Claude Code, Codex, Gemini CLI, zcode, Antigravity, Cursor) can execute to build the product. One folder = one idea = one product.
 
 ## Actors
 
 | Actor | Description |
 |---|---|
 | **Owner** | The non-technical user. Speaks any language (User Language). Cannot read technical specs unaided. |
-| **Conductor** | The LVP skill running in a harness (`/lvp-init-new-idea` or `/lvp-continue`). Loads boosters per Section, drives the interview, writes state. |
-| **Builder** | Any agent harness that later consumes the Blueprint Bundle. Has no LVP skills; relies on bundle files only. |
-| **Web UI** | Optional read-only client (MVP) that reads the same `.lvp/` files. Two-way editing is F3. |
+| **Conductor** | The LVR skill running in a harness (`/lvr-init-new-idea` or `/lvr-continue`). Loads boosters per Section, drives the interview, writes state. |
+| **Builder** | Any agent harness that later consumes the Blueprint Bundle. Has no LVR skills; relies on bundle files only. |
+| **Web UI** | Optional read-only client (MVP) that reads the same `.lvr/` files. Two-way editing is F3. |
 
 ## v0 scope
 
-Shipped: `/lvp-init-new-idea`, `/lvp-continue`, `/lvp-handoff` (Sections S0–S9, bundle generation).
-Not in v0 (stub contracts only): `/lvp-recheck-plan`, `/lvp-add-feature`, optional `/lvp-build`, `/lvp-personal-brand`.
+Shipped: `/lvr-init-new-idea`, `/lvr-continue`, `/lvr-handoff` (Sections S0–S9, bundle generation).
+Not in v0 (stub contracts only): `/lvr-recheck-plan`, `/lvr-add-feature`, optional `/lvr-build`, `/lvr-personal-brand`.
 
 ## Spec files
 
-1. `01-state.md` — `.lvp/` layout, `state.json` schema, journal events, section records, Folder Gate, checkpoint/resume semantics
+1. `01-state.md` — `.lvr/` layout, `state.json` schema, journal events, section records, Folder Gate, checkpoint/resume semantics
 2. `02-sections.md` — S0–S10 definitions, question strategy, routing table (Section → booster → output)
-3. `03-skills.md` — contracts for the three v0 skills + v1 stubs + Constitution (`lvp-principles.md`)
+3. `03-skills.md` — contracts for the three v0 skills + v1 stubs + Constitution (`lvr-principles.md`)
 4. `04-bundle.md` — Blueprint Bundle file specs, compilation order, `blueprint.json` schema
 5. `05-boosters.md` — dependency model, tiers, bootstrap check, installers, failure UX
 
@@ -40,5 +40,5 @@ Not in v0 (stub contracts only): `/lvp-recheck-plan`, `/lvp-add-feature`, option
 
 - Two-way web UI, multi-user, auth.
 - Version history of documents (state journal is audit log, not doc versioning).
-- Executing the build without LVP skills — the bundle must stay sufficient for any builder on its own; `/lvp-build` is an optional convenience, not a requirement.
-- Posting to any platform — `/lvp-personal-brand` produces files only.
+- Executing the build without LVR skills — the bundle must stay sufficient for any builder on its own; `/lvr-build` is an optional convenience, not a requirement.
+- Posting to any platform — `/lvr-personal-brand` produces files only.

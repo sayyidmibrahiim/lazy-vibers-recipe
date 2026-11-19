@@ -1,19 +1,19 @@
 # Spec 01 — State, Folders, Checkpoints
 
-All paths are relative to the **project folder** (created by `/lvp-init-new-idea`, see Folder Gate). One folder = one idea = one product.
+All paths are relative to the **project folder** (created by `/lvr-init-new-idea`, see Folder Gate). One folder = one idea = one product.
 
-## `.lvp/` layout
+## `.lvr/` layout
 
 ```
 <project-folder>/
-├── .lvp/
+├── .lvr/
 │   ├── state.json          authoritative snapshot (rewritable)
 │   ├── journal.ndjson      append-only event log (never rewritten)
 │   ├── docs/
 │   │   └── sections/       section records: S0-intake.md, S1-context.md, ...
 │   └── recheck/            recheck reports: RECHECK-<date>.md (audit artifacts)
 ├── (after handoff: bundle files + builder code live here)
-└── brand/                  personal-brand kit from /lvp-personal-brand (never part of the bundle)
+└── brand/                  personal-brand kit from /lvr-personal-brand (never part of the bundle)
 ```
 
 `state.json` is the source of truth for "where are we". `journal.ndjson` is the audit trail; if `state.json` is corrupted or missing, it is rebuilt by replaying the journal. Section records are the raw material compiled by S9.
@@ -65,16 +65,16 @@ All paths are relative to the **project folder** (created by `/lvp-init-new-idea
   // probe: "passed" | "skipped" (T1 skips the probe) | "failed"
   "milestones": [                          // filled at S8
     { "id": "M0", "goal": "...", "features": ["F-01"],
-      "verified": false, "verified_at": null }   // verified by /lvp-build
+      "verified": false, "verified_at": null }   // verified by /lvr-build
   ],
   "deployment": null,                      // { status: "live|pending", url, verified_at }
-  "handoff": null                          // filled at /lvp-handoff: { status: "done", completed_at }
+  "handoff": null                          // filled at /lvr-handoff: { status: "done", completed_at }
 }
 ```
 
 ### Project status enum
 
-`interview` → `researching` (S5–S6) → `review` (S7–S8) → `bundled` (S9 done) → `building` (builder active) → `complete` · `error` (with `error` entry in journal; recoverable via `/lvp-continue`).
+`interview` → `researching` (S5–S6) → `review` (S7–S8) → `bundled` (S9 done) → `building` (builder active) → `complete` · `error` (with `error` entry in journal; recoverable via `/lvr-continue`).
 
 ### ID conventions
 
@@ -90,15 +90,15 @@ Rules: append-only; never rewrite; every state mutation emits at least one event
 
 ## Section records
 
-File: `.lvp/docs/sections/S<N>-<name>.md` (e.g. `S3-data.md`). Content: the section's questions, the user's verbatim answers (User Language), and the section's decision summary (English, written by the Conductor). These are the **only** inputs S9 compiles, plus `decisions[]` and `milestones[]`.
+File: `.lvr/docs/sections/S<N>-<name>.md` (e.g. `S3-data.md`). Content: the section's questions, the user's verbatim answers (User Language), and the section's decision summary (English, written by the Conductor). These are the **only** inputs S9 compiles, plus `decisions[]` and `milestones[]`.
 
 Language rule: records keep answers verbatim in User Language; the Conductor adds an English summary per answer. S9 compiles English documents from the summaries; OVERVIEW.md additionally reflects the verbatim intent.
 
-## Folder Gate (mandatory first step of `/lvp-init-new-idea`)
+## Folder Gate (mandatory first step of `/lvr-init-new-idea`)
 
-1. `cwd` contains `.lvp/state.json` → **refuse init**; print progress summary; recommend `/lvp-continue`.
+1. `cwd` contains `.lvr/state.json` → **refuse init**; print progress summary; recommend `/lvr-continue`.
 2. `cwd` is empty (ignore OS junk: `.DS_Store`, `Thumbs.db`, `desktop.ini`) → **proceed in place**.
-3. `cwd` has project markers (`.git`, `package.json`, `Cargo.toml`, `pubspec.yaml`, `pyproject.toml`, `go.mod`, `.solution`, `*.csproj`, …) and no `.lvp/` → **refuse**: existing project detected. Recommend running init in an empty/new folder; mention `/lvp-recheck-plan` as the generic audit option for that project.
+3. `cwd` has project markers (`.git`, `package.json`, `Cargo.toml`, `pubspec.yaml`, `pyproject.toml`, `go.mod`, `.solution`, `*.csproj`, …) and no `.lvr/` → **refuse**: existing project detected. Recommend running init in an empty/new folder; mention `/lvr-recheck-plan` as the generic audit option for that project.
 4. `cwd` has ≥1 subdirectory with project markers (e.g. `~/projects/`) → **create subfolder** `./<slug>/` (slug from idea, confirm with user), proceed there. Journal: `folder_gate_subfolder_created`.
 5. `cwd` non-empty, no markers (loose files) → **ask the user**: proceed here or create subfolder (recommend subfolder).
 
@@ -108,5 +108,5 @@ Web UI variant: the UI supplies an absolute path via a folder picker; the same c
 
 - **Checkpoint moments** (journal write + state save): every answer, every Section start/done, every booster install/choice, every generated file, every error, handoff steps.
 - Interruption-safe: any session that dies leaves a consistent `state.json` (last checkpoint) — work loss is at most the current unanswered micro-batch.
-- `/lvp-continue` rebuild: load `state.json`; if unreadable → replay journal; report what was reconstructed. A rebuild may preserve the corrupt state file once as `.lvp/state.corrupt-<date>.json` before overwriting; it is not part of the canonical write set.
-- Idempotency: sections marked `done` are never re-run; re-running `/lvp-handoff` re-lints instead of regenerating everything (regeneration is explicit, per file).
+- `/lvr-continue` rebuild: load `state.json`; if unreadable → replay journal; report what was reconstructed. A rebuild may preserve the corrupt state file once as `.lvr/state.corrupt-<date>.json` before overwriting; it is not part of the canonical write set.
+- Idempotency: sections marked `done` are never re-run; re-running `/lvr-handoff` re-lints instead of regenerating everything (regeneration is explicit, per file).

@@ -1,6 +1,6 @@
 # Scope
 
-Locked by decision **D-020** (user_confirmed, journal `scope_locked` 2026-11-07T08:44:23Z, confirmed aloud at S7.q2 after a skip attempt was re-asked once: "Ya, ini dia versi pertamanya. Kunci."). Frozen from here: changes go through /lvp-add-feature post-v1. Nothing added, nothing dropped — verbatim from the S7 record.
+Locked by decision **D-020** (user_confirmed, journal `scope_locked` 2026-11-07T08:44:23Z, confirmed aloud at S7.q2 after a skip attempt was re-asked once: "Ya, ini dia versi pertamanya. Kunci."). Frozen from here: changes go through /lvr-add-feature post-v1. Nothing added, nothing dropped — verbatim from the S7 record.
 
 ## In MVP
 

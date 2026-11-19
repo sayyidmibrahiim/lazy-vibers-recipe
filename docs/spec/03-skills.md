@@ -1,8 +1,8 @@
 # Spec 03 — Skill Contracts & Constitution
 
-Skills are plain markdown instruction files (Agent Skills format) living in `skills/lvp-<name>/SKILL.md` in this repo, installed into harnesses via standard installers (see `05-boosters.md`). Per-harness thin adapters are generated from the same source.
+Skills are plain markdown instruction files (Agent Skills format) living in `skills/lvr-<name>/SKILL.md` in this repo, installed into harnesses via standard installers (see `05-boosters.md`). Per-harness thin adapters are generated from the same source.
 
-## `/lvp-init-new-idea` (v0)
+## `/lvr-init-new-idea` (v0)
 
 **Precondition**: none — the Folder Gate decides (`01-state.md`).
 
@@ -12,25 +12,25 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 3. **Booster bootstrap** (core check → install → interactive failure handling; `05-boosters.md`).
 4. Sections S1–S8 in order with checkpoints; S6 loop-backs as specified; scope lock mandatory before S8.
 5. S9 compile the Blueprint Bundle.
-6. Suggest `/lvp-handoff`.
+6. Suggest `/lvr-handoff`.
 
-**Never**: re-ask a recorded answer · generate the bundle before scope lock · write NC-licensed content into any LVP file · answer a factual question from memory when it can be verified (mark `unverified` or research).
+**Never**: re-ask a recorded answer · generate the bundle before scope lock · write NC-licensed content into any LVR file · answer a factual question from memory when it can be verified (mark `unverified` or research).
 
-**Interruption**: safe anywhere; resume is `/lvp-continue`'s job.
+**Interruption**: safe anywhere; resume is `/lvr-continue`'s job.
 
-## `/lvp-continue` (v0)
+## `/lvr-continue` (v0)
 
 **Input**: optional path (default cwd).
 
 **Flow**:
-1. Read `.lvp/state.json`. Missing → explain and suggest `/lvp-init-new-idea` (with Folder Gate guidance). Corrupt → rebuild by journal replay, report what was reconstructed.
+1. Read `.lvr/state.json`. Missing → explain and suggest `/lvr-init-new-idea` (with Folder Gate guidance). Corrupt → rebuild by journal replay, report what was reconstructed.
 2. Print a plain-language progress summary: project name, current Section, answered/total, pending loop-backs, booster status, last activity time.
 3. Offer the right next action: resume interview / answer pending loop-back / finish S9 generation (if scope locked, bundle incomplete) / run handoff (if bundled, handoff open) / suggest `add-feature` or `recheck-plan` (if bundled, handoff done).
 4. Resume the current Section exactly where it stopped (micro-batch boundary).
 
 **Never**: skip ahead of scope lock · re-ask answered questions.
 
-## `/lvp-handoff` (v0)
+## `/lvr-handoff` (v0)
 
 **Precondition**: S1–S8 `done` + scope locked.
 
@@ -44,21 +44,21 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 
 ## v1 skills
 
-### `/lvp-recheck-plan` (v1, implemented)
+### `/lvr-recheck-plan` (v1, implemented)
 
-**Precondition**: `.lvp/state.json` readable, scope locked (`scope_locked` journal event or S7 done), S1–S9 done, bundle present. Otherwise refuse with guidance to `/lvp-continue`.
+**Precondition**: `.lvr/state.json` readable, scope locked (`scope_locked` journal event or S7 done), S1–S9 done, bundle present. Otherwise refuse with guidance to `/lvr-continue`.
 
 **Flow**:
 1. Open: journal `recheck_started`; inventory state, journal, Section Records, all 20 bundle files.
 2. Audit: run `references/audit-checklist.md` groups R1–R6 literally — decision integrity, evidence freshness, cross-file coherence, feasibility/risk, bundle self-sufficiency, state/artifact consistency. Every failure is a finding `RC-NN` with severity, evidence, owner, fix; journal `recheck_finding`.
 3. Refresh: re-verify stale (price/cost > 90 days, legal/ToS/API > 90 days, competitor claims > 180 days) or unsourced claims live; update every file repeating the claim; journal `recheck_research_refresh`. No web access → claim stays `unverified`, stated loudly.
-4. Report: write `.lvp/recheck/RECHECK-<date>.md` (never overwrite a prior report); split fixes into mechanical and user-decision.
+4. Report: write `.lvr/recheck/RECHECK-<date>.md` (never overwrite a prior report); split fixes into mechanical and user-decision.
 5. Apply: mechanical one file per turn (`recheck_fix_applied`); user-decision fixes only after an explicit answer, recorded as `D-NNN`; `blueprint.json` regenerated from state + bundle when stale.
 6. Re-audit R3, R6, and every touched group; append results; journal `recheck_done`.
 
 **Never**: silent scope change · Parking Lot deletion · milestone verification · fabricated source/date · rewriting journal lines.
 
-### `/lvp-add-feature` (v1, implemented)
+### `/lvr-add-feature` (v1, implemented)
 
 **Precondition**: state readable, scope locked, S1–S9 done, bundle present. Request present or asked first.
 
@@ -69,13 +69,13 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 4. Impact analysis: every affected bundle file with exact edit; no new bundle files.
 5. Scope decision: extend milestone, append milestone, or Parking Lot; explicit answer recorded as `D-NNN user_confirmed`.
 6. Apply append-only, one file per turn, `feature_applied` per file; state decision + milestone appended; `blueprint.json` regenerated.
-7. Close with `/lvp-recheck-plan` then `/lvp-handoff`.
+7. Close with `/lvr-recheck-plan` then `/lvr-handoff`.
 
-Post-lock captures live in `.lvp/docs/sections/S4-additions.md`; done Section Records are never mutated.
+Post-lock captures live in `.lvr/docs/sections/S4-additions.md`; done Section Records are never mutated.
 
 **Never**: renumber ids · rewrite history · add bundle files · expand MVP without an explicit answer.
 
-### `/lvp-build` (v1, implemented)
+### `/lvr-build` (v1, implemented)
 
 **Precondition**: state readable, scope locked, S8–S9 done, bundle files (`AGENTS.md`, `MILESTONES.md`, `VERIFICATION.md`, `CODE_STYLE.md`, `SECURITY.md`, `DECISIONS.md`, `HANDOVER.md`) present, milestones non-empty. Handoff not done → warn, continue only on explicit answer.
 
@@ -86,11 +86,11 @@ Post-lock captures live in `.lvp/docs/sections/S4-additions.md`; done Section Re
 4. Implement deliverables, run the recorded procedure exactly, capture command/exit code/output.
 5. Pass → append to `VERIFICATION.md`, set `verified` + `verified_at`, journal `milestone_verified`. Fail → one fix attempt, then a fresh-assumption check, then `build_blocked`; two failures maximum.
 6. Deployment milestone → live check, then `state.deployment = { status: "live", url, verified_at }`.
-7. All verified → `build_done`; recommend `/lvp-handoff`, then `/lvp-personal-brand`.
+7. All verified → `build_done`; recommend `/lvr-handoff`, then `/lvr-personal-brand`.
 
-`.lvp/` writes are limited to `milestones[].verified`, `verified_at`, `deployment`, and journal appends. Never skip or weaken a verification.
+`.lvr/` writes are limited to `milestones[].verified`, `verified_at`, `deployment`, and journal appends. Never skip or weaken a verification.
 
-### `/lvp-personal-brand` (v1, implemented)
+### `/lvr-personal-brand` (v1, implemented)
 
 **Precondition (machine-checked, every run)**: state readable; `state.milestones[]` non-empty and every entry `verified: true`; `state.deployment.status` = `"live"` with a URL; that URL fetched now returns 2xx and one expected product fact; `AGENTS.md`, `OVERVIEW.md`, `DECISIONS.md`, `VERIFICATION.md` present. Any failure → refuse naming the exact unmet gate. Handoff is not required.
 
@@ -106,9 +106,9 @@ Post-lock captures live in `.lvp/docs/sections/S4-additions.md`; done Section Re
 
 **Never**: post, schedule, or message on any platform · invent metrics, users, revenue, awards, endorsements · place brand files in the Blueprint Bundle or edit bundle files · replace the English source with a localized variant · run before the gate passes.
 
-## Constitution — `lvp-principles.md`
+## Constitution — `lvr-principles.md`
 
-Loaded by every LVP skill before any work. Content (English; skill files keep it verbatim):
+Loaded by every LVR skill before any work. Content (English; skill files keep it verbatim):
 
 1. **Evidence-first** — claims carry sources and dates; if unverifiable, say so explicitly.
 2. **Anti-yes-man** — if the user's idea has a gap, show it immediately with a concrete fix option. Disagreement is a duty, not a risk.
@@ -122,4 +122,4 @@ Loaded by every LVP skill before any work. Content (English; skill files keep it
 10. **State discipline** — every meaningful event is checkpointed; a session that dies must lose nothing but the current question.
 11. **License discipline** — NC content is a runtime dependency, never vendored.
 12. **Fill what the user couldn't ask** — the owner is non-technical: they cannot name what they don't know. Important decisions that were never surfaced are made proactively, recorded with status `designer_filled`, and shown visibly for correction — never silent, never buried. The gap between what users say and what they need is the pipeline's job, not theirs.
-13. **Disk is memory** — the pipeline's memory lives in `.lvp/`, never in the context window. Any model able to follow the skill files finishes what any model started: checkpoint on pressure, reload from disk instead of improvising, continue truncated work instead of regenerating (spec 06).
+13. **Disk is memory** — the pipeline's memory lives in `.lvr/`, never in the context window. Any model able to follow the skill files finishes what any model started: checkpoint on pressure, reload from disk instead of improvising, continue truncated work instead of regenerating (spec 06).

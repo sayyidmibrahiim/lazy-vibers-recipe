@@ -44,5 +44,5 @@ Read in this order:
 | `ASSUMPTIONS.md` | The 13 designer_filled decisions, each with why + how to confirm it |
 | `HANDOVER.md` | Owner guide: run, deploy, update, back up, secrets, who to ask what |
 | `CAPABILITIES.md` | Recommended boosters for this stack, license-tagged, with install lines |
-| `blueprint.json` | Machine snapshot for UI and harnesses; derived from `.lvp/state.json` — regenerate, never hand-edit |
+| `blueprint.json` | Machine snapshot for UI and harnesses; derived from `.lvr/state.json` — regenerate, never hand-edit |
 | `CLAUDE.md`, `GEMINI.md` | One-line stubs pointing back to this file |

@@ -1,6 +1,6 @@
 # Assumptions
 
-Every decision whose status is not `user_confirmed` — here, 13 `designer_filled` decisions (filled proactively by the planner because a non-technical owner could not have known to ask; each was shown for correction during its Section). `user_confirmed` decisions never appear here. Mirrors `decisions[]` in `.lvp/state.json` and the rows in `DECISIONS.md`.
+Every decision whose status is not `user_confirmed` — here, 13 `designer_filled` decisions (filled proactively by the planner because a non-technical owner could not have known to ask; each was shown for correction during its Section). `user_confirmed` decisions never appear here. Mirrors `decisions[]` in `.lvr/state.json` and the rows in `DECISIONS.md`.
 
 ## D-002 — v1 ships as an installable browser app (home-screen icon, no store) instead of a store app (designer_filled)
 - **Why:** never surfaced — a non-technical user cannot know a website can install like an app; recorded proactively to avoid store accounts and the USD 99/yr Apple fee.
