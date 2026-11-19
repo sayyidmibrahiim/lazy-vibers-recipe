@@ -1,0 +1,1572 @@
+[
+ {
+  "id": "next",
+  "type": "web",
+  "fetched": "2026-11-19",
+  "gh_stars": 143573,
+  "gh_open_issues": 4054,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v16.4.6",
+  "gh_release_days": 9,
+  "npm_latest": "16.4.6",
+  "npm_license": "MIT",
+  "npm_weekly": 97670224,
+  "npm_latest_days": 9,
+  "llms": {
+   "status": 200,
+   "bytes": 14796,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/websites/nextjs",
+   "benchmark": 72.85,
+   "trust": 10,
+   "snippets": 9524,
+   "updated_days": 11
+  }
+ },
+ {
+  "id": "react-router",
+  "type": "web",
+  "fetched": "2026-11-19",
+  "gh_stars": 56641,
+  "gh_open_issues": 225,
+  "gh_pushed_days": 1,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "react-router@8.5.2",
+  "gh_release_days": 1,
+  "npm_latest": "8.5.2",
+  "npm_license": "MIT",
+  "npm_weekly": 78915314,
+  "npm_latest_days": 1,
+  "llms": {
+   "status": 404,
+   "bytes": 0,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/remix-run/react-router",
+   "benchmark": 75.38,
+   "trust": 7.5,
+   "snippets": 3074,
+   "updated_days": 2
+  }
+ },
+ {
+  "id": "tanstack-start",
+  "type": "web",
+  "fetched": "2026-11-19",
+  "gh_stars": 15325,
+  "gh_open_issues": 838,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "@tanstack/react-start@1.169.6",
+  "gh_release_days": 0,
+  "npm_latest": "1.169.5",
+  "npm_license": "MIT",
+  "npm_weekly": 13653849,
+  "npm_latest_days": 11,
+  "llms": {
+   "status": 200,
+   "bytes": 14399,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/websites/tanstack_start",
+   "benchmark": 67.27,
+   "trust": 10,
+   "snippets": 1309,
+   "updated_days": 44
+  }
+ },
+ {
+  "id": "astro",
+  "type": "web",
+  "fetched": "2026-11-19",
+  "gh_stars": 64053,
+  "gh_open_issues": 105,
+  "gh_pushed_days": 1,
+  "gh_archived": false,
+  "license": "NOASSERTION",
+  "gh_release": "@astrojs/node@11.1.14",
+  "gh_release_days": 1,
+  "npm_latest": "7.4.13",
+  "npm_license": "MIT",
+  "npm_weekly": 12313441,
+  "npm_latest_days": 1,
+  "llms": {
+   "status": 404,
+   "bytes": 0,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/websites/astro_build_en",
+   "benchmark": 75.78,
+   "trust": 10,
+   "snippets": 7594,
+   "updated_days": 8
+  }
+ },
+ {
+  "id": "nuxt",
+  "type": "web",
+  "fetched": "2026-11-19",
+  "gh_stars": 61076,
+  "gh_open_issues": 489,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v4.6.4",
+  "gh_release_days": 16,
+  "npm_latest": "4.6.4",
+  "npm_license": "MIT",
+  "npm_weekly": 3521505,
+  "npm_latest_days": 16,
+  "llms": {
+   "status": 200,
+   "bytes": 70471,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/nuxt/nuxt",
+   "benchmark": 72.67,
+   "trust": 0,
+   "snippets": 4939,
+   "updated_days": 3
+  }
+ },
+ {
+  "id": "sveltekit",
+  "type": "web",
+  "fetched": "2026-11-19",
+  "gh_stars": 20921,
+  "gh_open_issues": 978,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "@sveltejs/adapter-node@6.0.5",
+  "gh_release_days": 0,
+  "npm_latest": "3.4.0",
+  "npm_license": "MIT",
+  "npm_weekly": 5494569,
+  "npm_latest_days": 0,
+  "llms": {
+   "status": 200,
+   "bytes": 1674,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/sveltejs/kit",
+   "benchmark": 74.76,
+   "trust": 8.1,
+   "snippets": 1715,
+   "updated_days": 10
+  }
+ },
+ {
+  "id": "vue",
+  "type": "web",
+  "fetched": "2026-11-19",
+  "gh_stars": 55029,
+  "gh_open_issues": 965,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v3.5.45",
+  "gh_release_days": 14,
+  "npm_latest": "3.5.45",
+  "npm_license": "MIT",
+  "npm_weekly": 25914349,
+  "npm_latest_days": 14,
+  "llms": {
+   "status": 200,
+   "bytes": 7415,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/vuejs/vue",
+   "benchmark": 42.14,
+   "trust": 9.7,
+   "snippets": 671,
+   "updated_days": 31
+  }
+ },
+ {
+  "id": "angular",
+  "type": "web",
+  "fetched": "2026-11-19",
+  "gh_stars": 101449,
+  "gh_open_issues": 974,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v22.3.0",
+  "gh_release_days": 1,
+  "npm_latest": "22.3.0",
+  "npm_license": "MIT",
+  "npm_weekly": 8262632,
+  "npm_latest_days": 1,
+  "llms": {
+   "status": 200,
+   "bytes": 102321,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/angular/angular",
+   "benchmark": 58.74,
+   "trust": 8.9,
+   "snippets": 5649,
+   "updated_days": 6
+  }
+ },
+ {
+  "id": "solidstart",
+  "type": "web",
+  "fetched": "2026-11-19",
+  "gh_stars": 5921,
+  "gh_open_issues": 2,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "@solidjs/start@2.2.3",
+  "gh_release_days": 3,
+  "npm_latest": "2.2.3",
+  "npm_weekly": 228861,
+  "npm_latest_days": 3,
+  "llms": {
+   "status": 200,
+   "bytes": 64696,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/websites/solidjs_solid-start",
+   "benchmark": 76.22,
+   "trust": 9.8,
+   "snippets": 419,
+   "updated_days": 25
+  }
+ },
+ {
+  "id": "hono",
+  "type": "backend",
+  "fetched": "2026-11-19",
+  "gh_stars": 32979,
+  "gh_open_issues": 372,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v4.13.19",
+  "gh_release_days": 3,
+  "npm_latest": "4.13.19",
+  "npm_license": "MIT",
+  "npm_weekly": 112164124,
+  "npm_latest_days": 3,
+  "llms": {
+   "status": 200,
+   "bytes": 5925,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/honojs/hono",
+   "benchmark": 64.4,
+   "trust": 9.1,
+   "snippets": 1008,
+   "updated_days": 1
+  }
+ },
+ {
+  "id": "fastify",
+  "type": "backend",
+  "fetched": "2026-11-19",
+  "gh_stars": 37440,
+  "gh_open_issues": 204,
+  "gh_pushed_days": 1,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v5.12.8",
+  "gh_release_days": 17,
+  "npm_latest": "5.12.8",
+  "npm_license": "MIT",
+  "npm_weekly": 23597058,
+  "npm_latest_days": 17,
+  "llms": {
+   "status": 200,
+   "bytes": 106629,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/fastify/fastify",
+   "benchmark": 72.95,
+   "trust": 10,
+   "snippets": 1902,
+   "updated_days": 5
+  }
+ },
+ {
+  "id": "nestjs",
+  "type": "backend",
+  "fetched": "2026-11-19",
+  "gh_stars": 77099,
+  "gh_open_issues": 46,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v12.5.1",
+  "gh_release_days": 3,
+  "npm_latest": "12.5.1",
+  "npm_license": "MIT",
+  "npm_weekly": 25020183,
+  "npm_latest_days": 3,
+  "llms": {
+   "status": 200,
+   "bytes": 41780,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/websites/nestjs",
+   "benchmark": 76.19,
+   "trust": 9.8,
+   "snippets": 11043,
+   "updated_days": 13
+  }
+ },
+ {
+  "id": "fastapi",
+  "type": "backend",
+  "fetched": "2026-11-19",
+  "gh_stars": 104886,
+  "gh_open_issues": 49,
+  "gh_pushed_days": 1,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "0.165.0",
+  "gh_release_days": 1,
+  "pypi_latest": "0.165.0",
+  "pypi_license": "MIT",
+  "pypi_latest_days": 1,
+  "pypi_weekly": 136078054,
+  "llms": {
+   "status": 404,
+   "bytes": 0,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/websites/fastapi_tiangolo",
+   "benchmark": 75.79,
+   "trust": 9,
+   "snippets": 4160,
+   "updated_days": 9
+  }
+ },
+ {
+  "id": "django",
+  "type": "backend",
+  "fetched": "2026-11-19",
+  "gh_stars": 91807,
+  "gh_open_issues": 535,
+  "gh_pushed_days": 2,
+  "gh_archived": false,
+  "license": "BSD-3-Clause",
+  "pypi_latest": "6.1.3",
+  "pypi_license": "BSD-3-Clause",
+  "pypi_latest_days": 16,
+  "pypi_weekly": 12227667,
+  "llms": {
+   "status": 200,
+   "bytes": 54568,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/django/django",
+   "benchmark": 72.78,
+   "trust": 9.1,
+   "snippets": 25349,
+   "updated_days": 1
+  }
+ },
+ {
+  "id": "laravel",
+  "type": "backend",
+  "fetched": "2026-11-19",
+  "gh_stars": 35002,
+  "gh_open_issues": 102,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v13.43.0",
+  "gh_release_days": 2,
+  "llms": {
+   "status": 404,
+   "bytes": 0,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/laravel/docs",
+   "benchmark": 75.18,
+   "trust": 9.7,
+   "snippets": 12062,
+   "updated_days": 1
+  }
+ },
+ {
+  "id": "rails",
+  "type": "backend",
+  "fetched": "2026-11-19",
+  "gh_stars": 59048,
+  "gh_open_issues": 1788,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v8.1.4.1",
+  "gh_release_days": 15,
+  "llms": {
+   "status": 404,
+   "bytes": 0,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/websites/api_rubyonrails",
+   "benchmark": 76.9,
+   "trust": 10,
+   "snippets": 18262,
+   "updated_days": 6
+  }
+ },
+ {
+  "id": "pocketbase",
+  "type": "baas",
+  "fetched": "2026-11-19",
+  "gh_stars": 61580,
+  "gh_open_issues": 1,
+  "gh_pushed_days": 24,
+  "gh_archived": true,
+  "license": "MIT",
+  "gh_release": "v0.40.6",
+  "gh_release_days": 27,
+  "llms": {
+   "status": 404,
+   "bytes": 0,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/pocketbase/pocketbase",
+   "benchmark": 57.64,
+   "trust": 8.6,
+   "snippets": 1871,
+   "updated_days": 12
+  }
+ },
+ {
+  "id": "supabase",
+  "type": "baas",
+  "fetched": "2026-11-19",
+  "gh_stars": 115135,
+  "gh_open_issues": 1257,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "Apache-2.0",
+  "gh_release": "v1.26.08",
+  "gh_release_days": 104,
+  "npm_latest": "2.119.1",
+  "npm_license": "MIT",
+  "npm_weekly": 70028753,
+  "npm_latest_days": 1,
+  "llms": {
+   "status": 200,
+   "bytes": 3572,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/supabase/supabase",
+   "benchmark": 74.41,
+   "trust": 10,
+   "snippets": 27493,
+   "updated_days": 1
+  }
+ },
+ {
+  "id": "convex",
+  "type": "baas",
+  "fetched": "2026-11-19",
+  "gh_stars": 12806,
+  "gh_open_issues": 278,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "NOASSERTION",
+  "gh_release": "precompiled-2026-11-16-80befbc",
+  "gh_release_days": 3,
+  "npm_latest": "1.51.0",
+  "npm_license": "Apache-2.0",
+  "npm_weekly": 2897127,
+  "npm_latest_days": 1,
+  "llms": {
+   "status": 200,
+   "bytes": 55967,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/websites/convex_dev",
+   "benchmark": 73.81,
+   "trust": 9.9,
+   "snippets": 5961,
+   "updated_days": 21
+  }
+ },
+ {
+  "id": "react-native",
+  "type": "mobile",
+  "fetched": "2026-11-19",
+  "gh_stars": 126959,
+  "gh_open_issues": 1428,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v0.88.1",
+  "gh_release_days": 23,
+  "npm_latest": "0.88.1",
+  "npm_license": "MIT",
+  "npm_weekly": 21920525,
+  "npm_latest_days": 23,
+  "llms": {
+   "status": 200,
+   "bytes": 103509,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/react/react-native-website",
+   "benchmark": 72.6,
+   "trust": 8.3,
+   "snippets": 8844,
+   "updated_days": 0
+  }
+ },
+ {
+  "id": "expo",
+  "type": "mobile",
+  "fetched": "2026-11-19",
+  "gh_stars": 53653,
+  "gh_open_issues": 1092,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "expo-template-blank-typescript@58.0.35",
+  "gh_release_days": 2,
+  "npm_latest": "58.0.26",
+  "npm_license": "MIT",
+  "npm_weekly": 17198214,
+  "npm_latest_days": 2,
+  "llms": {
+   "status": 200,
+   "bytes": 62607,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/expo/expo",
+   "benchmark": 63.64,
+   "trust": 10,
+   "snippets": 18857,
+   "updated_days": 1
+  }
+ },
+ {
+  "id": "flutter",
+  "type": "mobile",
+  "fetched": "2026-11-19",
+  "gh_stars": 181273,
+  "gh_open_issues": 13593,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "BSD-3-Clause",
+  "gh_release": "3.19.0-0.1.pre",
+  "gh_release_days": 1043,
+  "pub_latest": "3.5.0",
+  "pub_days": 13,
+  "llms": {
+   "status": 200,
+   "bytes": 18382,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/flutter/website",
+   "benchmark": 67.32,
+   "trust": 7.9,
+   "snippets": 15839,
+   "updated_days": 11
+  }
+ },
+ {
+  "id": "capacitor",
+  "type": "mobile",
+  "fetched": "2026-11-19",
+  "gh_stars": 17121,
+  "gh_open_issues": 150,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "8.6.2",
+  "gh_release_days": 7,
+  "npm_latest": "8.6.2",
+  "npm_license": "MIT",
+  "npm_weekly": 8226035,
+  "npm_latest_days": 7,
+  "llms": {
+   "status": 404,
+   "bytes": 0,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/ionic-team/capacitor",
+   "benchmark": 52.19,
+   "trust": 10,
+   "snippets": 1596,
+   "updated_days": 2
+  }
+ },
+ {
+  "id": "kmp-compose",
+  "type": "mobile",
+  "fetched": "2026-11-19",
+  "gh_stars": 19488,
+  "gh_open_issues": 26,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "Apache-2.0",
+  "gh_release": "v1.12.2",
+  "gh_release_days": 35,
+  "llms": {
+   "status": 200,
+   "bytes": 49668,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/jetbrains/compose-multiplatform",
+   "benchmark": 41.15,
+   "trust": 10,
+   "snippets": 3824,
+   "updated_days": 9
+  }
+ },
+ {
+  "id": "tauri",
+  "type": "desktop",
+  "fetched": "2026-11-19",
+  "gh_stars": 112970,
+  "gh_open_issues": 1496,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "Apache-2.0",
+  "gh_release": "tauri-cli-v2.12.6",
+  "gh_release_days": 1,
+  "npm_latest": "2.12.5",
+  "npm_license": "Apache-2.0 OR MIT",
+  "npm_weekly": 5147443,
+  "npm_latest_days": 3,
+  "llms": {
+   "status": 200,
+   "bytes": 2798,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/tauri-apps/tauri-docs",
+   "benchmark": 72.31,
+   "trust": 9.7,
+   "snippets": 2944,
+   "updated_days": 1
+  }
+ },
+ {
+  "id": "electron",
+  "type": "desktop",
+  "fetched": "2026-11-19",
+  "gh_stars": 123987,
+  "gh_open_issues": 795,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v45.4.1",
+  "gh_release_days": 0,
+  "npm_latest": "45.4.1",
+  "npm_license": "MIT",
+  "npm_weekly": 12781452,
+  "npm_latest_days": 0,
+  "llms": {
+   "status": 404,
+   "bytes": 0,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/electron/electron",
+   "benchmark": 72.55,
+   "trust": 10,
+   "snippets": 6226,
+   "updated_days": 0
+  }
+ },
+ {
+  "id": "godot",
+  "type": "game",
+  "fetched": "2026-11-19",
+  "gh_stars": 120394,
+  "gh_open_issues": 19099,
+  "gh_pushed_days": 1,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "4.7.2-stable",
+  "gh_release_days": 93,
+  "llms": {
+   "status": 429,
+   "bytes": 0,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/websites/rs_godot_godot",
+   "benchmark": 64.73,
+   "trust": 9.1,
+   "snippets": 147713,
+   "updated_days": 10
+  }
+ },
+ {
+  "id": "phaser",
+  "type": "game",
+  "fetched": "2026-11-19",
+  "gh_stars": 40744,
+  "gh_open_issues": 191,
+  "gh_pushed_days": 90,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v4.2.1",
+  "gh_release_days": 133,
+  "npm_latest": "4.2.1",
+  "npm_license": "MIT",
+  "npm_weekly": 895162,
+  "npm_latest_days": 133,
+  "llms": {
+   "status": 404,
+   "bytes": 0,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/phaserjs/phaser",
+   "benchmark": 58.45,
+   "trust": 10,
+   "snippets": 2229,
+   "updated_days": 9
+  }
+ },
+ {
+  "id": "three",
+  "type": "game",
+  "fetched": "2026-11-19",
+  "gh_stars": 118891,
+  "gh_open_issues": 407,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "r187",
+  "gh_release_days": 20,
+  "npm_latest": "0.187.0",
+  "npm_license": "MIT",
+  "npm_weekly": 37314532,
+  "npm_latest_days": 20,
+  "llms": {
+   "status": 200,
+   "bytes": 274,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/mrdoob/three.js",
+   "benchmark": 68.03,
+   "trust": 9.1,
+   "snippets": 33037,
+   "updated_days": 0
+  }
+ },
+ {
+  "id": "babylon",
+  "type": "game",
+  "fetched": "2026-11-19",
+  "gh_stars": 26401,
+  "gh_open_issues": 24,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "Apache-2.0",
+  "gh_release": "9.37.1",
+  "gh_release_days": 1,
+  "npm_latest": "9.37.1",
+  "npm_license": "Apache-2.0",
+  "npm_weekly": 380228,
+  "npm_latest_days": 1,
+  "llms": {
+   "status": 200,
+   "bytes": 64566,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/babylonjs/documentation",
+   "benchmark": 62.44,
+   "trust": 9.2,
+   "snippets": 11410,
+   "updated_days": 10
+  }
+ },
+ {
+  "id": "bevy",
+  "type": "game",
+  "fetched": "2026-11-19",
+  "gh_stars": 49856,
+  "gh_open_issues": 3556,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "Apache-2.0",
+  "gh_release": "v0.20.1",
+  "gh_release_days": 21,
+  "crate_latest": "0.20.1",
+  "crate_days": 21,
+  "crate_recent_dl": 2147855,
+  "context7": {
+   "id": "/bevyengine/bevy",
+   "benchmark": 42.89,
+   "trust": 8.8,
+   "snippets": 5647,
+   "updated_days": 10
+  }
+ },
+ {
+  "id": "pixijs",
+  "type": "game",
+  "fetched": "2026-11-19",
+  "gh_stars": 48826,
+  "gh_open_issues": 448,
+  "gh_pushed_days": 2,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v8.23.0",
+  "gh_release_days": 8,
+  "npm_latest": "8.23.0",
+  "npm_license": "MIT",
+  "npm_weekly": 1913226,
+  "npm_latest_days": 8,
+  "llms": {
+   "status": 200,
+   "bytes": 53943,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/pixijs/pixijs",
+   "benchmark": 69.5,
+   "trust": 8.1,
+   "snippets": 4811,
+   "updated_days": 14
+  }
+ },
+ {
+  "id": "langgraph-js",
+  "type": "agents",
+  "fetched": "2026-11-19",
+  "gh_stars": 3420,
+  "gh_open_issues": 231,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "@langchain/angular@0.4.10",
+  "gh_release_days": 2,
+  "npm_latest": "1.7.5",
+  "npm_license": "MIT",
+  "npm_weekly": 5127292,
+  "npm_latest_days": 2,
+  "llms": {
+   "status": 200,
+   "bytes": 4006,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/websites/langchain_oss_python_langgraph",
+   "benchmark": 74.53,
+   "trust": 10,
+   "snippets": 1398,
+   "updated_days": 3
+  }
+ },
+ {
+  "id": "langchain-py",
+  "type": "agents",
+  "fetched": "2026-11-19",
+  "gh_stars": 149872,
+  "gh_open_issues": 755,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "langchain-core==1.8.3",
+  "gh_release_days": 1,
+  "pypi_latest": "1.5.2",
+  "pypi_license": "MIT",
+  "pypi_latest_days": 0,
+  "pypi_weekly": 37331348,
+  "llms": {
+   "status": 200,
+   "bytes": 8943,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/websites/langchain",
+   "benchmark": 61.59,
+   "trust": 10,
+   "snippets": 47939,
+   "updated_days": 3
+  }
+ },
+ {
+  "id": "llamaindex-py",
+  "type": "rag",
+  "fetched": "2026-11-19",
+  "gh_stars": 52951,
+  "gh_open_issues": 1492,
+  "gh_pushed_days": 5,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v0.14.26",
+  "gh_release_days": 5,
+  "pypi_latest": "0.14.26",
+  "pypi_license": "MIT",
+  "pypi_latest_days": 5,
+  "pypi_weekly": 413581,
+  "llms": {
+   "status": 200,
+   "bytes": 324720,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/websites/developers_llamaindex_ai",
+   "benchmark": 73.83,
+   "trust": 10,
+   "snippets": 78834,
+   "updated_days": 29
+  }
+ },
+ {
+  "id": "vercel-ai-sdk",
+  "type": "agents",
+  "fetched": "2026-11-19",
+  "gh_stars": 28079,
+  "gh_open_issues": 1643,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "NOASSERTION",
+  "gh_release": "@ai-sdk/workflow-harness@1.0.188",
+  "gh_release_days": 1,
+  "npm_latest": "7.0.177",
+  "npm_license": "Apache-2.0",
+  "npm_weekly": 47150887,
+  "npm_latest_days": 1,
+  "llms": {
+   "status": 0
+  },
+  "context7": {
+   "id": "/vercel/ai",
+   "benchmark": 74.19,
+   "trust": 9.7,
+   "snippets": 15787,
+   "updated_days": 5
+  }
+ },
+ {
+  "id": "mastra",
+  "type": "agents",
+  "fetched": "2026-11-19",
+  "gh_stars": 29628,
+  "gh_open_issues": 872,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "NOASSERTION",
+  "gh_release": "@mastra/core@1.84.0",
+  "gh_release_days": 1,
+  "npm_latest": "1.85.0",
+  "npm_license": "Apache-2.0",
+  "npm_weekly": 3733681,
+  "npm_latest_days": 1,
+  "llms": {
+   "status": 200,
+   "bytes": 61793,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/mastra-ai/mastra",
+   "benchmark": 73.19,
+   "trust": 7.5,
+   "snippets": 32300,
+   "updated_days": 8
+  }
+ },
+ {
+  "id": "pydantic-ai",
+  "type": "agents",
+  "fetched": "2026-11-19",
+  "gh_stars": 21283,
+  "gh_open_issues": 1850,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v2.71.0",
+  "gh_release_days": 0,
+  "pypi_latest": "2.71.0",
+  "pypi_license": "MIT",
+  "pypi_latest_days": 0,
+  "pypi_weekly": 1592320,
+  "llms": {
+   "status": 200,
+   "bytes": 74433,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/pydantic/pydantic-ai",
+   "benchmark": 76.14,
+   "trust": 9.6,
+   "snippets": 22573,
+   "updated_days": 6
+  }
+ },
+ {
+  "id": "openai-agents-py",
+  "type": "agents",
+  "fetched": "2026-11-19",
+  "gh_stars": 30761,
+  "gh_open_issues": 39,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v0.25.0",
+  "gh_release_days": 1,
+  "pypi_latest": "0.25.0",
+  "pypi_license": "MIT",
+  "pypi_latest_days": 1,
+  "pypi_weekly": 4972681,
+  "llms": {
+   "status": 200,
+   "bytes": 7173,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/websites/openai_github_io_openai-agents-python_zh",
+   "benchmark": 75.64,
+   "trust": 9.7,
+   "snippets": 1108,
+   "updated_days": 30
+  }
+ },
+ {
+  "id": "claude-agent-sdk-ts",
+  "type": "agents",
+  "fetched": "2026-11-19",
+  "gh_stars": 1891,
+  "gh_open_issues": 255,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "gh_release": "v0.3.328",
+  "gh_release_days": 0,
+  "npm_latest": "0.3.328",
+  "npm_license": "SEE LICENSE IN README.md",
+  "npm_weekly": 19698870,
+  "npm_latest_days": 0,
+  "context7": {
+   "id": "/nothflare/claude-agent-sdk-docs",
+   "benchmark": 78.06,
+   "trust": 5.2,
+   "snippets": 1048,
+   "updated_days": 7
+  }
+ },
+ {
+  "id": "crewai",
+  "type": "agents",
+  "fetched": "2026-11-19",
+  "gh_stars": 61091,
+  "gh_open_issues": 1264,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "1.15.43",
+  "gh_release_days": 0,
+  "pypi_latest": "1.15.43",
+  "pypi_latest_days": 0,
+  "pypi_weekly": 594011,
+  "llms": {
+   "status": 200,
+   "bytes": 100097,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/crewaiinc/crewai",
+   "benchmark": 65.44,
+   "trust": 7.6,
+   "snippets": 3307,
+   "updated_days": 23
+  }
+ },
+ {
+  "id": "google-adk",
+  "type": "agents",
+  "fetched": "2026-11-19",
+  "gh_stars": 22269,
+  "gh_open_issues": 545,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "Apache-2.0",
+  "gh_release": "v2.14.1",
+  "gh_release_days": 6,
+  "pypi_latest": "2.14.1",
+  "pypi_latest_days": 6,
+  "pypi_weekly": 2734362,
+  "llms": {
+   "status": 200,
+   "bytes": 18739,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/websites/deepwiki_google_adk-python",
+   "benchmark": 54,
+   "trust": 9.5,
+   "snippets": 1187,
+   "updated_days": 15
+  }
+ },
+ {
+  "id": "mcp-ts-sdk",
+  "type": "mcp",
+  "fetched": "2026-11-19",
+  "gh_stars": 13785,
+  "gh_open_issues": 688,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "NOASSERTION",
+  "gh_release": "v2.4.0",
+  "gh_release_days": 27,
+  "npm_latest": "1.32.2",
+  "npm_license": "MIT",
+  "npm_weekly": 91218859,
+  "npm_latest_days": 27,
+  "llms": {
+   "status": 200,
+   "bytes": 50746,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/websites/ts_sdk_modelcontextprotocol_io",
+   "benchmark": 55.03,
+   "trust": 9.9,
+   "snippets": 0,
+   "updated_days": 6
+  }
+ },
+ {
+  "id": "mcp-py-sdk",
+  "type": "mcp",
+  "fetched": "2026-11-19",
+  "gh_stars": 24901,
+  "gh_open_issues": 421,
+  "gh_pushed_days": 2,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v2.3.0",
+  "gh_release_days": 47,
+  "pypi_latest": "2.3.0",
+  "pypi_license": "MIT",
+  "pypi_latest_days": 47,
+  "pypi_weekly": 80082676,
+  "context7": {
+   "id": "/websites/py_sdk_modelcontextprotocol_io",
+   "benchmark": 77.47,
+   "trust": 9.9,
+   "snippets": 5709,
+   "updated_days": 15
+  }
+ },
+ {
+  "id": "fastmcp",
+  "type": "mcp",
+  "fetched": "2026-11-19",
+  "gh_stars": 28664,
+  "gh_open_issues": 254,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "Apache-2.0",
+  "gh_release": "v4.2.2",
+  "gh_release_days": 1,
+  "pypi_latest": "4.2.2",
+  "pypi_license": "Apache-2.0",
+  "pypi_latest_days": 1,
+  "pypi_weekly": 17391469,
+  "llms": {
+   "status": 200,
+   "bytes": 70113,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/prefecthq/fastmcp",
+   "benchmark": 72.86,
+   "trust": 9.2,
+   "snippets": 8349,
+   "updated_days": 4
+  }
+ },
+ {
+  "id": "commander",
+  "type": "cli",
+  "fetched": "2026-11-19",
+  "gh_stars": 28462,
+  "gh_open_issues": 8,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v15.1.0",
+  "gh_release_days": 12,
+  "npm_latest": "15.1.0",
+  "npm_license": "MIT",
+  "npm_weekly": 766362169,
+  "npm_latest_days": 12,
+  "context7": {
+   "id": "/tj/commander.js",
+   "benchmark": 73.84,
+   "trust": 7.2,
+   "snippets": 449,
+   "updated_days": 0
+  }
+ },
+ {
+  "id": "oclif",
+  "type": "cli",
+  "fetched": "2026-11-19",
+  "gh_stars": 9613,
+  "gh_open_issues": 25,
+  "gh_pushed_days": 15,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "6.0.15",
+  "gh_release_days": 24,
+  "npm_latest": "6.0.15",
+  "npm_license": "MIT",
+  "npm_weekly": 593570,
+  "npm_latest_days": 24,
+  "llms": {
+   "status": 404,
+   "bytes": 0,
+   "looksLikeLlmsTxt": false
+  },
+  "context7": {
+   "id": "/websites/oclif_io",
+   "benchmark": 81.05,
+   "trust": 9.1,
+   "snippets": 388,
+   "updated_days": 95
+  }
+ },
+ {
+  "id": "clack",
+  "type": "cli",
+  "fetched": "2026-11-19",
+  "gh_stars": 8141,
+  "gh_open_issues": 100,
+  "gh_pushed_days": 8,
+  "gh_archived": false,
+  "license": "NOASSERTION",
+  "gh_release": "@clack/prompts@1.9.0",
+  "gh_release_days": 10,
+  "npm_latest": "1.9.0",
+  "npm_license": "MIT",
+  "npm_weekly": 46623929,
+  "npm_latest_days": 10,
+  "context7": {
+   "id": "/bombshell-dev/clack",
+   "benchmark": 81.08,
+   "trust": 8.8,
+   "snippets": 568,
+   "updated_days": 40
+  }
+ },
+ {
+  "id": "typer",
+  "type": "cli",
+  "fetched": "2026-11-19",
+  "gh_stars": 20388,
+  "gh_open_issues": 47,
+  "gh_pushed_days": 1,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "0.29.2",
+  "gh_release_days": 1,
+  "pypi_latest": "0.29.2",
+  "pypi_license": "MIT",
+  "pypi_latest_days": 1,
+  "pypi_weekly": 74329528,
+  "context7": {
+   "id": "/websites/typer_tiangolo",
+   "benchmark": 74.16,
+   "trust": 9.1,
+   "snippets": 1751,
+   "updated_days": 31
+  }
+ },
+ {
+  "id": "clap",
+  "type": "cli",
+  "fetched": "2026-11-19",
+  "gh_stars": 16891,
+  "gh_open_issues": 459,
+  "gh_pushed_days": 2,
+  "gh_archived": false,
+  "license": "Apache-2.0",
+  "gh_release": "v4.6.7",
+  "gh_release_days": 66,
+  "crate_latest": "4.6.8",
+  "crate_days": 2,
+  "crate_recent_dl": 295045095,
+  "context7": {
+   "id": "/clap-rs/clap",
+   "benchmark": 61.3,
+   "trust": 8.2,
+   "snippets": 895,
+   "updated_days": 10
+  }
+ },
+ {
+  "id": "cobra",
+  "type": "cli",
+  "fetched": "2026-11-19",
+  "gh_stars": 44786,
+  "gh_open_issues": 512,
+  "gh_pushed_days": 131,
+  "gh_archived": false,
+  "license": "Apache-2.0",
+  "gh_release": "v1.10.2",
+  "gh_release_days": 350,
+  "context7": {
+   "id": "/spf13/cobra",
+   "benchmark": 68.58,
+   "trust": 9.9,
+   "snippets": 441,
+   "updated_days": 23
+  }
+ },
+ {
+  "id": "wxt",
+  "type": "extension",
+  "fetched": "2026-11-19",
+  "gh_stars": 10753,
+  "gh_open_issues": 194,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "wxt-v0.21.5",
+  "gh_release_days": 24,
+  "npm_latest": "0.21.5",
+  "npm_license": "MIT",
+  "npm_weekly": 1261307,
+  "npm_latest_days": 24,
+  "llms": {
+   "status": 200,
+   "bytes": 2783,
+   "looksLikeLlmsTxt": true
+  },
+  "context7": {
+   "id": "/websites/wxt_dev",
+   "benchmark": 71.2,
+   "trust": 8.1,
+   "snippets": 1733,
+   "updated_days": 0
+  }
+ },
+ {
+  "id": "plasmo",
+  "type": "extension",
+  "fetched": "2026-11-19",
+  "gh_stars": 13182,
+  "gh_open_issues": 369,
+  "gh_pushed_days": 1,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v0.90.5",
+  "gh_release_days": 550,
+  "npm_latest": "0.90.5",
+  "npm_license": "MIT",
+  "npm_weekly": 423170,
+  "npm_latest_days": 551,
+  "context7": {
+   "id": "/websites/plasmo",
+   "benchmark": 73.24,
+   "trust": 8.7,
+   "snippets": 575,
+   "updated_days": 130
+  }
+ },
+ {
+  "id": "crxjs",
+  "type": "extension",
+  "fetched": "2026-11-19",
+  "gh_stars": 4182,
+  "gh_open_issues": 18,
+  "gh_pushed_days": 17,
+  "gh_archived": false,
+  "gh_release": "vite-plugin-v2.7.0",
+  "gh_release_days": 153,
+  "npm_latest": "3.0.0",
+  "npm_license": "MIT",
+  "npm_weekly": 660834,
+  "npm_latest_days": 56,
+  "context7": {
+   "id": "/crxjs/chrome-extension-tools",
+   "benchmark": 75.49,
+   "trust": 9,
+   "snippets": 239,
+   "updated_days": 9
+  }
+ },
+ {
+  "id": "n8n",
+  "type": "workflow",
+  "fetched": "2026-11-19",
+  "gh_stars": 211286,
+  "gh_open_issues": 1247,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "NOASSERTION",
+  "gh_release": "n8n@2.48.5",
+  "gh_release_days": 1,
+  "npm_latest": "2.48.5",
+  "npm_license": "SEE LICENSE IN LICENSE.md",
+  "npm_weekly": 106895,
+  "npm_latest_days": 1,
+  "context7": {
+   "id": "/n8n-io/n8n-docs",
+   "benchmark": 67.51,
+   "trust": 9.8,
+   "snippets": 14075,
+   "updated_days": 1
+  }
+ },
+ {
+  "id": "activepieces",
+  "type": "workflow",
+  "fetched": "2026-11-19",
+  "gh_stars": 25616,
+  "gh_open_issues": 975,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "NOASSERTION",
+  "gh_release": "0.93.0",
+  "gh_release_days": 11,
+  "context7": {
+   "id": "/activepieces/activepieces",
+   "benchmark": 71.23,
+   "trust": 9,
+   "snippets": 5820,
+   "updated_days": 39
+  }
+ },
+ {
+  "id": "windmill",
+  "type": "workflow",
+  "fetched": "2026-11-19",
+  "gh_stars": 18639,
+  "gh_open_issues": 867,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "NOASSERTION",
+  "gh_release": "v1.877.0",
+  "gh_release_days": 0,
+  "context7": {
+   "id": "/websites/windmill_dev",
+   "benchmark": 64.5,
+   "trust": 7.5,
+   "snippets": 6210,
+   "updated_days": 4
+  }
+ },
+ {
+  "id": "kestra",
+  "type": "workflow",
+  "fetched": "2026-11-19",
+  "gh_stars": 30286,
+  "gh_open_issues": 636,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "Apache-2.0",
+  "gh_release": "v2.0.11",
+  "gh_release_days": 2,
+  "context7": {
+   "id": "/kestra-io/docs",
+   "benchmark": 66.76,
+   "trust": 9.7,
+   "snippets": 23333,
+   "updated_days": 31
+  }
+ },
+ {
+  "id": "node-red",
+  "type": "workflow",
+  "fetched": "2026-11-19",
+  "gh_stars": 23862,
+  "gh_open_issues": 356,
+  "gh_pushed_days": 2,
+  "gh_archived": false,
+  "license": "Apache-2.0",
+  "gh_release": "5.0.10",
+  "gh_release_days": 2,
+  "npm_latest": "5.0.10",
+  "npm_license": "Apache-2.0",
+  "npm_weekly": 93645,
+  "npm_latest_days": 2,
+  "context7": {
+   "id": "/node-red/node-red.github.io",
+   "benchmark": 66.87,
+   "trust": 7.3,
+   "snippets": 2642,
+   "updated_days": 20
+  }
+ },
+ {
+  "id": "temporal",
+  "type": "workflow",
+  "fetched": "2026-11-19",
+  "gh_stars": 24493,
+  "gh_open_issues": 1074,
+  "gh_pushed_days": 0,
+  "gh_archived": false,
+  "license": "MIT",
+  "gh_release": "v1.32.2",
+  "gh_release_days": 17,
+  "context7": {
+   "id": "/temporalio/temporal",
+   "benchmark": 55.82,
+   "trust": 9.5,
+   "snippets": 5631,
+   "updated_days": 15
+  }
+ },
+ {
+  "id": "trigger-dev",
+  "type": "workflow",
+  "fetched": "2026-11-19",
+  "gh_stars": 16782,
+  "gh_open_issues": 268,
+  "gh_pushed_days": 1,
+  "gh_archived": false,
+  "license": "Apache-2.0",
+  "gh_release": "v4.8.6",
+  "gh_release_days": 1,
+  "npm_latest": "4.8.6",
+  "npm_license": "MIT",
+  "npm_weekly": 1561196,
+  "npm_latest_days": 1,
+  "context7": {
+   "id": "/triggerdotdev/trigger.dev",
+   "benchmark": 73.96,
+   "trust": 9.4,
+   "snippets": 8938,
+   "updated_days": 29
+  }
+ }
+]
