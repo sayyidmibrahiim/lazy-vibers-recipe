@@ -1,0 +1,25 @@
+{
+  "name": "lazy-vibers-recipe",
+  "version": "0.9.0",
+  "description": "Model-agnostic interview pipeline that turns a raw product idea from a non-technical owner into a verified Blueprint Bundle (spec, data model, milestones, costs), then builds it. Seven skills: lvr-init-new-idea, lvr-continue, lvr-handoff, lvr-recheck-plan, lvr-add-feature, lvr-build, lvr-personal-brand.",
+  "author": { "name": "Ibrahim", "url": "https://github.com/sayyidmibrahiim" },
+  "homepage": "https://github.com/sayyidmibrahiim/lazy-vibers-recipe",
+  "repository": "https://github.com/sayyidmibrahiim/lazy-vibers-recipe",
+  "license": "MIT",
+  "keywords": ["lvr", "planning", "interview", "blueprint", "skills"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Lazy Vibers Recipe",
+    "shortDescription": "Idea to verified Blueprint Bundle, then build",
+    "longDescription": "An interview pipeline that turns a raw product idea into a verified Blueprint Bundle (spec, data model, milestones, costs) with disk-based state and evidence-first research, then executes the milestones.",
+    "developerName": "Ibrahim",
+    "category": "Productivity",
+    "capabilities": ["Instructions"],
+    "websiteURL": "https://github.com/sayyidmibrahiim/lazy-vibers-recipe",
+    "defaultPrompt": [
+      "Use $lvr-init-new-idea to start a new product idea.",
+      "Use $lvr-continue to resume my LVR project.",
+      "Use $lvr-build to build the next milestone."
+    ]
+  }
+}

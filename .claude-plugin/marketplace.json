@@ -1,0 +1,14 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-marketplace.json",
+  "name": "lazy-vibers-recipe",
+  "description": "Lazy Vibers Recipe: idea to verified Blueprint Bundle, then build.",
+  "owner": { "name": "Ibrahim", "url": "https://github.com/sayyidmibrahiim" },
+  "plugins": [
+    {
+      "name": "lazy-vibers-recipe",
+      "description": "Seven LVR pipeline skills: init, continue, handoff, recheck, add-feature, build, personal-brand.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

@@ -37,6 +37,8 @@ The loose `lvr-*.md` files at the top of `skills/` are the repo's canonical copi
 
 ## Install (preferred): `npx skills add`
 
+Per-harness commands and skill paths for every OS live in [INSTALL.md](../INSTALL.md); the summary below covers the common cases.
+
 The [skills CLI](https://github.com/vercel-labs/skills) discovers skills at `skills/<name>/SKILL.md` in a repo — this repo already matches that layout, no flags or config needed:
 
 ```bash
