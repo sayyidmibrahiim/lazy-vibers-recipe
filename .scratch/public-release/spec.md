@@ -32,6 +32,7 @@
 | D9 | Specialist agents through a routing table: native spawn, then explicit spawn, then inline role-play. Profiles are always wrapped in a planning-only brief |
 | D10 | Framework discovery = new step S5b, live-signal scored |
 | D11 | Context research (unknown-unknowns): from S0 on, the AI researches the idea's domain for what the user doesn't know and didn't say. Findings are shown with sources, then turned into questions or `designer_filled` decisions. Never from model memory |
+| D13 | The web app = deterministic read-only plan dashboard + tracker: progress, plan files, agents, harness session ids, review ledger, mindmap + diagrams (Mermaid offline, ASCII monospace), and copy-ready "how to continue" commands. No harness connection, no LLM |
 | D12 | Research-grounded answers: every AI claim, recommendation and filled decision rests on live research with the freshest source found. Cross-check key facts with ≥2 sources; set freshness limits; no model-memory fallback. Web research is a hard requirement |
 
 ## Milestones
@@ -45,7 +46,7 @@
 | M5 | Delegation | 17 agent routing | DB/security/research tasks auto-delegate on 3 harnesses |
 | M6 | Install anywhere | 18 manifests · 19 OS × harness matrix | Install verified on ≥4 harnesses × 3 OS |
 | M8 | Skill alignment + review | 27 schema v2 · 28 variable bundle · 29 add-feature · 30 build · 31 done-per-type · 32 continue · 33 recheck alignment · 34 brand · 35 skills README · 36 booster lifecycle · 37 handoff · **38 critical review** | Every skill obeys D1–D12; review run twice = identical; planted miss → apology |
-| M7 | Public release | 20 hygiene · 21 web app scope · 22 CI + tests · 23 docs · 24 dogfood proof · 25 release | Repo public, v1.0.0 tagged |
+| M7 | Public release | 20 hygiene · 21 web app scope · 39 dashboard + session tracker · 22 CI + tests · 23 docs · 24 dogfood proof · 25 release | Repo public, v1.0.0 tagged |
 
 ## Order
 

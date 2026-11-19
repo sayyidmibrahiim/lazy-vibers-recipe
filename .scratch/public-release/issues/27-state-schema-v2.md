@@ -1,7 +1,7 @@
 # 27: State/journal schema v2 + full replay coverage
 Status: ready-for-agent · Blocked by: 02, 03 · Type: task · Agent: Opus design → Sonnet
 Source: research/K (continue + cross-skill rows).
-- [ ] Schema v2 adds:
+- [ ] Schema v2 adds (incl. `sessions[]` for ticket 39):
   - `product_types[]` and flags
   - `boosters.installed[]`
   - `research[]` / `context_research`
