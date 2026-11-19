@@ -1,3 +1,4 @@
+import { legacyGuard } from "@/lib/legacy";
 import { NextResponse } from "next/server";
 import { getDoc, touchProject, updateDocContent } from "@/lib/db";
 
@@ -8,6 +9,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const disabled = legacyGuard();
+  if (disabled) return disabled;
   const { id } = await params;
   const doc = getDoc(id);
 

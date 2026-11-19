@@ -1,3 +1,4 @@
+import { legacyGuard } from "@/lib/legacy";
 import { DOC_KINDS, docPrompt, previousDocsContext } from "@/lib/blueprint";
 import { getDocs, getProject, getQuestions, saveAnswers, setStatus, upsertDoc } from "@/lib/db";
 import { chatDetailed, type ChatMessage } from "@/lib/llm";
@@ -10,6 +11,8 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const disabled = legacyGuard();
+  if (disabled) return disabled;
   const { id } = await params;
   const project = getProject(id);
 

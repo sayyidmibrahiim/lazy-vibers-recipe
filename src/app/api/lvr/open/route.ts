@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { registerLvrProject } from "@/lib/db";
-import { readLvrProject } from "@/lib/lvr-fs";
+import { LvrPathError, readLvrProject } from "@/lib/lvr-fs";
 import type { ProjectStatus } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -17,7 +17,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const detail = readLvrProject(folderPath);
+  let detail: ReturnType<typeof readLvrProject>;
+  try {
+    detail = readLvrProject(folderPath);
+  } catch (error) {
+    if (error instanceof LvrPathError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    throw error;
+  }
   if (!detail) {
     return NextResponse.json(
       { error: "Folder tidak ditemukan atau tidak memiliki .lvr/state.json yang valid." },

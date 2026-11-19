@@ -1,3 +1,4 @@
+import { legacyGuard } from "@/lib/legacy";
 import { NextResponse } from "next/server";
 import { interviewPrompt, parseInterview } from "@/lib/blueprint";
 import { addQuestions, createProject } from "@/lib/db";
@@ -8,6 +9,8 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 export async function POST(request: Request) {
+  const disabled = legacyGuard();
+  if (disabled) return disabled;
   const body = (await request.json().catch(() => null)) as { idea?: unknown } | null;
   const idea = typeof body?.idea === "string" ? body.idea.trim() : "";
 

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import * as fs from "node:fs";
 import path from "node:path";
 
 export interface LvrState {
@@ -59,7 +59,7 @@ export interface LvrState {
 export interface LvrDocItem {
   id: string;
   title: string;
-  category: "overview" | "spec" | "bundle" | "recheck" | "brand";
+  category: "overview" | "spec" | "bundle" | "recheck" | "brand" | "profile";
   content: string;
   relativePath: string;
 }
@@ -95,12 +95,55 @@ const BUNDLE_FILES: Array<{ path: string; title: string; category: LvrDocItem["c
   { path: "HANDOFF-PROMPT.md", title: "Handoff Prompt", category: "bundle" },
 ];
 
+export class LvrPathError extends Error {
+  constructor() {
+    super("Folder berisi tautan (symlink) yang mengarah ke luar folder proyek. Ditolak demi keamanan.");
+  }
+}
+
+// Every read goes through these guards: the real path must stay inside the opened
+// folder's real root. Missing paths behave like fs does (false / ENOENT).
+let realRoot = "";
+
+function inside(target: string): boolean {
+  let real: string;
+  try {
+    real = fs.realpathSync(target);
+  } catch {
+    return false; // missing or dangling
+  }
+  return real === realRoot || real.startsWith(realRoot + path.sep);
+}
+
+function guard(target: string): boolean {
+  if (!fs.existsSync(target)) return false;
+  if (!inside(target)) throw new LvrPathError();
+  return true;
+}
+
+const existsSync = guard;
+function readFileSync(target: string, enc: "utf-8"): string {
+  guard(target);
+  return fs.readFileSync(target, enc);
+}
+function readdirSync(target: string, opts: { withFileTypes: true }): fs.Dirent[];
+function readdirSync(target: string): string[];
+function readdirSync(target: string, opts?: { withFileTypes: true }) {
+  guard(target);
+  return opts ? fs.readdirSync(target, opts) : fs.readdirSync(target);
+}
+
 export function readLvrProject(targetDir: string): LvrProjectDetail | null {
   const resolved = path.isAbsolute(targetDir)
     ? targetDir
     : path.resolve(/*turbopackIgnore: true*/ process.cwd(), targetDir);
   const statePath = path.join(resolved, ".lvr", "state.json");
 
+  try {
+    realRoot = fs.realpathSync(resolved);
+  } catch {
+    return null;
+  }
   if (!existsSync(statePath)) return null;
 
   try {
@@ -137,6 +180,36 @@ export function readLvrProject(targetDir: string): LvrProjectDetail | null {
           category: item.category,
           content: readFileSync(filePath, "utf-8"),
           relativePath: item.path,
+        });
+      }
+    }
+
+    // Discovered files: UI_SPEC.md and product-type profile files. Filenames are
+    // matched by glob, not by a fixed schema (docs/spec/04-bundle.md does not define them).
+    const known = new Set(BUNDLE_FILES.map((item) => item.path.toLowerCase()));
+    const skip = new Set(["claude.md", "gemini.md", "readme.md"]);
+    for (const dir of ["", "SPEC", "profile", "profiles"]) {
+      const abs = path.join(/*turbopackIgnore: true*/ resolved, dir);
+      if (!existsSync(abs)) continue;
+      const files = readdirSync(abs, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".md"))
+        .map((entry) => entry.name)
+        .sort();
+      for (const file of files) {
+        const rel = dir ? `${dir}/${file}` : file;
+        if (known.has(rel.toLowerCase()) || skip.has(file.toLowerCase())) continue;
+        const base = file.replace(/\.md$/i, "");
+        const isUiSpec = base.toLowerCase() === "ui_spec";
+        const isProfileDir = dir === "profile" || dir === "profiles";
+        // Root-level and SPEC/ markdown that is not a known bundle file is only
+        // shown when it is UI_SPEC or looks like a profile; other strays stay hidden.
+        if (!isUiSpec && !isProfileDir && !/profile/i.test(base)) continue;
+        docs.push({
+          id: rel.replace(/\//g, "-").replace(/\.md$/i, ""),
+          title: isUiSpec ? "UI Spec" : `Profile: ${base}`,
+          category: isUiSpec ? "spec" : "profile",
+          content: readFileSync(path.join(resolved, rel), "utf-8"),
+          relativePath: rel,
         });
       }
     }
@@ -187,7 +260,8 @@ export function readLvrProject(targetDir: string): LvrProjectDetail | null {
       docs,
       journalCount,
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof LvrPathError) throw error;
     return null;
   }
 }

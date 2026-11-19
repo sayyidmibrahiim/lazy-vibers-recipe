@@ -1,3 +1,4 @@
+import { legacyGuard } from "@/lib/legacy";
 import { NextResponse } from "next/server";
 import { getDocs, getProject, getQuestions } from "@/lib/db";
 
@@ -8,6 +9,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const disabled = legacyGuard();
+  if (disabled) return disabled;
   const { id } = await params;
   const project = getProject(id);
 

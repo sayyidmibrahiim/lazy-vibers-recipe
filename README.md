@@ -51,7 +51,11 @@ npm run dev
 
 Open `http://localhost:3000`.
 
-Generation needs the LLM proxy at `127.0.0.1:17070`. If the proxy is down, generation fails with a 502 error.
+The home page (`/`) is a read-only viewer for a project folder that holds a `.lvr/` bundle. Enter the folder path to open it. The viewer renders the bundle documents, `UI_SPEC.md`, product-type profile files, and Mermaid code blocks (rendered offline in the browser; if a diagram fails to render, the raw code is shown). Other fenced blocks, such as ASCII diagrams, stay monospace.
+
+### Legacy generator (off by default)
+
+The old idea-to-5-documents generator is hidden unless you set `ENABLE_LEGACY_GENERATOR=1` (only the exact value `1` enables it; `true`, `yes`, `0` or anything else leaves it off) (for example in `.env.local`, then restart). When it is off, `/legacy` and the `/api/projects/*` and `/api/docs/*` routes return 404. When it is on, open `/legacy`. Only this generator needs the LLM proxy at `127.0.0.1:17070`; if the proxy is down, generation fails with a 502 error.
 
 All settings are optional. Copy `.env.example` to `.env.local` only to override defaults.
 

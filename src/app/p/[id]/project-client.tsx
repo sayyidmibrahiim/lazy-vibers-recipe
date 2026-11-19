@@ -184,7 +184,7 @@ export function ProjectClient({
         <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-4 px-5 py-4">
           <div className="flex min-w-0 items-center gap-4">
             <Link
-              href="/"
+              href="/legacy"
               className="label shrink-0 text-ink/65 transition-colors hover:text-ink"
             >
               &lt;- Arsip
