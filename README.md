@@ -35,7 +35,7 @@ One folder is one product. Every project folder holds a `.lvr/` folder. It store
 The preferred install is the skills CLI:
 
 ```bash
-npx skills add <owner>/lazy-vibers-planner
+npx skills add <owner>/lazy-vibers-recipe
 ```
 
 You can also copy a skill folder into the skills directory of your harness. Supported harnesses include ZCode, Claude Code, Codex, and Gemini CLI. See [skills/README.md](skills/README.md) for the full install table and the uninstall steps.

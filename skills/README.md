@@ -42,12 +42,12 @@ Per-harness commands and skill paths for every OS live in [INSTALL.md](../INSTAL
 The [skills CLI](https://github.com/vercel-labs/skills) discovers skills at `skills/<name>/SKILL.md` in a repo — this repo already matches that layout, no flags or config needed:
 
 ```bash
-npx skills add <owner>/lazy-vibers-planner
+npx skills add <owner>/lazy-vibers-recipe
 ```
 
 - It walks the repo's `skills/` directories, finds every `lvr-<name>/SKILL.md`, and installs those skill folders (including their `references/`) into the coding agent(s) it detects — you pick the agent(s) interactively.
 - Scope: installed into the current project by default; add `-g` to install globally (available in every project).
-- To install one skill only or pick an agent explicitly: `npx skills add <owner>/lazy-vibers-planner --skill lvr-init-new-idea -a claude-code`.
+- To install one skill only or pick an agent explicitly: `npx skills add <owner>/lazy-vibers-recipe --skill lvr-init-new-idea -a claude-code`.
 - It does not install the loose top-level `lvr-*.md` source copies and does not create `.lvr/` anywhere — project folders are created by the skill at runtime.
 
 ## Manual install (any harness)
