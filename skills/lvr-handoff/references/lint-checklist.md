@@ -135,19 +135,19 @@ The `ref` / `*_ref` values are logical pointers `<file>#<id>`, not Markdown anch
 
 Material: `.lvr/docs/sections/*.md`, `.lvr/docs/research/*.md`, every bundle Markdown file except CLAUDE.md/GEMINI.md, `state.json → decisions[]`, the journal's `research_logged`/`context_research` events, and `references/freshness.json`. Skip fenced code, inline code, HTML comments, and VERIFICATION.md `## Build log — …` sections. Syntax, limits, and the key-fact rule: conventions §10. Exact zone and message rules: `docs/spec/07-research.md` §6 in the LVR repository (the script applies them).
 
-- I1 every row of a table with a Source column, and every line stating a price, a fee or rate percentage, or a version in RESEARCH.md, the S5 record, the Domain Brief, the S2 `## Prices quoted` section and the OVERVIEW `## What it costs` section, carries a cite group, an `[unverified: …]` marker, or the answer id of a recorded answer (total rows exempt)
-- I2 no source is model memory ("model knowledge", "from memory", "assistant's memory", "no live check", "training data", "knowledge cutoff")
-- I3 every `[cite: …]` tag and `[unverified: …]` marker follows the syntax: known category, http(s) URL, `pub`/`upd` date or `n.d.`, `acc` date, known flags once each; one category per claim
+- I1 every row of a table with a Source column, and every line stating a price, a fee or rate percentage, or a version in RESEARCH.md, OVERVIEW.md, SPEC/architecture.md, SECURITY.md, CAPABILITIES.md, the S5 record, the Domain Brief and the S2 `## Prices quoted` section (also when it hides in emphasis, inline code, scale words such as "5 juta rupiah", or DSR/LTV/DP/suku rates), carries a cite group, an `[unverified: …]` marker, or the answer id of a recorded answer (rows starting with the word Total exempt). Also in every other scanned file (decisions, assumptions, Section Records, requirements): a line with a non-zero price and a billing word (`/mo`, `/yr`, `per month`, `fee`, `plan`, `subscription`, `biaya`, `per bulan`, `per tahun`, …) needs the same source. Prose facts, percentage-only vendor fees and versions outside the zones are your judgment: do not skip a fact because it contains a number.
+- I2 no source is model memory ("model knowledge", "from memory", "assistant's memory", "no live check", "training data", "knowledge cutoff", "my knowledge", "as I recall", "from my training", "pengetahuan model", "dari ingatan", "tanpa cek", "setahu saya", "berdasarkan pengalaman")
+- I3 every `[cite: …]` tag and `[unverified: …]` marker follows the syntax: known category, http(s) URL, `pub`/`upd` date or `n.d.`, `acc` date, a public host (a dot; not localhost or a private address), known flags once each; one category per claim; a price, fee or rate line carries `price`, `quota`, `legal`, `regulation` or `statistic` (never `market` or `general`), a version line `version`
 - I4 every cite has a date: `n.d.` only with `live` (never for `statistic` or `regulation`)
-- I5 no impossible date, no date after today, no published date after the access date
-- I6 no fact past its freshness limit (the freshest source counts; regulations: the newest `amend-check`)
+- I5 no impossible date, no date after today, no published date after the access date, no `amend-check` before the page's published date
+- I6 no fact past its freshness limit (the freshest source counts; regulations: the newest `amend-check` and the newest access date, both within 60 days)
 - I7 every key fact (`price`, `quota`, `version`, `legal`, `regulation`) has a fresh `primary` source or two fresh sources from different sites
 - I8 every regulation cite group has an `amend-check` date
-- I9 no bare "unverified": every marker names failed, logged research (`RQ-NNN` with `outcome` failed and queries)
+- I9 no bare "unverified": every marker names failed, logged research (`RQ-NNN` with `outcome` failed and queries); a failed `web_check` event is a tool outage, not research, so a marker naming it fails
 - I10 no marker whose newest failed research is older than the category limit (try again)
-- I11 no `designer_filled` decision (state, DECISIONS.md, ASSUMPTIONS.md, record lines) rests on an unverified fact
+- I11 no `designer_filled` decision (state, DECISIONS.md, ASSUMPTIONS.md, record lines) rests on an unverified fact, through its text, a `U-NN`, a failed `RQ-NNN`, a brief row's `Became`, or another such decision (status read ignoring case and `**`)
 - I12 no recommendation leans on "best practice", "industry standard", or "experts recommend" without a cite; every recommendation section holds at least one cite
-- I13 every Domain Brief item names its Section (S1–S8), and once that Section is done its `Became` cell holds an answer id or decision id
+- I13 every Domain Brief item names its Section (S1–S8), and once that Section is done its `Became` cell holds an answer id or decision id that exists in state
 
 A missing Domain Brief in a project whose S0 is done is reported as a warning (an older project), not a finding: `/lvr-continue` builds it.
 

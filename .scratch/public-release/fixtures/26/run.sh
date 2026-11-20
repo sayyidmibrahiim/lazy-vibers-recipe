@@ -20,17 +20,17 @@ rm -rf "$TMP/fx"; cp -r "$HERE/../04/futsal-fixed" "$TMP/fx"
 L "$TMP/fx" cite check --all > "$TMP/o.json"
 FLAGGED=$(node -e 'const o=JSON.parse(require("fs").readFileSync(process.argv[1]));console.log(o.findings.length)' "$TMP/o.json")
 echo "INFO futsal-fixed (unsourced): $FLAGGED findings"
-chk "futsal unsourced: cite check --all flags it (clean:false, exact count 101)" "$TMP/o.json" 'o.ok && o.clean===false && o.findings.length===101'
-chk "futsal unsourced: counts by id I1=19 I2=27 I9=49 I11=4 I12=2 (I3..I8, I10, I13 = 0)" "$TMP/o.json" '(()=>{const c={};for(const f of o.findings)c[f.id]=(c[f.id]||0)+1;return JSON.stringify(c)===JSON.stringify({I1:19,I2:27,I9:49,I12:2,I11:4})})()'
+chk "futsal unsourced: cite check --all flags it (clean:false, exact count 114; was 101 before ticket 40: +6 A5 zones, +7 B2 vendor prices outside the zones)" "$TMP/o.json" 'o.ok && o.clean===false && o.findings.length===114'
+chk "futsal unsourced: counts by id I1=32 (was 19: ticket-40 A5 adds OVERVIEW.md lines 7 and 60 and SPEC/architecture.md lines 8, 19, 108, 110; B2 adds S1-context 16, S2-kondisi 18, DECISIONS 8 and 13, ASSUMPTIONS 6, 7, 19) I2=27 I9=49 I11=4 I12=2 (I3..I8, I10, I13 = 0)" "$TMP/o.json" '(()=>{const c={};for(const f of o.findings)c[f.id]=(c[f.id]||0)+1;return JSON.stringify(c)===JSON.stringify({I1:32,I2:27,I9:49,I12:2,I11:4})})()'
 chk "futsal unsourced: memory phrases flagged (\"model knowledge\", \"no live check\", \"assistant’s memory\")" "$TMP/o.json" 'o.findings.some(f=>f.id==="I2"&&f.message.includes("model knowledge"))&&o.findings.some(f=>f.id==="I2"&&f.message.includes("no live check"))&&o.findings.some(f=>f.id==="I2"&&f.message.includes("assistant"))'
 chk "futsal unsourced: OVERVIEW Rp 100.000 row (a decision id D-005 is not a source) is I1" "$TMP/o.json" 'o.findings.some(f=>f.id==="I1"&&f.file==="OVERVIEW.md"&&f.line===23)'
 chk "futsal unsourced: D-018 designer_filled on an unverified price is I11 in the S5 record, DECISIONS.md, ASSUMPTIONS.md and state.json" "$TMP/o.json" 'o.findings.filter(f=>f.id==="I11").map(f=>f.file).join()===".lvr/docs/sections/S5-research.md,DECISIONS.md,ASSUMPTIONS.md,.lvr/state.json"'
 chk "futsal unsourced: Recommended stack + Stack comparison sections are I12" "$TMP/o.json" 'o.findings.filter(f=>f.id==="I12"&&/^Recommendation section/.test(f.message)).length===2'
-chk "futsal unsourced: NO_DOMAIN_BRIEF warning; owners are S2/S5/S7/S9" "$TMP/o.json" 'o.warnings.map(w=>w.code).join()==="NO_DOMAIN_BRIEF"&&o.findings.every(f=>["S2","S5","S7","S9"].includes(f.owner))'
+chk "futsal unsourced: NO_DOMAIN_BRIEF warning; owners are S1/S2/S5/S7/S9 (S1: ticket-40 B2 flags S1-context.md line 16)" "$TMP/o.json" 'o.warnings.map(w=>w.code).join()==="NO_DOMAIN_BRIEF"&&o.findings.every(f=>["S1","S2","S5","S7","S9"].includes(f.owner))'
 L "$TMP/fx" lint run --group I > "$TMP/o.json"
-chk "lint run --group I carries the same findings and the five needs_model items" "$TMP/o.json" 'o.ok&&o.groups.join()==="I"&&o.findings.length===101&&o.clean===false&&o.needs_model.map(x=>x.id).join()==="I1,I3,I6,I7,I12"'
+chk "lint run --group I carries the same findings and the five needs_model items" "$TMP/o.json" 'o.ok&&o.groups.join()==="I"&&o.findings.length===114&&o.clean===false&&o.needs_model.map(x=>x.id).join()==="I1,I3,I6,I7,I12"'
 L "$TMP/fx" crosscheck > "$TMP/o.json"
-chk "crosscheck lists X8 and it fails on futsal (every finding is group I)" "$TMP/o.json" 'o.ok&&o.rules.length===8&&o.rules[7].rule==="X8"&&o.rules[7].ok===false&&o.rules[7].findings===101&&o.rules.slice(0,7).every(r=>r.ok)'
+chk "crosscheck lists X8 and it fails on futsal (every finding is group I)" "$TMP/o.json" 'o.ok&&o.rules.length===8&&o.rules[7].rule==="X8"&&o.rules[7].ok===false&&o.rules[7].findings===114&&o.rules.slice(0,7).every(r=>r.ok)'
 
 # 3. futsal re-sourced: citations only (+ the failed research the markers point at) -> 0 findings
 rm -rf "$TMP/fr"; cp -r "$HERE/../04/futsal-fixed" "$TMP/fr"; node "$HERE/resource.mjs" "$TMP/fr"

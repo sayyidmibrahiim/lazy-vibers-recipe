@@ -209,7 +209,7 @@ function readJournal(dir) {
   const res = {
     path: relPath(dir, jp), exists: false, lines: 0, events: [], max_seq: 0, last_ts: null, seq_gaps: [],
     duplicate_seqs: [], corrupt_lines: [], truncated_tail: false, tail_missing_newline: false, crlf: false,
-    bom: false, unknown_types: [], scope_locked_seq: null, healthy: true,
+    bom: false, unknown_types: [], duplicate_rq_ids: [], scope_locked_seq: null, healthy: true,
   };
   let raw;
   try { raw = fs.readFileSync(jp, "utf8"); } catch { return res; }
@@ -248,15 +248,19 @@ function readJournal(dir) {
     const a = res.events[i - 1].seq, b = res.events[i].seq;
     if (b - a > 1) res.seq_gaps.push([a, b]);
   }
+  const rqSeen = new Set();
   for (const ev of res.events) {
     if (!EVENT_TYPES.includes(ev.type)) res.unknown_types.push({ seq: ev.seq, type: ev.type });
+    if ((ev.type === "research_logged" || ev.type === "context_research") && isStr(ev.payload.id)) {
+      if (rqSeen.has(ev.payload.id)) { if (!res.duplicate_rq_ids.includes(ev.payload.id)) res.duplicate_rq_ids.push(ev.payload.id); } else rqSeen.add(ev.payload.id);
+    }
     if (ev.type === "scope_locked") res.scope_locked_seq = ev.seq;
   }
   if (res.events.length) {
     res.max_seq = res.events[res.events.length - 1].seq;
     res.last_ts = res.events[res.events.length - 1].ts;
   }
-  res.healthy = !res.seq_gaps.length && !res.duplicate_seqs.length && !res.corrupt_lines.length && !res.truncated_tail && !res.unknown_types.length;
+  res.healthy = !res.seq_gaps.length && !res.duplicate_seqs.length && !res.corrupt_lines.length && !res.truncated_tail && !res.unknown_types.length && !res.duplicate_rq_ids.length;
   return res;
 }
 
@@ -267,6 +271,7 @@ function journalWarnings(j) {
   for (const [a, b] of j.seq_gaps) w.push(`Journal sequence jumps from ${a} to ${b}.`);
   for (const s of j.duplicate_seqs) w.push(`Journal sequence ${s} appears more than once; the first one is used.`);
   for (const u of j.unknown_types) w.push(`Event ${u.seq} has an unknown type "${u.type}".`);
+  for (const id of j.duplicate_rq_ids) w.push(`Research id ${id} appears on more than one event; the first one is used.`);
   return w;
 }
 
@@ -1450,14 +1455,19 @@ function findMarkers(names) {
 }
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+){1,3}$/;
+/** First usable folder name for a slug. A16: an existing folder that is empty (junk files aside) is reused, so a run that stopped before S0 and is repeated does not leave `<slug>/` behind and take `<slug>-2`. */
 function freeSlug(parent, slug) {
   let names = [];
   try { names = fs.readdirSync(parent); } catch { /* none */ }
-  const lower = new Set(names.map((n) => n.toLowerCase()));
+  const byLower = new Map(names.map((n) => [n.toLowerCase(), n]));
   const taken = names.filter((n) => n.toLowerCase() === slug || new RegExp(`^${slug}-\\d+$`).test(n.toLowerCase())).sort();
-  let free = slug;
-  for (let i = 2; lower.has(free); i++) free = `${slug}-${i}`;
-  return { free, taken };
+  const isEmptyDir = (n) => { try { const p = path.join(parent, n); return fs.statSync(p).isDirectory() && fs.readdirSync(p).every((x) => JUNK.has(x.toLowerCase())); } catch { return false; } };
+  let free = slug, reused = false;
+  for (let i = 2; byLower.has(free); i++) {
+    if (isEmptyDir(byLower.get(free))) { reused = true; break; }
+    free = `${slug}-${i}`;
+  }
+  return { free, taken, reused };
 }
 function slugValidate(slug) {
   const issues = [];
@@ -1521,7 +1531,7 @@ function gateCheck(dir, ideaSlug) {
     const shown = entries.filter((n) => !SKIP_DIRS.has(n.toLowerCase()));
     res.check = 5; res.verdict = "ask_loose"; res.loose = (shown.length ? shown : entries).sort().slice(0, 3);
   }
-  if (ideaSlug !== undefined) res.slug = { slug: ideaSlug, valid: slugValidate(ideaSlug).valid, free_slug: freeSlug(dir, ideaSlug).free };
+  if (ideaSlug !== undefined) res.slug = { slug: ideaSlug, valid: slugValidate(ideaSlug).valid, free_slug: freeSlug(dir, ideaSlug).free, free_slug_reused: freeSlug(dir, ideaSlug).reused };
   return res;
 }
 
@@ -2579,19 +2589,34 @@ function registrableDomain(url) {
 const MEMORY_PHRASES = [
   ["model knowledge", /model knowledge/gi], ["model-knowledge", /model-knowledge/gi], ["assistant's memory", /assistant['’]s memory/gi],
   ["from memory", /from memory/gi], ["no live check", /no live check/gi], ["training data", /training data/gi], ["knowledge cutoff", /knowledge cutoff/gi],
+  ["my knowledge", /\bmy knowledge\b/gi], ["as I recall", /\bas i recall\b/gi], ["based on my training", /based on my training/gi], ["from my training", /from my training/gi],
+  ["pengetahuan model", /pengetahuan model/gi], ["dari ingatan", /dari ingatan/gi], ["tanpa cek", /tanpa cek/gi], ["setahu saya", /setahu saya/gi], ["berdasarkan pengalaman", /berdasarkan pengalaman/gi],
 ];
 const RECO_PHRASES = [
   ["best practices", /best practices/gi], ["best practice", /best practice(?!s)/gi], ["industry standard", /industry standard/gi], ["industry-standard", /industry-standard/gi],
   ["experts recommend", /experts recommend/gi], ["recommended by experts", /recommended by experts/gi], ["widely recommended", /widely recommended/gi], ["commonly recommended", /commonly recommended/gi],
 ];
-const CURRENCY_BEFORE = /(?<![A-Za-z])(?:Rp|IDR|USD|US\$|EUR|GBP|SGD|S\$|MYR|RM|INR|JPY)\s?\d|[$€£₹¥]\s?\d/;
-const CURRENCY_AFTER = /\d[\d.,]*\s?(?:IDR|USD|EUR|GBP|SGD|MYR|INR|JPY|rupiah|dollars?)(?![A-Za-z])/i;
+const CURRENCY_BEFORE = /(?<![A-Za-z])(?:[Rr][Pp]\.?|IDR|USD|US\$|EUR|GBP|SGD|S\$|MYR|RM|INR|JPY)\s?\d|[$€£₹¥]\s?\d/;
+const SCALE_WORD = "(?:ribu|rb|juta|jt|miliar|milyar|triliun|thousand|million|billion|[kmb])";
+const CURRENCY_AFTER = new RegExp(`\\d[\\d.,]*\\s?(?:${SCALE_WORD}\\s?)?(?:IDR|USD|EUR|GBP|SGD|MYR|INR|JPY|rupiah|dollars?)(?![A-Za-z])`, "i");
 const PERCENT_RE = /\d(?:[.,]\d+)?\s?%/;
-const FEE_WORD_RE = /\b(?:fee|rate|interest|commission|mdr|tax|vat|levy|charge|payment|transaction|bunga|biaya|pajak|komisi|provisi|denda|cicilan|transaksi|pembayaran)/i;
+const FEE_WORD_RE = /\b(?:fee|rate|interest|commission|mdr|tax|vat|levy|charge|payment|transaction|bunga|biaya|pajak|komisi|provisi|denda|cicilan|transaksi|pembayaran)|\b(?:dsr|dti|ltv|dp|suku|uang muka)\b/i;
 const VERSION_RE = /(?<![\w.])v\d+(?:\.\d+)+(?![\w])|(?<![\w.])\d+\.\d+\.\d+(?!\.?\d)/;
 const ANSWER_ID_G = /\bS(?:10|[0-9])\.q[0-9]+\b/g;
 const BRIEF_FILE = ".lvr/docs/research/domain-brief.md";
-const sourceKind = (line) => (CURRENCY_BEFORE.test(line) || CURRENCY_AFTER.test(line) ? "price" : PERCENT_RE.test(line) && FEE_WORD_RE.test(line) ? "fee or rate" : VERSION_RE.test(line) ? "version" : null);
+/** Detection text: full-width forms folded (NFKC), zero-width characters and `*`/`_` emphasis removed (spec 07 §6.2). */
+const detectText = (line) => line.normalize("NFKC").replace(/[\u200B-\u200D\u2060\uFEFF]/g, "").replace(/[*_]/g, "");
+const sourceKind = (raw) => { const line = detectText(raw); return CURRENCY_BEFORE.test(line) || CURRENCY_AFTER.test(line) ? "price" : PERCENT_RE.test(line) && FEE_WORD_RE.test(line) ? "fee or rate" : VERSION_RE.test(line) ? "version" : null; };
+/** B2: a price with a non-zero amount next to a billing cue (a vendor price restated outside the research zones). */
+const AMOUNT_BEFORE_G = /(?:(?<![A-Za-z])(?:[Rr][Pp]\.?|IDR|USD|US\$|EUR|GBP|SGD|S\$|MYR|RM|INR|JPY)|[$€£₹¥])\s?(\d[\d.,]*)/g;
+const AMOUNT_AFTER_G = new RegExp(`(\\d[\\d.,]*)\\s?(?:${SCALE_WORD}\\s?)?(?:IDR|USD|EUR|GBP|SGD|MYR|INR|JPY|rupiah|dollars?)(?![A-Za-z])`, "gi");
+const BILLING_CUE = /\/(?:mo|month|yr|year|bulan|tahun)\b|\bper (?:month|year|seat|user|transaction|bulan|tahun|transaksi)\b|\b(?:monthly|yearly|annual|bulanan|tahunan|fees?|biaya|plan|tier|paket|subscription|langganan|renew|renewal|perpanjang|pricing|billed|developer account)\b/i;
+function vendorPrice(raw) {
+  const line = detectText(raw);
+  if (!BILLING_CUE.test(line)) return false;
+  for (const re of [AMOUNT_BEFORE_G, AMOUNT_AFTER_G]) { re.lastIndex = 0; for (const m of line.matchAll(re)) if (/[1-9]/.test(m[1])) return true; }
+  return false;
+}
 const claimOf = (line) => { const t = line.trim(); return t.length > 160 ? t.slice(0, 159) + "…" : t; };
 const blankSpan = (s) => s.replace(/[^\n]/g, " ");
 
@@ -2647,6 +2672,21 @@ function scanTags(line) {
   return out;
 }
 
+/** A7: the host of an http(s) URL must be a public site: a dot in the name, not localhost, `.local`, `.internal`, or a private, loopback, link-local or reserved IPv4 address. */
+const URL_HOST_ERR = "URL must point to a public site (a host name with a dot, not localhost or a private address)";
+function publicHostOk(url) {
+  let u;
+  try { u = new URL(url); } catch { return false; }
+  const h = u.hostname.toLowerCase().replace(/\.$/, "");
+  if (!h.includes(".") || h === "localhost" || /\.(?:localhost|local|internal)$/.test(h)) return false;
+  const m = h.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (m) {
+    const a = +m[1], b = +m[2];
+    if (a === 0 || a === 10 || a === 127 || a >= 224 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)) return false;
+  }
+  return true;
+}
+
 /** Parse one cite tag. Returns { err } or the parsed fields. */
 function parseCite(t, F) {
   if (!t.closed) return { err: "tag is not closed" };
@@ -2656,6 +2696,7 @@ function parseCite(t, F) {
   const [cat, url, date, acc, ...flagFields] = f;
   if (!Object.prototype.hasOwnProperty.call(F.categories, cat)) return { err: `unknown category "${cat}"` };
   if (!/^https?:\/\/[^\s/?#]+\S*$/.test(url)) return { err: "URL must start with http:// or https://" };
+  if (!publicHostOk(url)) return { err: URL_HOST_ERR };
   let dm = date === "n.d." ? { nd: true } : date.match(/^(pub|upd) (\d{4}(?:-\d{2}(?:-\d{2})?)?)$/);
   if (!dm) return { err: "date must be pub or upd YYYY[-MM[-DD]], or n.d." };
   const am = acc.match(/^acc (\d{4}-\d{2}-\d{2})$/);
@@ -2689,17 +2730,54 @@ function researchIndex(j) {
   for (const e of j.events) {
     if (!RESEARCH_TYPES.includes(e.type) || !isStr(e.payload.id)) continue;
     const q = Array.isArray(e.payload.queries) ? e.payload.queries : [];
-    m.set(e.payload.id, { type: e.type, ts: e.ts, failed: e.payload.outcome === "failed" && q.some((x) => isStr(x) && x.trim() !== "") });
+    if (m.has(e.payload.id)) continue; // a duplicate id (hand-edited journal): the first event is used; `journal check` flags it
+    const failedEv = e.payload.outcome === "failed" && q.some((x) => isStr(x) && x.trim() !== "");
+    const outage = failedEv && e.payload.purpose === "web_check"; // B1: a failed web check is a tool outage, not research
+    m.set(e.payload.id, { type: e.type, ts: e.ts, failed: failedEv && !outage, outage, failedEv });
   }
   return m;
 }
 
 const BRIEF_SECTION_RE = /^S[1-8]$/;
+/** Research zones that cover a whole file (A5: the bundle files that restate vendor, legal and cost facts). */
+const WHOLE_FILE_ZONES = ["RESEARCH.md", "OVERVIEW.md", "SPEC/architecture.md", "SECURITY.md", "CAPABILITIES.md"];
+const MONEY_CATS = ["price", "quota", "legal", "regulation", "statistic"];
+const VERSION_CATS = ["version", "quota", "legal", "regulation"];
+/** `line` with the spans of `tags` blanked (the tags were found on a same-length copy of the line). */
+const stripTagSpans = (line, tags) => { let r = line; for (const t of [...tags].reverse()) r = r.slice(0, t.start) + " ".repeat(t.end - t.start) + r.slice(t.end); return r; };
 function fileOwner(rel) {
   const m = rel.match(/^\.lvr\/docs\/sections\/S(\d+)-(.*)\.md$/);
   if (m) return m[1] === "4" && m[2] === "additions" ? "lvr-add-feature" : `S${m[1]}`;
   if (/^\.lvr\/docs\/research\//.test(rel)) return "S0";
   return "S9";
+}
+
+/** A17: a Status cell reads `designer_filled` whatever its case or emphasis (`**Designer_Filled**`, `_designer_filled_`, backticks). */
+const isDesignerFilled = (cell) => String(cell ?? "").replace(/^[*_`\s]+|[*_`\s]+$/g, "").toLowerCase() === "designer_filled";
+
+/** The designer_filled decisions a Markdown file records (spec 07 §6.3): DECISIONS.md rows, ASSUMPTIONS.md blocks, and `**D-NNN** … status: designer_filled` lines. */
+function designerFilledIn(text, rel) {
+  const out = [];
+  const { code } = prepareLines(text, rel);
+  const heads = parseHeadings(code.join("\n"));
+  if (rel === "DECISIONS.md") {
+    code.forEach((cl, li) => {
+      if (!/^\|\s*D-\d{3,}\s*\|/.test(cl)) return;
+      const cells = splitRow(cl);
+      if (isDesignerFilled(cells[cells.length - 1])) out.push({ id: cells[0], line: li, text: cl });
+    });
+  }
+  if (rel === "ASSUMPTIONS.md") {
+    for (const h of heads) {
+      if (h.level !== 2 || !/^D-\d{3,}\b/.test(h.text) || !/\(designer_filled\)$/i.test(h.text.trim())) continue;
+      out.push({ id: h.text.match(/^D-\d{3,}/)[0], line: h.line, text: [code[h.line], ...bodyOf(code, heads, h)].join("\n") });
+    }
+  }
+  code.forEach((cl, li) => {
+    const m = cl.match(/\*\*(D-\d{3,})\*\*.*status:\s*[*_`]*designer_filled/i);
+    if (m) out.push({ id: m[1], line: li, text: cl });
+  });
+  return out;
 }
 
 /** The analysis behind `cite check` and lint group I. `files` = project-relative paths to scan, in order. `state` = a valid state object or null. */
@@ -2724,19 +2802,44 @@ function citeAnalyze({ dir, files, all, state, journal, F, today }) {
   // Domain Brief: item sources (for I11) and rows (for I13)
   const briefText = texts.get(BRIEF_FILE) ?? tryReadLF(path.join(dir, BRIEF_FILE));
   const briefSource = new Map();
+  const briefBecame = new Map(); // A1: decision id -> the brief items whose Became names it
   if (briefText !== null) {
     const bl = prepareLines(briefText, BRIEF_FILE).code;
     for (const tb of findTables(bl)) {
       const hc = tb.cells.map((c) => cleanCell(c).toLowerCase());
       const si = hc.findIndex((c) => c.startsWith("source"));
+      const bi = hc.indexOf("became");
       for (const r of tb.rows) {
         const cells = splitRow(bl[r]);
         const id = cleanCell(cells[0] ?? "");
-        if (/^U-\d{2,}$/.test(id)) briefSource.set(id, si >= 0 ? (cells[si] ?? "") : "");
+        if (!/^U-\d{2,}$/.test(id)) continue;
+        briefSource.set(id, si >= 0 ? (cells[si] ?? "") : "");
+        if (bi >= 0) for (const m of cleanCell(cells[bi] ?? "").matchAll(/\bD-\d{3,}\b/g)) { if (!briefBecame.has(m[0])) briefBecame.set(m[0], []); briefBecame.get(m[0]).push(id); }
       }
     }
   }
   const unverifiedText = (s) => /\[unverified:/.test(s) || /\bunverified\b/i.test(s.replace(/\[unverified:[^\]]*\]?/g, " "));
+  const unverifiedItem = (u) => briefSource.has(u.toUpperCase()) && unverifiedText(briefSource.get(u.toUpperCase()));
+  // I11 (A1, A2): a designer_filled decision rests on an unverified fact when its text holds an unverified marker or the bare word, a U-NN (any case)
+  // whose brief Source is unverified, the id of a failed research event, a brief item that names it in Became and is unverified, or a D-NNN that itself rests on one.
+  const restsDirect = (did, txt) => unverifiedText(txt)
+    || [...txt.matchAll(/\bU-\d{2,}\b/gi)].some((m) => unverifiedItem(m[0]))
+    || [...txt.matchAll(/\bRQ-\d{3,}\b/gi)].some((m) => rq.get(m[0].toUpperCase())?.failedEv)
+    || (briefBecame.get(did) ?? []).some(unverifiedItem);
+  const decTexts = new Map(); // id -> [{ status?, text }] from state.json and from the decision records of every scanned file
+  const noteDec = (id, text) => { if (!decTexts.has(id)) decTexts.set(id, []); decTexts.get(id).push(text); };
+  if (state) for (const d of state.decisions) if (d.status === "designer_filled") noteDec(d.id, `${d.summary} ${d.rationale ?? ""}`);
+  for (const rel of scanned) for (const d of designerFilledIn(texts.get(rel), rel)) noteDec(d.id, d.text);
+  const i11Ids = new Set();
+  for (let changed = true; changed;) {
+    changed = false;
+    for (const [id, tl] of decTexts) {
+      if (i11Ids.has(id)) continue;
+      if (tl.some((t) => restsDirect(id, t) || [...t.matchAll(/\bD-\d{3,}\b/g)].some((m) => m[0] !== id && i11Ids.has(m[0])))) { i11Ids.add(id); changed = true; }
+    }
+  }
+  const restsOnUnverified = (did, txt) => restsDirect(did, txt) || [...txt.matchAll(/\bD-\d{3,}\b/g)].some((m) => m[0] !== did && i11Ids.has(m[0]));
+  const knownDecisions = new Set(state ? state.decisions.map((d) => d.id) : []);
 
   const decisionSeen = new Set();
   for (const rel of scanned) {
@@ -2759,16 +2862,15 @@ function citeAnalyze({ dir, files, all, state, journal, F, today }) {
       exempt.add(tb.header); exempt.add(tb.sep);
       const isSource = tb.cells.some((c) => cleanCell(c).toLowerCase().startsWith("source"));
       for (const r of tb.rows) {
-        if (/^total/i.test(cleanCell(splitRow(code[r])[0] ?? ""))) { exempt.add(r); continue; }
+        if (/^totals?(?![A-Za-z])/i.test(cleanCell(splitRow(code[r])[0] ?? ""))) { exempt.add(r); continue; }
         if (isSource) sourceRows.add(r);
       }
     }
     for (const h of heads) exempt.add(h.line);
     const zone = new Set();
-    const zoneSection = (title) => { for (const h of heads) if (h.text === title) { zone.add(h.line); for (let i = 1; i <= bodyOf(code, heads, h).length; i++) zone.add(h.line + i); } };
-    if (rel === "RESEARCH.md" || /^\.lvr\/docs\/sections\/S5-.*\.md$/.test(rel) || /^\.lvr\/docs\/research\/.*\.md$/.test(rel)) code.forEach((_, i) => zone.add(i));
-    else if (/^\.lvr\/docs\/sections\/S2-.*\.md$/.test(rel)) zoneSection("Prices quoted");
-    else if (rel === "OVERVIEW.md") zoneSection("What it costs");
+    const zoneSection = (title) => { for (const h of heads) if (h.text.trim().toLowerCase() === title) { zone.add(h.line); for (let i = 1; i <= bodyOf(code, heads, h).length; i++) zone.add(h.line + i); } };
+    if (WHOLE_FILE_ZONES.includes(rel) || /^\.lvr\/docs\/sections\/S5-.*\.md$/.test(rel) || /^\.lvr\/docs\/research\/.*\.md$/.test(rel)) code.forEach((_, i) => zone.add(i));
+    else if (/^\.lvr\/docs\/sections\/S2-.*\.md$/.test(rel)) zoneSection("prices quoted");
 
     // Domain Brief rows (I13) + owners
     if (rel === BRIEF_FILE) {
@@ -2785,8 +2887,12 @@ function citeAnalyze({ dir, files, all, state, journal, F, today }) {
           const sec = cleanCell(cells[secI] ?? "");
           if (!BRIEF_SECTION_RE.test(sec)) { add("I13", "brief_unresolved", r, `Domain Brief item ${uid} has no target Section (S1–S8).`); continue; }
           lineOwner.set(r, sec);
-          if (state && sectionDone(sec) && !/\bS(?:10|[0-9])\.q[0-9]+\b|\bD-\d{3,}\b/.test(cleanCell(cells[becI] ?? ""))) {
+          const became = cleanCell(cells[becI] ?? "");
+          if (state && sectionDone(sec) && !/\bS(?:10|[0-9])\.q[0-9]+\b|\bD-\d{3,}\b/.test(became)) {
             add("I13", "brief_unresolved", r, `Domain Brief item ${uid} never became a question or decision, but ${sec} is done: record the answer id or decision id in Became.`);
+          } else if (state) {
+            const phantom = [...became.matchAll(/\bS(?:10|[0-9])\.q[0-9]+\b|\bD-\d{3,}\b/g)].map((m) => m[0]).find((id) => (id.startsWith("D-") ? !knownDecisions.has(id) : !recorded.has(id)));
+            if (phantom) add("I13", "brief_unresolved", r, `Domain Brief item ${uid} names ${phantom} in Became, but no such recorded answer or decision exists.`);
           }
         }
       }
@@ -2831,8 +2937,9 @@ function citeAnalyze({ dir, files, all, state, journal, F, today }) {
             };
             const accDay = chk(p.acc);
             const pubDay = p.date ? chk(p.date) : null;
-            if (p.flags.amend) chk(p.flags.amend);
+            const amendDay = p.flags.amend ? chk(p.flags.amend) : null;
             if (pubDay !== null && accDay !== null && pubDay > accDay) { add("I5", "bad_date", li, `Published date ${p.date} is after the access date ${p.acc}.`); drop = true; }
+            if (pubDay !== null && amendDay !== null && amendDay < pubDay) { add("I5", "bad_date", li, `Amendment check ${p.flags.amend} is before the published date ${p.date}.`); drop = true; }
             if (!drop) { t.pubDay = pubDay; t.accDay = accDay; cites.push(t); }
           } else {
             stats.unverified++;
@@ -2855,7 +2962,7 @@ function citeAnalyze({ dir, files, all, state, journal, F, today }) {
         for (const t of marks) {
           const refs = t.p.rqs.map((id) => ({ id, ev: rq.get(id) }));
           let any = false;
-          for (const r of refs) if (!r.ev || !r.ev.failed) { add("I9", "unverified_no_queries", li, `${r.id} is not a failed research_logged or context_research event with queries.`); any = true; }
+          for (const r of refs) if (!r.ev || !r.ev.failed) { add("I9", "unverified_no_queries", li, r.ev?.outage ? `${r.id} is a failed web check (a tool outage), not failed research: enable the web tools and research the fact again.` : `${r.id} is not a failed research_logged or context_research event with queries.`); any = true; }
           if (any) continue;
           const max = F.categories[t.p.cat].max_age_days;
           let newest = refs[0];
@@ -2877,7 +2984,9 @@ function citeAnalyze({ dir, files, all, state, journal, F, today }) {
           if (!amends.length) { add("I8", "amendment_unchecked", li, "Regulation cited without an amendment check: confirm there is no newer amendment and add amend-check YYYY-MM-DD."); step1 = false; }
           else {
             const age = ageOf(Math.max(...amends));
+            const readAge = ageOf(Math.max(...cites.map((t) => t.accDay)));
             if (age > max) { add("I6", "expired", li, `Amendment check is ${age} days old (limit ${max}): search for newer amendments again.`); step1 = false; }
+            else if (readAge > max) { add("I6", "expired", li, `Regulation source was read ${readAge} days ago (limit ${max}): read it again and search for newer amendments.`); step1 = false; }
           }
         } else {
           const asof = (t) => (def.clock === "published" ? t.pubDay : t.p.flags.live ? t.accDay : t.pubDay ?? t.accDay);
@@ -2895,7 +3004,7 @@ function citeAnalyze({ dir, files, all, state, journal, F, today }) {
       }
 
       // line-level checks
-      const noTags = (() => { let s = pl; for (const t of [...tags].reverse()) s = s.slice(0, t.start) + " ".repeat(t.end - t.start) + s.slice(t.end); return s; })();
+      const noTags = stripTagSpans(pl, tags);
       const bare = /\bunverified\b/i.test(noTags);
       if (bare) add("I9", "unverified_no_queries", li, 'Bare "unverified" with no research log: research the fact, or log the failed research and write [unverified: <category> · RQ-NNN].');
       for (const [name, re] of MEMORY_PHRASES) { re.lastIndex = 0; if (re.test(noTags)) add("I2", "memory_source", li, `Cites model memory ("${name}"): research the fact and cite it, or log the failed research and use an [unverified: …] marker.`); }
@@ -2903,10 +3012,19 @@ function citeAnalyze({ dir, files, all, state, journal, F, today }) {
         const used = [];
         for (const [name, re] of RECO_PHRASES) { re.lastIndex = 0; if (re.test(noTags) && !used.some((u) => u.includes(name) || name.includes(u))) { used.push(name); add("I12", "unsourced_recommendation", li, `Recommendation leans on "${name}" with no citation: cite the research it rests on.`); } }
       }
+      // A4: in a research zone, a price or fee or rate needs a category that carries one (price, quota, legal, regulation, statistic), a version one that carries a version
+      const strict = zone.has(li);
+      const detSrc = strict ? stripTagSpans(cl, tags) : noTags; // inline code is text in the research zones
+      if (strict && !exempt.has(li)) {
+        const k = sourceKind(detSrc);
+        const lineCats = groups.flat().map((t) => t.cat).filter(Boolean);
+        const allowed = k === "version" ? VERSION_CATS : k ? MONEY_CATS : null;
+        if (allowed && lineCats.length && !lineCats.some((c) => allowed.includes(c))) add("I3", "malformed_cite", li, `Malformed tag: category "${lineCats[0]}" does not fit a ${k}.`);
+      }
       // I1: missing source
       if (!exempt.has(li)) {
         const inTable = sourceRows.has(li);
-        const kind = inTable ? "table" : zone.has(li) ? sourceKind(noTags) : null;
+        const kind = inTable ? "table" : strict ? sourceKind(detSrc) : vendorPrice(detSrc) ? "vendor price" : null;
         if (kind && !hasTag && !bare) {
           const ids = [...cl.matchAll(ANSWER_ID_G)].map((m) => m[0]);
           if (ids.some((id) => !state || recorded.has(id))) { /* a recorded answer is the source */ }
@@ -2924,29 +3042,11 @@ function citeAnalyze({ dir, files, all, state, journal, F, today }) {
     }
 
     // I11: designer_filled decisions resting on an unverified fact
-    const restsOnUnverified = (txt) => unverifiedText(txt) || [...txt.matchAll(/\bU-\d{2,}\b/g)].some((m) => briefSource.has(m[0]) && unverifiedText(briefSource.get(m[0])));
-    const i11 = (did, li, txt) => {
-      const key = `${rel}|${did}`;
-      if (decisionSeen.has(key)) return;
-      if (restsOnUnverified(txt)) { decisionSeen.add(key); add("I11", "designer_filled_unverified", li, `designer_filled decision ${did} rests on an unverified fact: ask the user to confirm it, or record it as an S6 blocking risk.`); }
-    };
-    if (rel === "DECISIONS.md") {
-      code.forEach((cl, li) => {
-        if (!/^\|\s*D-\d{3,}\s*\|/.test(cl)) return;
-        const cells = splitRow(cl);
-        if ((cells[cells.length - 1] ?? "").replace(/[*`]/g, "").trim() === "designer_filled") i11(cells[0], li, cl);
-      });
+    for (const d of designerFilledIn(text, rel)) {
+      const key = `${rel}|${d.id}`;
+      if (decisionSeen.has(key)) continue;
+      if (restsOnUnverified(d.id, d.text)) { decisionSeen.add(key); add("I11", "designer_filled_unverified", d.line, `designer_filled decision ${d.id} rests on an unverified fact: ask the user to confirm it, or record it as an S6 blocking risk.`); }
     }
-    if (rel === "ASSUMPTIONS.md") {
-      for (const h of heads) {
-        if (h.level !== 2 || !/^D-\d{3,}\b/.test(h.text) || !h.text.endsWith("(designer_filled)")) continue;
-        i11(h.text.match(/^D-\d{3,}/)[0], h.line, [code[h.line], ...bodyOf(code, heads, h)].join("\n"));
-      }
-    }
-    code.forEach((cl, li) => {
-      const m = cl.match(/\*\*(D-\d{3,})\*\*.*status:\s*designer_filled/);
-      if (m) i11(m[1], li, cl);
-    });
   }
 
   // state.json decisions (--all only)
@@ -2955,8 +3055,7 @@ function citeAnalyze({ dir, files, all, state, journal, F, today }) {
     for (const d of state.decisions) {
       if (d.status !== "designer_filled") continue;
       const txt = `${d.summary} ${d.rationale ?? ""}`;
-      const rests = unverifiedText(txt) || [...txt.matchAll(/\bU-\d{2,}\b/g)].some((m) => briefSource.has(m[0]) && unverifiedText(briefSource.get(m[0])));
-      if (rests) stateFindings.push({ id: "I11", group: "I", code: "designer_filled_unverified", file: ".lvr/state.json", line: null, message: `designer_filled decision ${d.id} rests on an unverified fact: ask the user to confirm it, or record it as an S6 blocking risk.`, owner: d.section, kind: "bundle_gap", needs_model: false, claim: claimOf(`${d.id} ${d.summary}`), _decision: d.id });
+      if (restsOnUnverified(d.id, txt)) stateFindings.push({ id: "I11", group: "I", code: "designer_filled_unverified", file: ".lvr/state.json", line: null, message: `designer_filled decision ${d.id} rests on an unverified fact: ask the user to confirm it, or record it as an S6 blocking risk.`, owner: d.section, kind: "bundle_gap", needs_model: false, claim: claimOf(`${d.id} ${d.summary}`), _decision: d.id });
     }
     stateFindings.sort((a, b) => decNum(a._decision) - decNum(b._decision));
   }
@@ -2965,10 +3064,11 @@ function citeAnalyze({ dir, files, all, state, journal, F, today }) {
   const out = [...findings, ...stateFindings].map((f) => Object.fromEntries(Object.entries(f).filter(([k]) => !k.startsWith("_"))));
 
   if (state && sectionDone("S0") && briefText === null) warnings.push({ code: "NO_DOMAIN_BRIEF", message: "S0 is done but .lvr/docs/research/domain-brief.md does not exist (a project started before ticket 26): /lvr-continue builds it." });
+  if (journal.duplicate_rq_ids.length) warnings.push({ code: "DUPLICATE_RQ_ID", message: `Research id ${journal.duplicate_rq_ids.join(", ")} appears on more than one event (a hand-edited journal): the first event is used.` });
   if (!journal.exists) warnings.push({ code: "NO_JOURNAL", message: "There is no journal, so no RQ id resolves: every unverified marker is reported as I9." });
 
   const needs = scanned.length ? [
-    ["I1", "Check prose facts the script cannot see (no number: rules, availability, \"free\", \"supports X\", competitor facts) for a cite tag, an unverified marker, or an answer id; facts restated outside the zones carry the same tag as their source line."],
+    ["I1", "Check prose facts the script cannot see for a cite tag, an unverified marker, or an answer id: rules, availability, \"free\", \"supports X\", competitor facts, and any price, percentage fee or rate, or version the script cannot see (a percentage-only vendor fee such as `2.9% transaction fee`, a version outside the zones, a number written in words); facts restated outside the zones carry the same tag as their source line."],
     ["I3", "Check that each cite's category fits the fact (a price tagged market or general dodges the 30-day limit)."],
     ["I6", "Check that each cited page really states the claim, and that primary, live and amend-check are honest."],
     ["I7", "Check that sources counted as independent are not one source republished, and that disagreeing sources are recorded as a conflict with the winner named."],
@@ -3038,12 +3138,13 @@ function validateResearch(type, p, forLog) {
   if (p.section === undefined || !(p.section === null || /^S[0-9]$/.test(p.section))) throw invalid("section", "S0..S9 or null");
   if (type === "research_logged" && !RESEARCH_PURPOSES.includes(p.purpose)) throw invalid("purpose", RESEARCH_PURPOSES.join("|"));
   if (type === "context_research") {
+    if (p.purpose !== undefined) throw invalid("purpose", "absent (context_research has no purpose)");
     if (!["brief", "scan"].includes(p.scope)) throw invalid("scope", "brief|scan");
     if (p.scope === "brief" && p.section !== "S0") throw invalid("section", "S0 when scope is brief");
     if (p.scope === "scan" && !/^S[1-8]$/.test(p.section ?? "")) throw invalid("section", "S1..S8 when scope is scan");
     if (!Array.isArray(p.findings) || !p.findings.every((x) => isStr(x) && /^U-\d{2,}$/.test(x))) throw invalid("findings", "an array of U-NN ids");
     if (p.note !== undefined && !isStr(p.note)) throw invalid("note", "a string");
-    if (p.scope === "brief" && !p.findings.length) throw invalid("findings", "at least one U-NN id when scope is brief");
+    if (p.scope === "brief" && !p.findings.length && !(p.outcome === "failed" && isStr(p.note) && p.note.trim() !== "")) throw invalid("findings", "at least one U-NN id when scope is brief (or outcome failed with a non-empty note)");
     if (p.scope === "scan" && !p.findings.length && !(isStr(p.note) && p.note.trim() !== "")) throw invalid("note", "a non-empty string saying why when findings is empty");
   }
   if (!isStr(p.topic) || p.topic.trim() === "") throw invalid("topic", "a non-empty string");
@@ -3056,6 +3157,7 @@ function validateResearch(type, p, forLog) {
     const at = `sources[${i}]`;
     if (!isObj(s)) throw invalid(at, "an object");
     if (!isStr(s.url) || !/^https?:\/\/[^\s/?#]+\S*$/.test(s.url)) throw invalid(`${at}.url`, "an http:// or https:// URL");
+    if (!publicHostOk(s.url)) throw invalid(`${at}.url`, "a public site (a host name with a dot, not localhost or a private address)");
     if (s.title !== undefined && s.title !== null && !isStr(s.title)) throw invalid(`${at}.title`, "a string or null");
     for (const k of ["published", "updated"]) {
       if (s[k] === undefined || s[k] === null) continue;
@@ -3064,9 +3166,16 @@ function validateResearch(type, p, forLog) {
     }
     if (!isCalendarDate(s.accessed)) throw invalid(`${at}.accessed`, "YYYY-MM-DD");
     if (parseDay(s.accessed).day > today.day) throw invalid(`${at}.accessed`, `a date not after today (${today.iso})`);
+    for (const k of ["published", "updated"]) {
+      if (s[k] === undefined || s[k] === null) continue;
+      const day = parseDay(s[k]).day;
+      if (day > today.day) throw invalid(`${at}.${k}`, `a date not after today (${today.iso})`);
+      if (day > parseDay(s.accessed).day) throw invalid(`${at}.${k}`, `a date not after accessed (${s.accessed})`);
+    }
     for (const k of ["primary", "live"]) if (s[k] !== undefined && typeof s[k] !== "boolean") throw invalid(`${at}.${k}`, "true or false");
   });
   if (p.outcome === "found" && !srcs.length) throw invalid("sources", "at least one source when outcome is found");
+  if (p.outcome === "failed" && srcs.length) throw invalid("sources", "empty when outcome is failed (name the pages you could not use in reason)");
   if (p.outcome === "failed" && !(isStr(p.reason) && p.reason.trim() !== "")) throw invalid("reason", "a non-empty string when outcome is failed");
   if (p.reason !== undefined && p.reason !== null && !isStr(p.reason)) throw invalid("reason", "a string or null");
   if (p.conflicts !== undefined) {
@@ -3503,13 +3612,14 @@ const COMMANDS = {
     run: async ({ dir, flags }) => gateCheck(dir, flags["idea-slug"]),
   },
   "gate subfolder": {
-    help: "Create the project subfolder for --slug s (first free name).", flags: ["slug"],
+    help: "Create the project subfolder for --slug s (first free name; an existing empty folder of that name is reused).", flags: ["slug"],
     run: async ({ dir, flags }) => {
       const slug = need(flags, "slug");
       const v = slugValidate(slug);
       if (!v.valid) throw invalid("slug", "2-4 lowercase words joined by hyphens");
       for (let tries = 0; tries < 50; tries++) {
-        const { free } = freeSlug(dir, slug);
+        const { free, reused } = freeSlug(dir, slug);
+        if (reused) return { project_dir: free, slug_used: free, reused: true };
         try { fs.mkdirSync(confine(dir, path.join(dir, free))); return { project_dir: free, slug_used: free }; } catch (e) {
           if (e.code !== "EEXIST") throw fail("JOURNAL_WRITE_FAILED", `Could not create the folder: ${e.message}`, { errno: e.code });
         }
@@ -3524,7 +3634,7 @@ const COMMANDS = {
     run: async ({ dir, flags }) => {
       const slug = need(flags, "slug");
       const r = freeSlug(flags["in-dir"] ? path.resolve(dir, flags["in-dir"]) : dir, slug);
-      return { slug, free_slug: r.free, taken: r.taken };
+      return { slug, free_slug: r.free, taken: r.taken, reused: r.reused };
     },
   },
   "probe prompts": { help: "Print the three capability probe prompts.", flags: [], run: async () => ({ prompts: PROBE_PROMPTS }) },

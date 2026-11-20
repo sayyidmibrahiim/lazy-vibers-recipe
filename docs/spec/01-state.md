@@ -131,7 +131,7 @@ Language rule: records keep answers verbatim in User Language; the Conductor add
 1. `cwd` contains `.lvr/state.json` → **refuse init**; print progress summary; recommend `/lvr-continue`.
 2. `cwd` is empty (ignore OS junk: `.DS_Store`, `Thumbs.db`, `desktop.ini`) → **proceed in place**.
 3. `cwd` has project markers (`.git`, `package.json`, `Cargo.toml`, `pubspec.yaml`, `pyproject.toml`, `go.mod`, `.solution`, `*.csproj`, …) and no `.lvr/` → **refuse**: existing project detected. Recommend running init in an empty/new folder; mention `/lvr-recheck-plan` as the generic audit option for that project.
-4. `cwd` has ≥1 subdirectory with project markers (e.g. `~/projects/`) → **create subfolder** `./<slug>/` (slug from idea, confirm with user), proceed there. Journal: `folder_gate_subfolder_created`.
+4. `cwd` has ≥1 subdirectory with project markers (e.g. `~/projects/`) → **create subfolder** `./<slug>/` (slug from idea, confirm with user), proceed there; an existing empty `./<slug>/` (junk files aside; left by a run that stopped at the web research check) is reused instead of taking `<slug>-2`. Journal: `folder_gate_subfolder_created`.
 5. `cwd` non-empty, no markers (loose files) → **ask the user**: proceed here or create subfolder (recommend subfolder).
 
 Web UI variant: the UI supplies an absolute path via a folder picker; the same checks run before interview start. UI surfaces the gate result as a screen, not a log line.

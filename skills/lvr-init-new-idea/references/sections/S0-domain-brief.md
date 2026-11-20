@@ -23,6 +23,8 @@ Log each step with `LVR research log --context --in -` (`scope: "brief"`, `secti
 4. **Key terms** — the 3–6 words the user will meet (in the market's language and in English), each defined in one line.
 5. **What similar users usually expect** — features and behaviors that comparable products have made normal in this market (and what users there complain is missing).
 
+A tool error is not "found nothing": if search or fetch errors, or no readable page comes from up to 3 results of a query and again from up to 3 of one reworded query, stop with the enable guidance (conventions §10) — never log it as a failed step. Only a step where search and fetch worked and nothing usable turned up is `failed`.
+
 Search queries name the market and the current year. Prefer, in order: the official source (regulator, law text, vendor's own page) → an established local outlet → anything else. Key facts (`price`, `quota`, `version`, `legal`, `regulation`) need one primary source or two independent sites (conventions §10).
 
 ### Template
@@ -70,7 +72,7 @@ Column rules:
 - `Source` — one cite group (conventions §10), or `[unverified: <category> · RQ-NNN]` after logged research failed.
 - `Section` — the Section where the item matters most: `S1` context, `S2` costs and accounts, `S3` data, money and law, `S4` features, `S5` stack and vendors, `S6`–`S8` rarely. Exactly one.
 - `Became` — empty until the item is handled; then the answer id (`S3.q4`) or decision id (`D-012`) it turned into. `cite check` (I13) flags an item whose Section is done while `Became` is still empty.
-- A heading with nothing found keeps one line: `None found — <queries tried, RQ id>`.
+- A heading with nothing found keeps one line: `None found — <queries tried, RQ id>`. The RQ id is a `context_research` event with `scope` "brief", `outcome` "failed", a `reason`, `findings` `[]` and a `note` saying what was searched (the script accepts a failed brief step with no findings); search and fetch worked, so this is never an outage.
 
 Set `Status: complete` when all five headings are filled. Then run `LVR cite check --file .lvr/docs/research/domain-brief.md` and fix every finding before S1 starts.
 
@@ -89,7 +91,8 @@ Run once per Section, after `section_start` and before the first batch (engine s
 | S7 Scope lock | `LVR cite check --all`; legal must-haves that cannot be parked |
 | S8 Milestones | `LVR cite check --all`; platform limits, review times, and quotas that affect deploy and verification |
 
-- S1–S4: at least one targeted search. S6–S8: the freshness re-check first, then searches as needed.
+- **S1–S5 start with the brief freshness gate:** `LVR cite check --file .lvr/docs/research/domain-brief.md`. For every finding I6, I7, I8 or I10 whose `owner` is this Section and whose row has an empty `Became`: research that item again (`LVR research log --context`, `scope` "scan", `findings` = the U-id, `note` "refresh"), put the new cite group in its `Source` cell, and re-run the check. Repeat until none is left for this Section. An item whose new research fails (search and fetch worked, nothing usable) becomes `[unverified: <category> · RQ-NNN]` and is asked as a question. Only then search for new unknowns and show the items.
+- S1–S4: at least one targeted search. S6–S8: the freshness re-check first (`cite check --all`), then searches as needed.
 - Log the scan with `LVR research log --context --in -` (`scope: "scan"`, `section: "<S>"`, `findings`: new U-ids, or `[]` plus `note`).
 - Append new items to `## Per-section scans` and add the summary line.
 
@@ -97,7 +100,7 @@ Run once per Section, after `section_start` and before the first batch (engine s
 
 Before the Section's first batch, show the open items targeted at this Section (brief and scan rows whose `Became` is empty), in User Language, at most 5 per message (T3: 2). English source:
 
-"Before we go on, here are things people in your situation often don't know. I checked each one today:
+"Before we go on, here are things people in your situation often don't know. Each one shows where I read it and when:
 1. <finding in plain words> — <why it matters, one line> (source: <site name>, <date>)
 2. …"
 
@@ -112,4 +115,5 @@ Update the `Became` cell at the checkpoint where the answer or decision is recor
 
 - Brief missing after S0 is done (an older project, or a session that died) → build it now, before the next batch of any Section.
 - Brief `Status: in progress` → continue at the first heading with no rows and no `None found` line; never redo a logged step.
-- A Section in progress without a `context_research` scan event for it → run the scan before the next batch. Items already shown keep their `Became` cells.
+- A search or fetch error at any point → stop with the enable guidance and re-run the web check on resume (conventions §10); it is never a failed step.
+- A Section in progress without a `context_research` scan event for it → run the scan (freshness gate first, S1–S5) before the next batch. Items already shown keep their `Became` cells.
