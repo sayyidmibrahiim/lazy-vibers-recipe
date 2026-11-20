@@ -11,7 +11,7 @@ The closing skill of the LVR pipeline. It verifies that the Blueprint Bundle (co
 
 Before any check or file write:
 
-1. Read `references/principles.md` (the Constitution). All 13 principles bind this skill — especially 2 (Anti-yes-man), 9 (Verification-before-completion), and 13 (Disk is memory).
+1. Read `references/principles.md` (the Constitution). All 14 principles bind this skill — especially 1 (Evidence-first), 2 (Anti-yes-man), 9 (Verification-before-completion), and 13 (Disk is memory).
 2. Read `references/conventions.md` (the operational manual). It owns the state schema (§2), journal events (§3), Section map (§5), the tier tables (§7), and the bundle file list (§8); the steps below reference it instead of repeating it.
 3. Interact in the user's language from the first message. The messages below are the English source; translate them when speaking. Artifacts and stored values follow the conventions (English source of truth).
 4. **Script helper (preferred when Node is available).** This skill ships `scripts/lvr.mjs` (Node ≥22, nothing to install). `<skill-dir>` = the folder holding this SKILL.md (use the base directory the harness reports; otherwise look for `lvr-<this-skill>/scripts/lvr.mjs` in the skills directories listed in INSTALL.md). Once per session run `node "<skill-dir>/scripts/lvr.mjs" version`. If it prints JSON with `"lvr_schema":1`, run the `Script:` command given at each step below (`LVR` = `node "<skill-dir>/scripts/lvr.mjs" --dir "<PROJECT_DIR>"`) and act on its JSON. If `node` is missing, the command cannot start, or `lvr_schema` differs, say once (English source): "Node.js is not available here, so I'll do the bookkeeping by hand." Then follow each step's prose — the prose is the fallback and stays authoritative for behavior. Never hand-edit `.lvr/` files to work around a script error (`"ok":false`): report its `code` plainly and stop that step. On any non-zero exit (`"ok":false`) stop the step, show the error and follow `error.details.hint`; exit code 3 means the event was journaled (`journaled_seq`) or blocked but `state.json` was NOT updated (`STATE_LAGS`, `STATE_MISSING`, `STATE_INVALID`, `STATE_SEQ_UNKNOWN`, `JOURNAL_BEHIND_STATE`): do not continue the interview, run `/lvr-continue` (its Step 2 maps each code to the exact command). Pass long text through `--in -` with a quoted heredoc (`<<'EOF'`) or a PowerShell here-string (`@'…'@ |`), never inline in double quotes.
@@ -19,7 +19,7 @@ Before any check or file write:
 ## Flow at a glance
 
 1. **Precondition** — `.lvr/state.json` readable, scope locked, S1–S8 done. Not met → refuse with guidance; never lint a half-built pipeline.
-2. **Gap lint** — `lint run` (script) or `references/lint-checklist.md` run literally, groups A–H in order. Journal `handoff_started` at open, `gap_found` per finding.
+2. **Gap lint** — `lint run` (script) or `references/lint-checklist.md` run literally, groups A–I in order (I = citations, `cite check`). Journal `handoff_started` at open, `gap_found` per finding.
 3. **Findings → offer** — fix now (jump back into the owning procedure) or abort; re-lint after fixes.
 4. **Emit** — `blueprint.json` + the two harness stubs; AGENTS.md verified, never assumed fine.
 5. **Entry prompt + close** — write `HANDOFF-PROMPT.md`, print the booster install lines and the harness kickoff command, journal `handoff_done`.
@@ -42,7 +42,7 @@ S9 is deliberately not a precondition: an uncompiled or half-compiled bundle is 
    - Script: `LVR journal append --type handoff_started --payload '{"project":"<slug>"}'`
 2. **Run the checklist** — Material: the bundle files in `TARGET`, `TARGET/.lvr/state.json`, and the journal (scope evidence). Do not sample: every check runs, every time, on every run.
    - Script: `LVR lint run --journal`. The JSON is the whole mechanical result: `findings[]` = `{id, group, file, message, owner, kind}` (`kind` is `bundle_gap` or `self_fix`; `clean` is true when no `bundle_gap` is left), and `--journal` has already journaled one `gap_found` per finding. `needs_model[]` lists the checks only a model can judge (the `id` names the check in `references/lint-checklist.md`; the `message` says what to look at): perform each one yourself, literally, against the checklist. A failed one is a finding exactly like a script finding, journaled with `LVR journal append --type gap_found --payload '{"check":"<id>","finding":"…","owner":"…"}'`. Never add a script finding by judgment, never drop one, never reword it. `precondition` repeats the scope-lock evidence.
-   - Fallback (no Node): read `references/lint-checklist.md` and execute every check literally, groups A–H in order.
+   - Fallback (no Node): read `references/lint-checklist.md` and execute every check literally, groups A–I in order.
 3. **Findings** — every failed check is one finding: a plain-language line (what is wrong, where) plus its owner (the checklist's owner table). Journal `gap_found` per finding (payload: check id, one-line finding, owner) at the moment it is found (with the script, `--journal` did this for its own findings).
    - Script: `LVR journal append --type gap_found --payload '{"check":"<id>","finding":"…","owner":"…"}'` — only for findings the script did not report.
 4. **Two finding kinds** (the checklist marks them):

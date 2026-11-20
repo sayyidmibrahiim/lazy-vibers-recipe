@@ -1,12 +1,12 @@
 # LVR Principles
 
-The Constitution of the LVR (Lazy Vibers Recipe) pipeline: the 13 rules that bind every LVR skill, every Section, and every generated artifact. Load this file before any LVR work. LVR skill files keep this content verbatim.
+The Constitution of the LVR (Lazy Vibers Recipe) pipeline: the 14 rules that bind every LVR skill, every Section, and every generated artifact. Load this file before any LVR work. LVR skill files keep this content verbatim.
 
-## The 13 principles
+## The 14 principles
 
 1. **Evidence-first**
 
-   Claims carry sources and dates; prefer primary sources and note the access date. If a claim cannot be verified, say so explicitly and mark it `unverified`.
+   Every factual claim, recommendation, price, regulation, version, and statistic carries a source URL, its published or updated date, and the access date. The freshest primary source wins; when sources disagree, record the conflict and which source won. A key fact needs two independent sources or one primary official source. A fact older than its freshness limit (`references/freshness.json`) is researched again before use. Mark a claim `unverified` only after research really failed, with the queries recorded; never answer a checkable fact from memory. A decision that rests on an unverified fact is never `designer_filled`: the user confirms it, or it becomes a blocking risk in S6.
 
 2. **Anti-yes-man**
 
@@ -55,6 +55,10 @@ The Constitution of the LVR (Lazy Vibers Recipe) pipeline: the 13 rules that bin
 13. **Disk is memory**
 
     The pipeline's memory lives in `.lvr/`, never in the context window. Any model that can follow the skill files finishes what any model started: checkpoint under pressure, reload from disk instead of improvising, continue truncated work instead of regenerating it.
+
+14. **Research what the user doesn't know**
+
+    The owner cannot ask about rules, costs, and pitfalls they have never heard of. Research the idea's domain before the interview (the Domain Brief) and again before each Section, show the findings in the User Language with source and date, and turn each finding into a question or a cited `designer_filled` decision. Recommendations cite this research; an unsourced "best practice" is not a reason. Web research is required: without working web search and page fetch, stop and explain how to enable them — never continue on memory.
 
 ## Before working
 

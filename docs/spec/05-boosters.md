@@ -19,9 +19,11 @@ Boosters are external, verified skills/MCPs treated as **essential dependencies*
 | humanizer (de-slop pass) | `blader/humanizer` | MIT | S9 |
 | karpathy-guidelines | `multica-ai/andrej-karpathy-skills` | MIT | S9 (CODE_STYLE), S10 |
 | ponytail | `DietrichGebert/ponytail` | MIT | S9 (CODE_STYLE), S10 |
-| competitor-analysis / web search | `browserbase/skills` or Firecrawl MCP | MIT | S5 |
+| competitor-analysis (research depth) | `browserbase/skills` or Firecrawl MCP | MIT | S5 |
 | Playwright MCP | `microsoft/playwright-mcp` | MIT | S10 verification (when build runs) |
 | agents.md spec | `agentsmd/agents.md` | (spec text, permissive) | S9 |
+
+**Web research is a required capability, not a booster** (principle 14, spec 07 §1): a working web search and page fetch — the harness's own tools or any search/fetch MCP server — checked at the start of `/lvr-init-new-idea` and `/lvr-continue`. It has no "continue degraded" choice: without it the skill explains how to enable it and stops. The competitor-analysis booster above only adds depth to S5 on top of that capability; choosing "continue degraded" for it is allowed only when the web research check passed, and S5 then researches with the plain web tools.
 
 NC-licensed candidates (e.g. `deanpeters/Product-Manager-Skills`, CC BY-NC-SA 4.0) are **allowed as runtime dependencies only** (install at runtime, credit, never copy content into LVR files) and are flagged in CAPABILITIES.md with the commercialization reminder (ADR-0001).
 

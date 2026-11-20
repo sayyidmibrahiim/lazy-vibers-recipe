@@ -8,3 +8,5 @@ Boosters core awal: pm-skills interview patterns (Apache 2.0), OpenSpec pattern,
 
 - Standalone-first (LVP jalan tanpa skill eksternal, booster opsional): ditolak pemilik — kualitas dan kenyamanan baca user adalah janji produk.
 - Hard stop untuk semua kegagalan: offline membuat user macet total — ditolak; diganti pilihan eksplisit ke user.
+
+> **Sebagian digantikan oleh ADR-0007 (2026-11-20)**: untuk riset web tidak ada lagi pilihan "lanjut dengan output ditandai terbatas"; pipeline berhenti dengan panduan mengaktifkan alat. Bagian lain ADR ini tetap berlaku.

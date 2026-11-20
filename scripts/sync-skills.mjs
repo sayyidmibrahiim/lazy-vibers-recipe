@@ -3,7 +3,8 @@
 //   node scripts/sync-skills.mjs          copy sources over every skills/lvr-*/ copy that differs
 //   node scripts/sync-skills.mjs --check  report drift without writing; exit 1 when anything is off
 // Sources: scripts/lvr.mjs -> skills/<s>/scripts/lvr.mjs; skills/lvr-conventions.md and lvr-principles.md
-// -> skills/<s>/references/; skills/lvr-boosters.json -> references/boosters.json (once it exists).
+// -> skills/<s>/references/; skills/lvr-boosters.json -> references/boosters.json (once it exists);
+// skills/lvr-freshness.json -> references/freshness.json.
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -24,6 +25,7 @@ const sources = [
   { src: path.join(SKILLS, "lvr-conventions.md"), dest: (s) => path.join(s, "references", "conventions.md") },
   { src: path.join(SKILLS, "lvr-principles.md"), dest: (s) => path.join(s, "references", "principles.md") },
   { src: path.join(SKILLS, "lvr-boosters.json"), dest: (s) => path.join(s, "references", "boosters.json"), optional: true },
+  { src: path.join(SKILLS, "lvr-freshness.json"), dest: (s) => path.join(s, "references", "freshness.json") },
 ];
 
 const copied = [];

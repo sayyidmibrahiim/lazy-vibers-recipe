@@ -1,6 +1,6 @@
 # LVR Pipeline Core — Spec Overview
 
-Version: v1 (F1). Date: 2026-11-20. Decisions referenced: ADR-0001..0006, `GLOSSARY.md`.
+Version: v1 (F1). Date: 2026-11-20. Decisions referenced: ADR-0001..0007, `GLOSSARY.md`.
 
 ## What LVR is
 
@@ -32,14 +32,17 @@ Each skill ships `scripts/lvr.mjs` for the deterministic bookkeeping (journal, s
 4. `04-bundle.md` — Blueprint Bundle file specs, compilation order, maintenance after S9, `blueprint.json` schema
 5. `05-boosters.md` — dependency model, tiers, bootstrap check, installers, failure UX
 6. `06-model-tiers.md` — model tiers T1–T3, capability probe, context guard, truncation recovery, cross-model resume
+7. `07-research.md` — web research requirement, Domain Brief and per-Section scans, citation syntax, freshness limits (`freshness.json`), research log events, the `cite check` contract
 
 ## Ground rules (from ADRs — summarized)
 
 - State lives in **files** in the project folder; the web app is a client (ADR-0003).
 - All pipeline artifacts are **English source of truth**; AI translates interaction into the user's language at runtime (ADR-0002).
 - Boosters are **essential dependencies**, never optional garnish; NC-licensed skills are runtime dependencies only, never vendored into the repo (ADR-0001, ADR-0004).
+- **Web research is required**: every claim rests on live, cited, fresh research; no memory fallback and no degraded research mode (ADR-0007, which supersedes ADR-0004 for research only; contract in `07-research.md`).
 - Skill external loading is **per Section** via the Conductor; every Section boundary produces a section record + checkpoint (ADR-0005).
 - The pipeline is **honest**: evidence-first, anti-yes-man, assumptions flagged, "I don't know → research" allowed (Constitution).
+- The pipeline **researches what the user doesn't know**: a Domain Brief after S0 and a scan before each Section; every fact cited with source and dates, within its freshness limit; web research is required — no web, no run (Constitution principles 1 and 14, spec 07).
 
 ## Non-goals
 

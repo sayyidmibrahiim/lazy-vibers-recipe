@@ -4,7 +4,7 @@ Canonical source: `docs/spec/*` in the LVR repository. This file is the packaged
 
 schema_version: 1 · date: 2026-11-20
 
-Companion file: `lvr-principles.md` — the Constitution, loaded before any LVR work. The Conductor (the model running the pipeline) applies the rules below.
+Companion files: `lvr-principles.md` — the Constitution, loaded before any LVR work; `lvr-freshness.json` (installed as `references/freshness.json`) — the freshness limits for cited facts (section 10). The Conductor (the model running the pipeline) applies the rules below.
 
 ## 1. Folder model
 
@@ -16,7 +16,8 @@ One folder = one idea = one product. Never mix two ideas or two products in one 
 │   ├── state.json        State: authoritative snapshot (rewritable)
 │   ├── journal.ndjson    Journal: append-only event log (never rewritten)
 │   ├── docs/
-│   │   └── sections/     Section Records: S0-intake.md, S1-context.md, ...
+│   │   ├── sections/     Section Records: S0-intake.md, S1-context.md, ...
+│   │   └── research/     domain-brief.md: Domain Brief + per-Section scan items (section 10)
 │   └── recheck/          Recheck reports: RECHECK-<date>.md (audit artifacts)
 ├── (after S9: Blueprint Bundle files + builder code live here)
 ├── HANDOFF-PROMPT.md     Builder entry prompt from /lvr-handoff (side artifact, never part of the bundle)
@@ -86,7 +87,7 @@ Project status enum: `interview` → `researching` (S5–S6) → `review` (S7 st
 
 `error`: any skill journals `error` (payload: `skill`, `step`, plain `message`) when an unrecoverable failure stops its run with work half-done (a file it cannot write, a tool that crashes mid-step) — never for a refusal, a failed probe, a failed milestone, or context pressure (those have their own events). It sets `project.status` = "error" and remembers the previous status; the next skill run's opening event (`resume` — every /lvr-continue run appends one — or `session_start`, `handoff_started`, `recheck_started`, `feature_started`, `brand_started`), or the next `section_start`, `section_done`, `section_blocked` or `answer_recorded`, restores it. /lvr-continue offers the retry from the status it loaded, before its own `resume`.
 
-ID conventions: questions `S<n>.q<n>`, unpadded (`S1.q9`) · features `F-01…` · decisions `D-001…` · milestones `M0, M1, …` · loop-backs `L-01…`.
+ID conventions: questions `S<n>.q<n>`, unpadded (`S1.q9`) · features `F-01…` · decisions `D-001…` · milestones `M0, M1, …` · loop-backs `L-01…` · research log entries `RQ-001…` · Domain Brief items `U-01…` (section 10).
 
 ## 3. Journal (`journal.ndjson`)
 
@@ -96,7 +97,7 @@ Append-only; never rewritten. Every state mutation emits at least one event; `an
 {"ts": "2026-11-08T09:00:00Z", "seq": 1, "type": "answer_recorded", "payload": { }}
 ```
 
-Event types: `session_start`, `folder_gate_passed`, `folder_gate_rejected`, `folder_gate_subfolder_created`, `tier_declared`, `capability_probe_passed`, `capability_probe_failed`, `context_guard_triggered`, `truncation_recovered`, `tier_changed`, `booster_check`, `booster_install_ok`, `booster_install_failed`, `booster_choice`, `section_start`, `section_done`, `section_blocked`, `answer_recorded`, `loop_back_opened`, `loop_back_closed`, `scope_locked`, `doc_generated`, `handoff_started`, `gap_found`, `handoff_done`, `recheck_started`, `recheck_finding`, `recheck_research_refresh`, `recheck_fix_applied`, `recheck_done`, `feature_started`, `feature_captured`, `feature_research`, `impact_analysis`, `feature_scope_decision`, `feature_applied`, `feature_done`, `build_started`, `milestone_started`, `milestone_verified`, `milestone_failed`, `build_blocked`, `deployment_verified`, `build_done`, `brand_started`, `brand_file_generated`, `brand_done`, `error`, `resume`.
+Event types: `session_start`, `folder_gate_passed`, `folder_gate_rejected`, `folder_gate_subfolder_created`, `tier_declared`, `capability_probe_passed`, `capability_probe_failed`, `context_guard_triggered`, `truncation_recovered`, `tier_changed`, `booster_check`, `booster_install_ok`, `booster_install_failed`, `booster_choice`, `section_start`, `section_done`, `section_blocked`, `answer_recorded`, `loop_back_opened`, `loop_back_closed`, `scope_locked`, `doc_generated`, `handoff_started`, `gap_found`, `handoff_done`, `recheck_started`, `recheck_finding`, `recheck_research_refresh`, `recheck_fix_applied`, `recheck_done`, `feature_started`, `feature_captured`, `feature_research`, `impact_analysis`, `feature_scope_decision`, `feature_applied`, `feature_done`, `build_started`, `milestone_started`, `milestone_verified`, `milestone_failed`, `build_blocked`, `deployment_verified`, `build_done`, `brand_started`, `brand_file_generated`, `brand_done`, `error`, `resume`, `research_logged`, `context_research`.
 
 Every event type is replayable; types with no state effect (`folder_gate_rejected`, `impact_analysis`, `brand_*`, …) are informational.
 
@@ -109,7 +110,7 @@ Payload extensions: any event may also carry `project` as an object (`slug`, `na
 - Section Records keep the user's answers verbatim in User Language; the Conductor adds an English summary per answer.
 - Feature names: the S4 record keeps the user's verbatim words; each F-NN also carries a coined English display name — that English name is what SPEC/requirements.md, USER_FLOWS.md, and blueprint.json use.
 - S9 compiles English documents from the summaries; OVERVIEW.md additionally reflects the verbatim intent.
-- Deep research (S5) runs on English sources; results are summarized in English.
+- Research (Domain Brief, Section scans, S5) runs on English sources plus the primary local sources of the user's market (regulators, local price pages); results are summarized in English. "Things you may not know" items are stored in English and shown in User Language at runtime.
 
 ## 5. Section map
 
@@ -117,7 +118,7 @@ Sections run strictly in order, except loop-backs opened by the Feasibility Loop
 
 | Section | Purpose (one line) | Output record | Bundle contribution |
 |---|---|---|---|
-| S0 Intake | Capture the raw idea fully; detect User Language; propose slug + name | `S0-intake.md` | project metadata (`idea_raw`, `user_language`) |
+| S0 Intake | Capture the raw idea fully; detect User Language; propose slug + name; confirm the market; then build the Domain Brief | `S0-intake.md` + `research/domain-brief.md` | project metadata (`idea_raw`, `user_language`) |
 | S1 Context | Problem, target users, platform shape, what "working" means for the user | `S1-context.md` | `SPEC/prd.md` |
 | S2 Conditions | What the user already has and can pay: devices, accounts, hosting, budget ceiling | `S2-kondisi.md` | `DECISIONS.md` (platform, budget), `HANDOVER.md` (deploy target) |
 | S3 Data & privacy | Login, personal data, payments, third-party services, where data may legally live | `S3-data.md` | `SPEC/data-model.md`, `SPEC/api.md`, `SECURITY.md` |
@@ -128,6 +129,8 @@ Sections run strictly in order, except loop-backs opened by the Feasibility Loop
 | S8 Milestone plan | Break the MVP into M0…Mn, each independently verifiable | `S8-milestones.md` | `MILESTONES.md`, `VERIFICATION.md` |
 | S9 Compile | Compile Section Records + decisions + milestones into the Blueprint Bundle | (bundle files) | all bundle files (section 8) |
 | S10 Build | Optional (/lvr-build); not an interview Section — no section entry, no `current_section` pointer; progress is `project.status` + `milestones[].verified`; the bundle must be sufficient for any builder | — | — |
+
+Every Section S1–S8 opens with its per-Section scan and the "Things you may not know" items for it, before the first batch (section 10).
 
 Hard rules: if the chosen platform needs a paid account the user lacks, surface it during S2 with the price (do not defer it to research); any blocking risk in S6 makes a loop-back mandatory; scope lock is mandatory before S8; every Acceptance Criterion from S8 must be machine-checkable or scripted (never "looks good").
 
@@ -158,6 +161,8 @@ The pipeline must complete on any model the harness offers. Its memory lives on 
 Harness overhead (system prompt, tool definitions, skills) eats ~30k–85k tokens before any user content: T2/T3 budgets must subtract it. "Flash" no longer implies a small window; only Flash-Lite/nano and open small models are small.
 
 Tier declaration and probe: the user declares the tier (or it is read from harness config) and it is stored in `model_profile.tier`. The capability probe is mandatory for T2/T3 and skipped for a declared T1: before S1, the model must produce a small strict-JSON object, follow a 3-step instruction in order, and continue an unfinished sentence correctly. Probe failure → refuse to run (the saved State stays safe) and journal `capability_probe_failed`.
+
+Web research check (every tier, T1 included): the probe tests the model; this tests the harness. One real web search plus one page fetch must work — in idea init before `.lvr/` is created, in /lvr-continue before any Section work. Failure → explain the cause and how to enable web tools (section 10), then stop: there is no memory fallback at any tier. It is journaled as `research_logged` with `purpose: "web_check"`, never as a probe event.
 
 Per-tier behavior rules:
 
@@ -210,8 +215,45 @@ A Checkpoint = one Journal write + one State write, together.
 
 When `scripts/lvr.mjs` is available, every Checkpoint goes through it (journal first, then state, under one lock); the prose procedures are the fallback.
 
-Checkpoint moments: every answer · every Section start and done · every Booster install or choice · every generated file · every error · each Handoff step.
+Checkpoint moments: every answer · every Section start and done · every research step (`research_logged` / `context_research`) · every Booster install or choice · every generated file · every error · each Handoff step.
 
 - Interruption-safe: a session that dies leaves a consistent `state.json` at the last checkpoint; work loss is at most the current unanswered micro-batch.
 - Rebuild: load `state.json`; if it is unreadable, replay the Journal and report what was reconstructed; the corrupt file MAY be preserved once as `.lvr/state.corrupt-<date>.json` (not part of the canonical write set).
 - Idempotency: Sections marked `done` are never re-run; re-running the Handoff re-lints instead of regenerating; regeneration is explicit and per file.
+
+## 10. Research and citations
+
+Principles 1 and 14 in operational form. Full contract (exact parsing, finding messages, output shape): `docs/spec/07-research.md` in the LVR repository.
+
+**Web research is required.** Web search and page fetch must both work (harness tools or an MCP server). No web → say the cause, give the enable steps, stop; never continue on memory. Enable steps (English source): Claude Code — allow `WebSearch` and `WebFetch`; on Amazon Bedrock web search is unavailable, so add a search MCP server. Codex CLI — `web_search = "live"` in `~/.codex/config.toml`, or start with `codex --search`. Gemini CLI — keep `google_web_search` and `web_fetch` enabled (not excluded in `settings.json`); on Antigravity CLI, check its web tools are on. OpenCode — allow web search on first use and pick a provider (`/connect` or the provider's environment variable); `"websearch": false` turns it off. Any harness — add a web search + fetch MCP server (for example Firecrawl, Brave Search, Exa) with its API key.
+
+**Cite tag** — one source for one claim, on the same line as the claim:
+
+```
+[cite: <category> · <url> · <date> · acc <YYYY-MM-DD>( · primary)( · live)( · amend-check <YYYY-MM-DD>)]
+```
+
+- Separator ` · ` (space, middle dot, space). `<category>` is a key of `references/freshness.json`. `<url>` is http(s), no spaces (`%20`, `]` as `%5D`). `<date>` is what the page states: `pub YYYY-MM-DD` or `upd YYYY-MM-DD` (also `YYYY-MM` or `YYYY`), or `n.d.`. `acc` = the day you read it.
+- Flags: `primary` = the source owns the fact (vendor's own page, regulator, law text, official statistics office). `live` = the value was read off the live page on the access date. `amend-check YYYY-MM-DD` = on that day you searched for newer amendments of the regulation and found none.
+- A claim with two sources: two tags side by side, same category. Example: `Vercel Hobby costs USD 0/month [cite: price · https://vercel.com/pricing · n.d. · acc 2026-11-20 · primary · live]`.
+
+**Freshness** (`references/freshness.json`, one file for every skill): `price`, `quota`, `version` 30 days · `legal` (ToS, policies, licences, vendor availability by country) 60 · `regulation` 60 for its amendment check · `market` 90 · `statistic` 365 · `general` 365. Age is counted from `acc` for a `live` cite, else from the page's `pub`/`upd` date (statistics: always the published date; regulations: the newest `amend-check`). A partial date counts from the first day of its period. Past the limit → research it again before use. The freshest primary source wins; when sources disagree, record the conflict and which source won.
+
+**Key facts** (`price`, `quota`, `version`, `legal`, `regulation`) need one fresh `primary` source or two fresh sources from different sites. Regulations always need `amend-check`.
+
+**Unverified** — only after research really failed: log the failed research (below), then write `[unverified: <category> · RQ-NNN]` with the failed log ids. The bare word "unverified" is not enough. A decision that rests on an unverified fact is never `designer_filled`: ask the user to confirm it, or record it as an S6 blocking risk.
+
+**User facts** — a fact the user stated is sourced by its answer id (`S2.q3`) on the same line.
+
+**Recommendations** cite the research they rest on (a `U-NN` item or a cite tag). "Best practice" or "industry standard" alone is never a reason.
+
+**Domain Brief** — `.lvr/docs/research/domain-brief.md`, built right after S0 closes: 8–15 items on the market's rules and regulations, typical and hidden costs, failure modes, key terms, and what similar users expect. Rows: `| ID | Finding (EN) | Why it matters | Source | Section | Became |`; `U-NN` ids; `Section` = the target Section S1–S8; `Became` = the answer id or decision id the item turned into. Template: `lvr-init-new-idea/references/sections/S0-domain-brief.md`.
+
+**Per-Section scan** — before the first batch of S1–S8 (once per Section): S1–S4 at least one targeted search; S5 the research itself; S6–S8 the freshness re-check (`cite check --all`, research every expired fact again) plus searches as needed. New items go to the brief's `## Per-section scans` table; nothing new → one line `- <S> scan (RQ-NNN): no new unknowns — <reason>`. Then show the open items for the Section as "Things you may not know" (User Language, source site + date each). Each item becomes a question (counts toward the batch size) or a `designer_filled` decision whose rationale cites the `U-NN` and its tag.
+
+**Research log** — every research step (one topic, any number of queries), found or failed, is one journal event:
+
+- `research_logged` — `{ id, section, purpose: web_check|claim|s5|refresh|feature|recheck, topic, queries[], sources[{url, title, published, updated, accessed, primary, live}], outcome: found|failed, reason, conflicts[] }`. `failed` needs `reason`; `found` needs a source; a direct page read is the query `fetch <url>`.
+- `context_research` — the same without `purpose`, plus `scope: brief|scan`, `findings` (U-ids), optional `note`.
+- `id` = `RQ-NNN`, assigned by the script. Both events are informational on replay and valid before `state.json` exists.
+- Script: `LVR research log --in -` (add `--context` for `context_research`). Check: `LVR cite check --all` or `--file <path>` — findings I1–I13; fix every one. Without Node, run the checks by reading, per `lvr-handoff/references/lint-checklist.md` group I.

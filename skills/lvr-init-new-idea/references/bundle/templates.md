@@ -14,7 +14,7 @@ Fill: What this is — 2-4 lines from S0/S1. How to load context — the numbere
 ## 2. OVERVIEW.md — owner document (strictest plain language)
 Headings, in order: `# <Display name> — plain-language overview` · `## What this is` · `## What was decided` · `## What it costs` · `## How you will use it` · `## What is parked` · `## Limitations`
 
-Fill: written for the non-technical owner — the shortest sentences of the bundle, no step that assumes reading code. What was decided — the shaping decisions, each with a one-line why. What it costs — total table (item · price · when) with monthly and one-time totals; every number cites its S2 fact-sheet row (source + access date, or `unverified`). How you will use it — the day-one task, walk-through style, from the S1 success picture and F-01. What is parked — the Parking Lot from SCOPE.md, one line each. Limitations — one line per degraded booster, per blocked-then-resolved Section, and per known gap; never silent.
+Fill: written for the non-technical owner — the shortest sentences of the bundle, no step that assumes reading code. What was decided — the shaping decisions, each with a one-line why. What it costs — total table (item · price · when · source) with monthly and one-time totals; every number carries the cite tag copied from its S2 `## Prices quoted` or S5 cost row, the `[unverified: …]` marker of logged failed research, or the answer id of a user-stated amount (conventions §10); total rows need none. How you will use it — the day-one task, walk-through style, from the S1 success picture and F-01. What is parked — the Parking Lot from SCOPE.md, one line each. Limitations — one line per degraded booster, per blocked-then-resolved Section, and per known gap; never silent.
 
 ## 3. DECISIONS.md — append-only decision log
 Headings, in order: `# Decisions` · one table row per decision:
@@ -86,7 +86,7 @@ Fill: Auth model — from the S3 auth decision (method, sessions, password reset
 ## 12. RESEARCH.md
 Headings, in order: `# Research` · `## Competitor scan` · `## Comparable products` · `## Stack comparison and trade-offs` · `## Cost table` · `## Risks (from S6)`
 
-Fill: compiled from the S5 record plus the S6 risks appendix — nothing new is researched at S9, claims keep their S5 flags. Competitor scan — product, pricing model, one lesson. Stack comparison — the trade-offs table; the chosen stack cites its decision id. Cost table — item · price · type · source, built on the S2 fact-sheet plus S5 additions; every claim with source + access date or `unverified`. Risks — one line each: R-n, finding, outcome (`resolved via L-NN | accepted → D-NNN | note`).
+Fill: compiled from the S5 record plus the S6 risks appendix — claims keep their S5 cite tags and markers, copied verbatim. A tag past its freshness limit is researched again before compiling (the `cite check` I6 finding), never compiled stale. Competitor scan — product, pricing model, one lesson, source. Stack comparison — the trade-offs table; the chosen stack cites its decision id and the research it rests on. Cost table — item · price · type · source, built on the S2 `## Prices quoted` rows plus S5 additions; every row with a cite group, an `[unverified: …]` marker, or the answer id of a user-stated cost (conventions §10). Risks — one line each: R-n, finding, outcome (`resolved via L-NN | accepted → D-NNN | note`).
 
 ## 13. SCOPE.md
 Headings, in order: `# Scope` · `## In MVP` · `## Parking Lot (recorded, never deleted)`

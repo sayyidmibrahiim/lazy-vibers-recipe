@@ -2,7 +2,7 @@
 
 Candidate questions for Section S2. The English text is the source: translate each question into User Language when asking (conventions §4). Bank order is not ask order — `S2.qNN` ids are assigned in the order actually asked. Compose batches adaptively; never ask what `answers` already holds. Controls (skip, "enough for this Section") follow the engine's micro-batch loop.
 
-Booster note: no external booster — this bank plus the cost fact-sheet below is the booster (the S2 routing: "internal cost fact-sheets + web verification").
+Booster note: no external booster — this bank plus the cost lead list below is the booster (the S2 routing: "internal cost fact-sheets as a lead list + live web verification"). The Domain Brief's cost items targeted at S2 are shown first (engine step 1b).
 
 ## Opening questions (establish first, in this order)
 
@@ -72,16 +72,16 @@ Booster note: no external booster — this bank plus the cost fact-sheet below i
 - **Unlocks:** deploy-target decision; `HANDOVER.md` update rhythm.
 - **designer_filled follow-ups:** "backups are a weekly job unless automated" — surface as `designer_filled` if the user picks self-managed hosting.
 
-## Cost fact-sheet (verified 2026-11-08)
+## Cost fact-sheet (lead list, last read 2026-11-08)
 
-Every number below was read from the linked source on **2026-11-08**. Prices move: re-verify each row you are about to quote, at S2 start, by opening the source. Never quote a price from memory (principle 1); anything you cannot verify live → mark `unverified` next to the number and move on.
+Every number below was read from the linked source on **2026-11-08** — older than the 30-day `price` limit (`references/freshness.json`), so these rows are leads, never citations. Before quoting any price: open the source, read the current value, and quote it with a cite tag, e.g. `USD 99/yr [cite: price · https://developer.apple.com/programs/enroll/ · n.d. · acc <today> · primary · live]`; log the step with `LVR research log` (`purpose: "claim"`). Never quote a price from memory (principle 1). Research that really fails → log it (`outcome: "failed"`), write `[unverified: price · RQ-NNN]` next to the number, and say so plainly; such a price is a question for the user, never the basis of a `designer_filled` decision.
 
 | Item | Price | Type | Source (accessed 2026-11-08) |
 |---|---|---|---|
 | Apple Developer Program | USD 99 / membership year | yearly, required for App Store distribution; fee waiver for eligible non-profits/education/government | <https://developer.apple.com/programs/enroll/> |
 | Google Play Console developer account | USD 25 | one-time registration | <https://support.google.com/googleplay/android-developer/answer/6112435> |
 | .com domain, Namecheap | USD 15.98/yr registration, USD 19.98/yr renewal (promos: first year from USD 6.48) | yearly | <https://www.namecheap.com/domains/registration/gtld/com/> |
-| .com domain, Cloudflare Registrar | at-cost (registry + ICANN price, no markup; no figure published on the page) — typical .com ≈ USD 10–15/yr `unverified-figure` | yearly | <https://www.cloudflare.com/domains/> (model verified; figure must be read from their search at purchase) |
+| .com domain, Cloudflare Registrar | at-cost (registry + ICANN price, no markup); the page publishes no figure — read the current figure from their domain search before quoting it | yearly | <https://www.cloudflare.com/domains/> |
 | Vercel Hobby | USD 0 / month — non-commercial use only | monthly | <https://vercel.com/pricing> |
 | Vercel Pro | USD 20 / month per Developer seat (viewers free; overages extra) | monthly | <https://vercel.com/pricing> |
 | Hetzner CX23 — cheapest cost-optimized shared-vCPU plan (2 vCPU, 4 GB RAM, 40 GB NVMe) | EUR 5.99 / month excl. VAT | monthly | <https://www.hetzner.com/cloud/cost-optimized/> |

@@ -46,7 +46,7 @@ Booster note: no booster — the S3 routing assigns none. This bank is the quest
 - **Ask:** "Are there rules about where this data may sit — company policy, school rules, or country law? Or is 'somewhere reputable' fine?"
 - **Why it matters:** some data (customer records, student data, health notes) may be legally required to stay in-country; discovering this after S5 forces rework.
 - **Unlocks:** hosting-region constraint for S5; compliance notes in `SECURITY.md`.
-- **designer_filled follow-ups:** none typical — the user either knows a rule exists or honestly does not; "don't know" is a fine answer (principle 4) and S5 researches it.
+- **designer_filled follow-ups:** none typical — the user either knows a rule exists or honestly does not; "don't know" is a fine answer (principle 4). Show the Domain Brief's data-location and data-protection items for the user's market first (engine step 1b) so the user answers with the rule in front of them; a rule the brief did not cover is researched now (`LVR research log`), not left to S5.
 
 ### 8. Offline behavior
 - **Ask:** "Must it keep working when the internet drops — at all, or a little, or no?"
@@ -58,7 +58,7 @@ Booster note: no booster — the S3 routing assigns none. This bank is the quest
 - **Ask:** "If someone asks you to erase everything you have about them, what should happen?"
 - **Why it matters:** erasure is both a feature (a delete flow) and often a legal duty; retrofitting it is painful.
 - **Unlocks:** deletion flow in `SPEC/api.md`; erasure section of `SECURITY.md`.
-- **designer_filled follow-ups:** privacy laws in many jurisdictions grant erasure rights even to tiny products — record a `designer_filled` decision that the product will have a working "delete my account and data" path unless the user declines.
+- **designer_filled follow-ups:** when the Domain Brief (or this Section's scan) cites an erasure right in the user's market, record a `designer_filled` decision that the product will have a working "delete my account and data" path unless the user declines; its rationale cites the item (`per U-NN [cite: regulation · …]`). No cited rule → ask the question; never assume a law from memory.
 
 ### 10. Who sees whose data
 - **Ask:** "Who is allowed to see whose information — only its owner, everyone in a group, or the whole world?"

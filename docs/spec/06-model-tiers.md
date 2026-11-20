@@ -17,6 +17,7 @@ Caveats baked into rules: harness overhead (system prompt + tool defs + skills) 
 1. **Declared first**: the skill asks the user (one plain question: "model di harness ini besar, sedang, atau kecil?") or reads it from harness config where available. Stored as `model_profile.tier` (T1|T2|T3).
 2. **Capability probe (mandatory for T2/T3, skipped for declared T1 — T1 stores `probe: "skipped"`)**: before S1 and **before the booster bootstrap** (fail-fast: an incapable model is refused before any install work), the model must pass a mini-probe — produce a small strict-JSON object, follow a 3-step instruction in order, and continue an unfinished sentence correctly. Fail → the pipeline **refuses** with guidance ("use a larger model"; before S0 nothing is captured, so nothing is lost) — journals `capability_probe_failed`. A pipeline that limps on an incapable model would produce silently bad bundles; refusing is the honest gate.
 3. Journal: `tier_declared`, `capability_probe_passed|failed`.
+4. **Web research check (every tier, T1 included)**: the probe tests the model; this tests the harness. One real web search and one page fetch must work (spec 07 §1) — before `.lvr/` is created in `/lvr-init-new-idea`, before any Section work in `/lvr-continue`. Fail → explain the cause and the enable steps for the harness, then stop; there is no memory fallback at any tier. It journals `research_logged` (`purpose: "web_check"`), never the probe events, so `model_profile.probe` is untouched.
 
 ## Per-tier behavior rules
 

@@ -26,9 +26,9 @@ You said you can spend at most Rp 100.000 per month (D-005). This plan spends Rp
 |---|---|---|---|
 | Vercel Hobby (app hosting) | USD 0 (Rp 0) | monthly | vercel.com/pricing, checked 2026-11-07 |
 | Supabase Free (database, login, photo storage) | USD 0 (Rp 0) | monthly | supabase.com/pricing, checked 2026-11-07 |
-| Email sender for password reset | USD 0 (Rp 0) on a free tier | monthly | unverified — from the assistant's memory, not checked live |
+| Email sender for password reset | USD 0 (Rp 0) on a free tier | monthly | [unverified: price · RQ-001] — from the assistant's memory, not checked live |
 | Own `.com` address | USD 0 now; USD 19.98 per year if you ever want it | yearly, deferred | namecheap.com, checked 2026-11-07 |
-| Online payment gateway | not used in this version; about 2–3% of each payment if ever switched on | per payment, parked | unverified |
+| Online payment gateway | not used in this version; about 2–3% of each payment if ever switched on | per payment, parked | [unverified: price · RQ-002] |
 
 | | |
 |---|---|

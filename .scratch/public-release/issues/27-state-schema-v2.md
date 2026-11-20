@@ -21,3 +21,4 @@ Verify: replay = live state on fixtures for every event; the v1 fixture migrates
 
 ## Comments
 - From ticket 03 (V-05): `error` is defined in conventions §2/spec 01, but no SKILL.md says when its own run journals it. Add it with the event-ownership work. See `runs/03-verify.md`.
+- From ticket 26 (Q5): consider `pipeline.research` in state for the Domain Brief and per-section scans (today derived from the journal + brief file). See `runs/26-impl.md`.

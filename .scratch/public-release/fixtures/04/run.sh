@@ -8,6 +8,14 @@ TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 export LVR_NOW=2026-11-20T11:00:00Z
 fail=0; n=0
 L() { node "$LVR" --dir "$1" "${@:2}" 2> "$TMP/stderr"; }
+# Ticket 26 added lint group I and cross-check rule X8 (citations). These fixtures predate citations, so every ticket-04
+# expectation runs on groups A-H and rules X1-X7 exactly as before (nothing weakened); group I / X8 are covered by fixtures/26.
+AH="--group A,B,C,D,E,F,G,H"
+XC() { L "$1" crosscheck > "$TMP/xc.raw"; node -e '
+  const fs=require("fs"); const o=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
+  if(!o.rules||o.rules.length!==8||o.rules[7].rule!=="X8"){console.error("crosscheck must list X1-X8");process.exit(1)}
+  o.rules=o.rules.filter(r=>r.rule!=="X8"); o.findings=o.findings.filter(f=>f.rule!=="X8"); o.needs_model=o.needs_model.filter(f=>f.rule!=="X8"); o.clean=o.findings.length===0;
+  console.log(JSON.stringify(o))' "$TMP/xc.raw"; }
 chk() { n=$((n+1)); node "$HERE/check.mjs" "$@" || fail=1; }   # name file expr
 mk() { rm -rf "$TMP/$1"; cp -r "$HERE/futsal-fixed" "$TMP/$1"; }   # fresh copy of futsal-fixed
 apply() {  # apply broken/<case> onto the copy at $TMP/<dst>
@@ -16,17 +24,17 @@ apply() {  # apply broken/<case> onto the copy at $TMP/<dst>
 }
 
 # 1. futsal-fixed passes
-mk fx; L "$TMP/fx" lint run > "$TMP/o.json"
+mk fx; L "$TMP/fx" lint run $AH > "$TMP/o.json"
 chk "futsal-fixed lint clean (0 findings, 0 gaps, 0 self-fixes)" "$TMP/o.json" 'o.ok && o.clean && o.findings.length===0 && o.self_fixes===0 && o.precondition.scope_locked===true'
 chk "futsal-fixed lint reports the judgment checks as needs_model (not guessed)" "$TMP/o.json" 'o.needs_model.length===12 && o.needs_model.every(x=>x.needs_model===true) && o.needs_model.map(x=>x.id).join()==="B19,B21,C4,D3,D4,D5,D6,E3,E4,G3,G5,H4"'
-L "$TMP/fx" crosscheck > "$TMP/o.json"
-chk "futsal-fixed crosscheck clean (X1-X7)" "$TMP/o.json" 'o.ok && o.clean && o.findings.length===0 && o.rules.length===7 && o.rules.every(r=>r.ok)'
+XC "$TMP/fx" > "$TMP/o.json"
+chk "futsal-fixed crosscheck clean (X1-X7; X8 is listed and covered by fixtures/26)" "$TMP/o.json" 'o.ok && o.clean && o.findings.length===0 && o.rules.length===7 && o.rules.every(r=>r.ok)'
 L "$TMP/fx" blueprint emit --check > "$TMP/o.json"
 chk "futsal-fixed blueprint emit --check: no drift" "$TMP/o.json" 'o.ok && o.changed===false && o.written===false && o.reason==="in_sync"'
 
 # 1b. a CRLF + BOM copy of the bundle reads the same (Windows editors)
 mk crlf; find "$TMP/crlf" -name '*.md' -not -path '*/.lvr/*' | while read -r f; do { printf '\357\273\277'; sed 's/$/\r/' "$f"; } > "$f.new"; mv "$f.new" "$f"; done
-L "$TMP/crlf" lint run > "$TMP/o.json"; chk "CRLF+BOM bundle: lint clean" "$TMP/o.json" 'o.ok && o.findings.length===0'
+L "$TMP/crlf" lint run $AH > "$TMP/o.json"; chk "CRLF+BOM bundle: lint clean" "$TMP/o.json" 'o.ok && o.findings.length===0'
 L "$TMP/crlf" handoff stubs > "$TMP/o.json"; chk "CRLF+BOM bundle: stubs already correct" "$TMP/o.json" 'o.ok && o.changed===false'
 
 # 1c. accented project name in decomposed form (NFD) everywhere, then blueprint NFC: same name, no B21 (verify R-3)
@@ -42,7 +50,7 @@ L "$TMP/nfd" lint run --group B > "$TMP/o.json"; chk "NFD project name, blueprin
 # 2. every broken case: exact findings
 for c in "$HERE"/broken/*/; do
   name="$(basename "$c")"; mk "$name"; apply "$name" "$name"
-  L "$TMP/$name" lint run > "$TMP/$name.lint.json"; L "$TMP/$name" crosscheck > "$TMP/$name.x.json"
+  L "$TMP/$name" lint run $AH > "$TMP/$name.lint.json"; XC "$TMP/$name" > "$TMP/$name.x.json"
   node -e '
     const fs=require("fs"); const [lint,x,exp,name]=process.argv.slice(1);
     const L=JSON.parse(fs.readFileSync(lint,"utf8")), X=JSON.parse(fs.readFileSync(x,"utf8")), E=JSON.parse(fs.readFileSync(exp,"utf8"));
@@ -78,14 +86,14 @@ L "$TMP/h2" blueprint emit > "$TMP/o.json"; chk "emit rewrites on drift (generat
 cp "$TMP/h2/blueprint.json" "$TMP/h2.after"
 LVR_NOW=2026-12-01T00:00:00Z L "$TMP/h2" blueprint emit > "$TMP/o.json"; chk "emit second run: changed=false, generated_at kept" "$TMP/o.json" 'o.ok && o.changed===false && o.generated_at==="2026-11-20T11:00:00Z"'
 n=$((n+1)); cmp -s "$TMP/h2/blueprint.json" "$TMP/h2.after" && echo "PASS emit second run: blueprint.json byte-identical" || { echo "FAIL emit rewrote an unchanged file"; fail=1; }
-L "$TMP/h2" lint run > "$TMP/o.json"; chk "lint clean after emit repaired the drift" "$TMP/o.json" 'o.ok && o.findings.length===0'
+L "$TMP/h2" lint run $AH > "$TMP/o.json"; chk "lint clean after emit repaired the drift" "$TMP/o.json" 'o.ok && o.findings.length===0'
 
 mk h3; rm -f "$TMP/h3/blueprint.json"
 L "$TMP/h3" blueprint emit > "$TMP/o.json"
 chk "emit with no blueprint.json and no input stack: BLUEPRINT_NEEDS_INPUT (judgment is never guessed)" "$TMP/o.json" 'o.ok===false && o.error.code==="BLUEPRINT_NEEDS_INPUT" && o.error.details.missing.includes("stack.primary") && o.error.details.missing.includes("stack.components")'
 echo '{"stack":{"primary":"next-supabase","components":["Next.js","Supabase","Vercel"],"reasons_ref":"DECISIONS.md#D-019"},"idea_summary_en":"A booking app for futsal venues."}' | L "$TMP/h3" blueprint emit --in - > "$TMP/o.json"
 chk "emit with --in stack input writes blueprint.json" "$TMP/o.json" 'o.ok && o.changed && o.written && o.reason==="missing"'
-L "$TMP/h3" lint run > "$TMP/o.json"; chk "lint clean after emit from input" "$TMP/o.json" 'o.ok && o.findings.length===0'
+L "$TMP/h3" lint run $AH > "$TMP/o.json"; chk "lint clean after emit from input" "$TMP/o.json" 'o.ok && o.findings.length===0'
 
 # 5. install lines, --group, --journal, usage errors
 L "$TMP/fx" handoff install-lines > "$TMP/o.json"
@@ -96,7 +104,7 @@ L "$TMP/g" lint run --group A,B > "$TMP/o.json"; chk "lint --group A,B skips the
 L "$TMP/g" lint run --group Z > "$TMP/o.json"; rc=$?; chk "lint --group Z is a usage error (exit 2)" "$TMP/o.json" 'o.ok===false && o.error.code==="MISSING_FLAG"'
 L "$TMP/g" lint run --group Z >/dev/null; [ $? -eq 2 ] && echo "PASS lint --group Z exit code 2" || { echo "FAIL lint --group Z exit code"; fail=1; }; n=$((n+1))
 before=$(wc -l < "$TMP/g/.lvr/journal.ndjson")
-L "$TMP/g" lint run --journal > "$TMP/o.json"
+L "$TMP/g" lint run $AH --journal > "$TMP/o.json"
 chk "lint --journal appends one gap_found per finding" "$TMP/o.json" 'o.ok && o.journal.length===2 && o.journal.every(j=>j.seq>0)'
 after=$(wc -l < "$TMP/g/.lvr/journal.ndjson"); n=$((n+1)); [ $((after-before)) -eq 2 ] && echo "PASS journal grew by 2 lines" || { echo "FAIL journal grew by $((after-before))"; fail=1; }
 tail -n 2 "$TMP/g/.lvr/journal.ndjson" > "$TMP/o.ndjson"; node -e '

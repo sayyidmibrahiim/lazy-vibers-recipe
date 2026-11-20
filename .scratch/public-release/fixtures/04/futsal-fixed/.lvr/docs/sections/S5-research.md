@@ -60,7 +60,7 @@ Built on the S2 fact-sheet rows (S2-kondisi.md, Prices quoted, verified 2026-11-
 | Email sender for admin password reset (D-012) | USD 0 on a free tier (e.g. Resend-class ~3.000 emails/month) | monthly | model knowledge, no live check (2026-11-07) | unverified |
 | Custom domain (.com) | deferred — free `*.vercel.app` subdomain first (D-007); renewal USD 19.98/yr if ever needed | yearly | S2 row: namecheap.com (2026-11-07) | verified (S2) |
 | Payment gateway (Midtrans/Xendit-class: QRIS, virtual account) | parked with the gateway (D-011): MDR ~2-3% per transaction when unparked | per-transaction | model knowledge, no live check (2026-11-07) | unverified |
-| Vercel Pro / Supabase Pro (paid fallback, D-018) | USD 20/month per seat / ~USD 25/month | monthly | S2 row (Vercel, verified) / model knowledge (Supabase, unverified) | mixed — see D-018 |
+| Vercel Pro / Supabase Pro (paid fallback, D-018) | USD 20/month per seat / ~USD 25/month | monthly | S2 row (Vercel, verified) / model knowledge (Supabase, [unverified: price · RQ-003]) | mixed — see D-018 |
 
 **v1 total recurring: USD 0 ≈ Rp 0/month** — inside the D-005 ceiling with the full Rp 100.000 untouched.
 

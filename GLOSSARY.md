@@ -57,7 +57,7 @@ Daftar kondisi terukur yang harus benar agar Milestone dinyatakan selesai, beser
 _Avoid_: definition of done, checklist (sendirian)
 
 **Constitution**:
-File `lvr-principles.md`: prinsip wajib yang di-load semua skill LVR (evidence-first, anti-yes-man, recheck sebelum setuju, no-slop, boleh bilang tidak tahu).
+File `lvr-principles.md`: prinsip wajib yang di-load semua skill LVR (evidence-first, anti-yes-man, recheck sebelum setuju, no-slop, boleh bilang tidak tahu, riset hal yang user tidak tahu).
 _Avoid_: rules, policy, system prompt
 
 **Capability Registry**:
@@ -87,6 +87,14 @@ _Avoid_: plugin, add-on, optional skill
 **Designer-filled**:
 Status keputusan yang diambil proaktif oleh Conductor karena penting tetapi tidak mungkin diketahui user untuk ditanyakan. Selalu terlihat (state + ASSUMPTIONS.md) dan selalu bisa dikoreksi user — tidak pernah senyap.
 _Avoid_: silent default, auto-assume, best practice (sebagai alasan)
+
+**Domain Brief**:
+File `.lvr/docs/research/domain-brief.md`, dibangun Conductor tepat setelah S0 selesai: 8–15 hal yang biasanya tidak diketahui orang di posisi user untuk ide dan negaranya — aturan dan regulasi, biaya umum dan biaya tersembunyi, kegagalan yang sering terjadi, istilah kunci, dan apa yang biasanya diharapkan pengguna sejenis. Setiap item punya id `U-NN`, sumber bertanggal, dan Section tujuan; item baru dari scan per Section ditambahkan ke file yang sama. Tiap item akhirnya menjadi pertanyaan atau keputusan `designer_filled` yang mengutipnya.
+_Avoid_: research notes, background, context dump
+
+**Freshness limit**:
+Umur maksimum sebuah fakta yang dikutip sebelum wajib diriset ulang, per kategori, dari satu file `freshness.json` yang dipakai semua skill: harga, kuota, versi 30 hari; ToS/legal 60 hari; pasar 90 hari; statistik 365 hari. Regulasi juga wajib dicek tidak ada amandemen yang lebih baru.
+_Avoid_: TTL, cache age, stale threshold (sebagai istilah lepas)
 
 **Handoff**:
 Proses dan skill (`/lvr-handoff`): memverifikasi Blueprint Bundle bebas gap, memastikan kompatibilitas lintas harness, dan menyusun entry prompt untuk builder.

@@ -10,7 +10,8 @@ All paths are relative to the **project folder** (created by `/lvr-init-new-idea
 │   ├── state.json          authoritative snapshot (rewritable)
 │   ├── journal.ndjson      append-only event log (never rewritten)
 │   ├── docs/
-│   │   └── sections/       section records: S0-intake.md, S1-context.md, ...
+│   │   ├── sections/       section records: S0-intake.md, S1-context.md, ...
+│   │   └── research/       domain-brief.md: the Domain Brief + per-Section scan items (spec 07)
 │   └── recheck/            recheck reports: RECHECK-<date>.md (audit artifacts)
 ├── (after S9: bundle files + builder code live here)
 ├── HANDOFF-PROMPT.md       builder entry prompt from /lvr-handoff (side artifact, never part of the bundle)
@@ -88,13 +89,15 @@ Who sets it: S0 start → `interview`; `section_start` S5 → `researching`; `se
 
 ### ID conventions
 
-Questions `S<n>.q<n>`, unpadded (`S1.q9`, `S1.q10`) · Features `F-01…` · Decisions `D-001…` · Milestones `M0, M1, …` · Loop-backs `L-01…`
+Questions `S<n>.q<n>`, unpadded (`S1.q9`, `S1.q10`) · Features `F-01…` · Decisions `D-001…` · Milestones `M0, M1, …` · Loop-backs `L-01…` · Research log entries `RQ-001…` (assigned by `research log`) · Domain Brief items `U-01…` (one id space for the brief and the per-Section scans)
 
 ## `journal.ndjson` event types
 
 Each line: `{"ts": "...", "seq": 1, "type": "...", "payload": { ... }}`
 
-`session_start` · `folder_gate_passed|folder_gate_rejected|folder_gate_subfolder_created` · `tier_declared` · `capability_probe_passed|failed` · `context_guard_triggered` · `truncation_recovered` · `tier_changed` · `booster_check` · `booster_install_ok|failed` · `booster_choice` (user decision on failure) · `section_start|section_done|section_blocked` · `answer_recorded` · `loop_back_opened|closed` · `scope_locked` · `doc_generated` · `handoff_started|gap_found|handoff_done` · `recheck_started|recheck_finding|recheck_research_refresh|recheck_fix_applied|recheck_done` · `feature_started|feature_captured|feature_research|impact_analysis|feature_scope_decision|feature_applied|feature_done` · `build_started|milestone_started|milestone_verified|milestone_failed|build_blocked|deployment_verified|build_done` · `brand_started|brand_file_generated|brand_done` · `error` · `resume`
+`session_start` · `folder_gate_passed|folder_gate_rejected|folder_gate_subfolder_created` · `tier_declared` · `capability_probe_passed|failed` · `context_guard_triggered` · `truncation_recovered` · `tier_changed` · `booster_check` · `booster_install_ok|failed` · `booster_choice` (user decision on failure) · `section_start|section_done|section_blocked` · `answer_recorded` · `loop_back_opened|closed` · `scope_locked` · `doc_generated` · `handoff_started|gap_found|handoff_done` · `recheck_started|recheck_finding|recheck_research_refresh|recheck_fix_applied|recheck_done` · `feature_started|feature_captured|feature_research|impact_analysis|feature_scope_decision|feature_applied|feature_done` · `build_started|milestone_started|milestone_verified|milestone_failed|build_blocked|deployment_verified|build_done` · `brand_started|brand_file_generated|brand_done` · `error` · `resume` · `research_logged|context_research`
+
+`research_logged` and `context_research` (ticket 26) record every research step: payloads, ids, and the `research log` command are specified in `07-research.md` §5. Both are informational on replay and valid before `state.json` exists. `research log` (or `journal append --type research_logged|context_research`) assigns the id; the script's event list and the conventions "Event types:" line both carry the two types.
 
 Rules: append-only; never rewrite; every state mutation emits at least one event; `answer_recorded` fires **per answer** (checkpoint granularity). Its payload is `{ "section", "answer_id", "q", "a", "skipped" }` — `q` is the question text exactly as asked, `a` the user's verbatim answer, both in User Language; `a` is null when the answer was skipped. Legacy payloads carrying only `{ "section", "answer_id", "skipped" }` remain replayable — rebuilds fold q/a from the Section Record when the payload has no text.
 
@@ -135,7 +138,7 @@ Web UI variant: the UI supplies an absolute path via a folder picker; the same c
 
 ## Checkpoint & resume semantics
 
-- **Checkpoint moments** (journal write + state save): every answer, every Section start/done, every booster install/choice, every generated file, every error, handoff steps.
+- **Checkpoint moments** (journal write + state save): every answer, every Section start/done, every research step (`research_logged` / `context_research`), every booster install/choice, every generated file, every error, handoff steps.
 - Interruption-safe: any session that dies leaves a consistent `state.json` (last checkpoint) — work loss is at most the current unanswered micro-batch.
 - `/lvr-continue` rebuild: load `state.json`; if unreadable → replay journal; report what was reconstructed. A rebuild may preserve the corrupt state file once as `.lvr/state.corrupt-<date>.json` before overwriting; it is not part of the canonical write set.
 - Idempotency: sections marked `done` are never re-run; re-running `/lvr-handoff` re-lints instead of regenerating everything (regeneration is explicit, per file).

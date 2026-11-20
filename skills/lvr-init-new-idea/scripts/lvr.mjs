@@ -5,7 +5,7 @@
 //
 // Sections, in order: 1 constants, 2 errors/args/io, 3 journal, 4 schema (validate/canonical/write/lock),
 // 5 reducer, 6 checkpoint (journal + state), 7 replay, 8 gate, 9 slug, 10 probe, 11 booster, 11b bundle lint/crosscheck/blueprint/handoff,
-// 12 commands/main.
+// 11c research (freshness, cite check, research log), 12 commands/main.
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -28,7 +28,7 @@ const EVENT_TYPES = [
   "feature_started", "feature_captured", "feature_research", "impact_analysis", "feature_scope_decision",
   "feature_applied", "feature_done", "build_started", "milestone_started", "milestone_verified",
   "milestone_failed", "build_blocked", "deployment_verified", "build_done", "brand_started",
-  "brand_file_generated", "brand_done", "error", "resume",
+  "brand_file_generated", "brand_done", "error", "resume", "research_logged", "context_research",
 ];
 const SECTIONS = ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10"];
 // S9 is the last section pointer: after S9 is done current_section stays "S9". S10 (build) is tracked by project.status
@@ -84,7 +84,9 @@ const sha256 = (s) => crypto.createHash("sha256").update(s).digest("hex");
 const ptrEsc = (s) => String(s).replace(/~/g, "~0").replace(/\//g, "~1");
 const secNum = (s) => parseInt(String(s).slice(1), 10);
 
-const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check"]);
+const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check", "all", "context"]);
+/** Every `--file` value in order (cite check takes several); a symbol key so the unknown-flag check never sees it. */
+const FILE_LIST = Symbol("files");
 const OPTIONAL_VALUE_FLAGS = new Set(["compare"]);
 const REPEAT_FLAGS = new Set(["decision"]);
 const GLOBAL_FLAGS = ["dir", "pretty", "help", "version"];
@@ -115,6 +117,7 @@ function parseArgv(argv) {
       }
       if (REPEAT_FLAGS.has(k)) (flags[k] ??= []).push(v);
       else flags[k] = v;
+      if (k === "file") (flags[FILE_LIST] ??= []).push(v);
     } else pos.push(t);
   }
   return { pos, flags };
@@ -669,6 +672,7 @@ function validatePayload(type, p) {
       break;
     case "milestone_verified": needStr("id"); break;
     case "deployment_verified": needStr("url"); break;
+    case "research_logged": case "context_research": validateResearch(type, p, false); break;
     default: break;
   }
   if (p.record !== undefined && !isStr(p.record)) throw invalid("record", "a string");
@@ -1641,7 +1645,7 @@ const BUNDLE_FILES = [
 ];
 const FILE_MAP_TARGETS = [...BUNDLE_FILES.slice(1), "blueprint.json", "CLAUDE.md", "GEMINI.md"];
 const STUB_LINE = "Read [AGENTS.md](AGENTS.md) — the builder entry point for this project.";
-const LINT_GROUPS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+const LINT_GROUPS = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
 const DECISIONS_HEADER = "| ID | Decision | Rationale | Alternatives considered | Date | Status |";
 const CAPABILITIES_HEADER = "| Name | Kind | License | Install | Notes |";
 const VAGUE_RE = /\b(looks? (?:good|fine|right|nice)|works? (?:well|fine|properly|correctly)|works? as expected|user-friendly|easy to use|feels? (?:good|right)|fast enough|good enough|performs? well|is intuitive)\b/i;
@@ -2019,7 +2023,7 @@ const NEEDS_MODEL = [
   ["D5", "D", "VERIFICATION.md", "Check that each acceptance criterion's procedure really covers that criterion (the script compares counts per milestone)."],
   ["D6", "D", "VERIFICATION.md", "Check that the Global smoke test is one real end-to-end pass over the product and that Definition of verified states when a milestone counts as verified (the script flags only missing numbering, thin steps and a near-empty definition)."],
   ["E3", "E", "OVERVIEW.md", "Check that the OVERVIEW.md and RESEARCH.md cost tables agree: same items, same numbers, no contradiction."],
-  ["E4", "E", "all bundle files", "Check that every price in the OVERVIEW.md and RESEARCH.md cost tables names where it came from (a site, a record, or unverified); the script checks the date or unverified flag on every row, and a Source cell that is not empty, only a date or only a placeholder wherever the table has a Source column."],
+  ["E4", "E", "all bundle files", "Check that every price in the OVERVIEW.md and RESEARCH.md cost tables names where it came from (a site, a record, a cite tag, or an [unverified: ...] marker; a bare \"unverified\" does not count); the script checks the date, cite tag or unverified marker on every row, and a Source cell that is not empty, only a date or only a placeholder wherever the table has a Source column."],
   ["G3", "G", "AGENTS.md", "Check that AGENTS.md \"## What this is\" says concretely what the product is, in 2-4 lines (the script checks that it is filled)."],
   ["G5", "G", "AGENTS.md", "Check that AGENTS.md \"## Working rules\" says a milestone is done only when its VERIFICATION.md procedure passes (the script checks that CODE_STYLE.md, SECURITY.md and VERIFICATION.md are mentioned)."],
   ["H4", "H", "all bundle files", "Check that no bundle document contradicts decisions[]: the stack named in OVERVIEW, SPEC, architecture and RESEARCH, and every shaping decision, trace to decision ids."],
@@ -2248,8 +2252,10 @@ function runChecks(b, wanted) {
         const cells = splitRow(r);
         if (cells.length < 2 || cells.every((c) => c === "") || /^\**total/i.test(cells[0])) continue;
         const label = trunc(cells[0].replace(/\*/g, ""), 60);
-        if (!/\d{4}-\d{2}-\d{2}/.test(r) && !/unverified/i.test(r)) add("E4", file, `${file} cost row "${label}" has no source date and no "unverified" flag.`);
-        else if (rows.srcCol >= 0 && !/unverified/i.test(r)) {
+        // A bare "unverified" is no longer a flag (group I9 forbids it): only a date, a [cite: ...] tag or an [unverified: ...] marker is.
+        const tagged = /\[(?:cite|unverified):/.test(r);
+        if (!/\d{4}-\d{2}-\d{2}/.test(r) && !tagged) add("E4", file, `${file} cost row "${label}" has no source date and no "unverified" flag.`);
+        else if (rows.srcCol >= 0 && !tagged) {
           const src = (cells[rows.srcCol] ?? "").replace(/\*/g, "").trim();
           if (/^[\s\-—–]*$/.test(src)) add("E4", file, `${file} cost row "${label}" has an empty Source cell.`);
           else if (!hasRealSource(src)) add("E4", file, `${file} cost row "${label}" has no real source in its Source cell ("${trunc(src, 40)}"): name where the price came from, not only a date or a placeholder.`);
@@ -2343,9 +2349,18 @@ function runChecks(b, wanted) {
     }
   }
 
+  // I. citations (cite check over every scanned file; needs freshness.json)
+  const extraNeeds = [];
+  if (want("I")) {
+    const r = citeAnalyze({ dir: b.dir, files: citeAllFiles(b.dir), all: true, state: b.st, journal: b.j, F: loadFreshness(null), today: todayInfo() });
+    findings.push(...r.findings);
+    extraNeeds.push(...r.needs_model);
+  }
+
   // needs_model items: only for groups that ran and files that exist
   const needs = NEEDS_MODEL.filter(([id, , file]) => want(id) && (file === "all bundle files" ? BUNDLE_FILES.some((f) => b.present(f)) : b.present(file)))
     .map(([id, group, file, message]) => ({ id, group, file, message, owner: ownerOf(id), kind: "bundle_gap", needs_model: true }));
+  needs.push(...extraNeeds);
   return { findings, needs_model: needs };
 }
 
@@ -2358,7 +2373,7 @@ function precondition(b) {
 function lintGroups(flags) {
   if (flags.group === undefined) return null;
   const g = String(flags.group).split(",").map((x) => x.trim().toUpperCase()).filter(Boolean);
-  if (!g.length || !g.every((x) => LINT_GROUPS.includes(x))) throw fail("MISSING_FLAG", "--group must be one or more of A,B,C,D,E,F,G,H (comma separated).", { flag: "group" });
+  if (!g.length || !g.every((x) => LINT_GROUPS.includes(x))) throw fail("MISSING_FLAG", "--group must be one or more of A,B,C,D,E,F,G,H,I (comma separated).", { flag: "group" });
   return new Set(g);
 }
 
@@ -2370,6 +2385,7 @@ const XRULES = [
   ["X5", "Every milestone has a VERIFICATION.md section and every acceptance criterion has a procedure", ["B15", "D4", "D5"]],
   ["X6", "Every price cites its source and access date, or is flagged unverified", ["E4"]],
   ["X7", "All 18 content files exist and are non-empty", ["A0", ...Array.from({ length: 18 }, (_, i) => `A${i + 1}`)]],
+  ["X8", "Every claim carries a valid, fresh citation or a logged unverified marker", Array.from({ length: 13 }, (_, i) => `I${i + 1}`)],
 ];
 
 function cmdLint({ dir, flags }) {
@@ -2499,6 +2515,595 @@ function cmdInstallLines({ dir }) {
   if (!b.present("CAPABILITIES.md")) throw fail("BUNDLE_INCOMPLETE", "CAPABILITIES.md is missing or empty.", { missing: ["CAPABILITIES.md"] });
   const items = b.capabilities().map((c) => ({ ...c, line: `${c.name} (${c.license}): ${c.install}${c.nc ? " [NC: runtime dependency only, never vendored]" : ""}` }));
   return { count: items.length, lines: items.map((i) => i.line), items };
+}
+
+// ---------------------------------------------------------------- 11c. research: freshness, cite check, research log
+// Contract: docs/spec/07-research.md. `cite check` is read-only; `research log` appends research_logged / context_research.
+const RESEARCH_TYPES = ["research_logged", "context_research"];
+const CLOCKS = ["standard", "published", "amendment"];
+const RESEARCH_PURPOSES = ["web_check", "claim", "s5", "refresh", "feature", "recheck"];
+const DAY_MS = 86400000;
+
+/** freshness.json: `--freshness PATH` (an explicit path never falls through), else <script dir>/../references/, else <script dir>/../skills/lvr-freshness.json. */
+function loadFreshness(explicit) {
+  const searched = explicit ? [path.resolve(explicit)] : [path.join(SCRIPT_DIR, "..", "references", "freshness.json"), path.join(SCRIPT_DIR, "..", "skills", "lvr-freshness.json")];
+  const found = searched.find((p) => { try { return fs.statSync(p).isFile(); } catch { return false; } });
+  if (!found) throw fail("FRESHNESS_MISSING", "freshness.json not found; nothing was checked.", { searched });
+  let data;
+  try { data = JSON.parse(readText(found)); } catch (e) { throw fail("FRESHNESS_INVALID", `freshness.json is not valid JSON: ${e.message}`, { path: found }); }
+  const errors = [];
+  if (!isObj(data) || !isObj(data.categories) || !Object.keys(data.categories).length) errors.push({ pointer: "/categories", message: "categories must be a non-empty object." });
+  else {
+    for (const [k, c] of Object.entries(data.categories)) {
+      const at = `/categories/${ptrEsc(k)}`;
+      if (!isObj(c)) { errors.push({ pointer: at, message: "A category must be an object." }); continue; }
+      if (!Number.isInteger(c.max_age_days) || c.max_age_days < 1) errors.push({ pointer: `${at}/max_age_days`, message: "max_age_days must be an integer >= 1." });
+      if (typeof c.key_fact !== "boolean") errors.push({ pointer: `${at}/key_fact`, message: "key_fact must be true or false." });
+      if (!CLOCKS.includes(c.clock)) errors.push({ pointer: `${at}/clock`, message: `clock must be ${CLOCKS.join("|")}.` });
+      if (!isStr(c.covers)) errors.push({ pointer: `${at}/covers`, message: "covers must be a string." });
+    }
+  }
+  if (errors.length) throw fail("FRESHNESS_INVALID", `freshness.json is not valid (${errors.length} problem${errors.length === 1 ? "" : "s"}).`, { path: found, errors });
+  return { path: found, categories: data.categories };
+}
+
+// ----- dates (UTC, whole days)
+/** `YYYY`, `YYYY-MM` or `YYYY-MM-DD` -> { ok, day } (a partial date is its first day); null when the shape is wrong. */
+function parseDay(s) {
+  const m = String(s).match(/^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/);
+  if (!m) return null;
+  const y = +m[1], mo = m[2] === undefined ? 1 : +m[2], d = m[3] === undefined ? 1 : +m[3];
+  if (y < 1000 || mo < 1 || mo > 12 || d < 1 || d > new Date(Date.UTC(y, mo, 0)).getUTCDate()) return { ok: false };
+  return { ok: true, day: Date.UTC(y, mo - 1, d) / DAY_MS };
+}
+function todayInfo() {
+  const t = Date.parse(now());
+  const iso = (Number.isNaN(t) ? new Date() : new Date(t)).toISOString().slice(0, 10);
+  return { iso, day: parseDay(iso).day };
+}
+const eventDay = (ts) => { const t = Date.parse(ts); return Number.isNaN(t) ? null : Math.floor(t / DAY_MS); };
+
+/** Registrable domain (spec 07 §4.2). */
+const SLD_SET = new Set(["ac", "biz", "co", "com", "desa", "edu", "go", "gov", "mil", "my", "ne", "net", "or", "org", "ponpes", "sch", "web"]);
+function registrableDomain(url) {
+  const m = String(url).match(/^https?:\/\/(?:[^/?#@]*@)?(\[[^\]]*\]|[^/?#:]+)/i);
+  let host = (m ? m[1] : "").toLowerCase();
+  if (host.startsWith("www.")) host = host.slice(4);
+  if (/^\d+(\.\d+){3}$/.test(host) || host.startsWith("[")) return host;
+  const parts = host.split(".");
+  if (parts.length >= 3 && parts[parts.length - 1].length === 2 && SLD_SET.has(parts[parts.length - 2])) return parts.slice(-3).join(".");
+  return parts.slice(-2).join(".");
+}
+
+// ----- text preparation
+const MEMORY_PHRASES = [
+  ["model knowledge", /model knowledge/gi], ["model-knowledge", /model-knowledge/gi], ["assistant's memory", /assistant['’]s memory/gi],
+  ["from memory", /from memory/gi], ["no live check", /no live check/gi], ["training data", /training data/gi], ["knowledge cutoff", /knowledge cutoff/gi],
+];
+const RECO_PHRASES = [
+  ["best practices", /best practices/gi], ["best practice", /best practice(?!s)/gi], ["industry standard", /industry standard/gi], ["industry-standard", /industry-standard/gi],
+  ["experts recommend", /experts recommend/gi], ["recommended by experts", /recommended by experts/gi], ["widely recommended", /widely recommended/gi], ["commonly recommended", /commonly recommended/gi],
+];
+const CURRENCY_BEFORE = /(?<![A-Za-z])(?:Rp|IDR|USD|US\$|EUR|GBP|SGD|S\$|MYR|RM|INR|JPY)\s?\d|[$€£₹¥]\s?\d/;
+const CURRENCY_AFTER = /\d[\d.,]*\s?(?:IDR|USD|EUR|GBP|SGD|MYR|INR|JPY|rupiah|dollars?)(?![A-Za-z])/i;
+const PERCENT_RE = /\d(?:[.,]\d+)?\s?%/;
+const FEE_WORD_RE = /\b(?:fee|rate|interest|commission|mdr|tax|vat|levy|charge|payment|transaction|bunga|biaya|pajak|komisi|provisi|denda|cicilan|transaksi|pembayaran)/i;
+const VERSION_RE = /(?<![\w.])v\d+(?:\.\d+)+(?![\w])|(?<![\w.])\d+\.\d+\.\d+(?!\.?\d)/;
+const ANSWER_ID_G = /\bS(?:10|[0-9])\.q[0-9]+\b/g;
+const BRIEF_FILE = ".lvr/docs/research/domain-brief.md";
+const sourceKind = (line) => (CURRENCY_BEFORE.test(line) || CURRENCY_AFTER.test(line) ? "price" : PERCENT_RE.test(line) && FEE_WORD_RE.test(line) ? "fee or rate" : VERSION_RE.test(line) ? "version" : null);
+const claimOf = (line) => { const t = line.trim(); return t.length > 160 ? t.slice(0, 159) + "…" : t; };
+const blankSpan = (s) => s.replace(/[^\n]/g, " ");
+
+/** Lines of a file in three layers: raw; `code` (fences, HTML comments and VERIFICATION build logs blanked); `plain` (inline code spans blanked too). */
+function prepareLines(text, rel) {
+  let t = blankFences(text);
+  t = t.replace(/<!--[\s\S]*?-->/g, blankSpan);
+  let lines = t.split("\n");
+  if (rel === "VERIFICATION.md") {
+    const heads = parseHeadings(lines.join("\n"));
+    for (const h of heads) {
+      if (h.level !== 2 || !/^Build log\b/i.test(h.text)) continue;
+      const body = bodyOf(lines, heads, h);
+      for (let i = h.line; i <= h.line + body.length; i++) lines[i] = "";
+    }
+  }
+  const plain = lines.map((l) => l.replace(/`[^`]*`/g, blankSpan));
+  return { code: lines, plain };
+}
+
+/** GFM tables in a line array: [{ header, rows: [lineIdx], sepIdx, cells }]. */
+function findTables(lines) {
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (!lines[i].trim().startsWith("|")) { i++; continue; }
+    let j = i;
+    while (j < lines.length && lines[j].trim().startsWith("|")) j++;
+    if (j - i >= 2 && splitRow(lines[i + 1]).every((c) => /^:?-+:?$/.test(c))) {
+      out.push({ header: i, sep: i + 1, rows: Array.from({ length: j - i - 2 }, (_, k) => i + 2 + k), cells: splitRow(lines[i]) });
+    }
+    i = j;
+  }
+  return out;
+}
+const cleanCell = (c) => c.replace(/[*_`]/g, "").trim();
+
+/** Tags of one line: [{ kind: "cite"|"unv", start, end, body, closed }]. */
+function scanTags(line) {
+  const out = [];
+  const re = /\[(cite|unverified):/g;
+  let i = 0;
+  for (;;) {
+    re.lastIndex = i;
+    const m = re.exec(line);
+    if (!m) break;
+    const close = line.indexOf("]", m.index);
+    const kind = m[1] === "cite" ? "cite" : "unv";
+    if (close < 0) { out.push({ kind, start: m.index, end: line.length, body: line.slice(m.index + m[0].length), closed: false }); break; }
+    out.push({ kind, start: m.index, end: close + 1, body: line.slice(m.index + m[0].length, close), closed: true });
+    i = close + 1;
+  }
+  return out;
+}
+
+/** Parse one cite tag. Returns { err } or the parsed fields. */
+function parseCite(t, F) {
+  if (!t.closed) return { err: "tag is not closed" };
+  if (!t.body.startsWith(" ")) return { err: "wrong number of fields" };
+  const f = t.body.slice(1).split(" · ").map((x) => x.trim());
+  if (f.length < 4) return { err: "wrong number of fields" };
+  const [cat, url, date, acc, ...flagFields] = f;
+  if (!Object.prototype.hasOwnProperty.call(F.categories, cat)) return { err: `unknown category "${cat}"` };
+  if (!/^https?:\/\/[^\s/?#]+\S*$/.test(url)) return { err: "URL must start with http:// or https://" };
+  let dm = date === "n.d." ? { nd: true } : date.match(/^(pub|upd) (\d{4}(?:-\d{2}(?:-\d{2})?)?)$/);
+  if (!dm) return { err: "date must be pub or upd YYYY[-MM[-DD]], or n.d." };
+  const am = acc.match(/^acc (\d{4}-\d{2}-\d{2})$/);
+  if (!am) return { err: "access date must be acc YYYY-MM-DD" };
+  const flags = { primary: false, live: false, amend: null };
+  const seen = new Set();
+  for (const x of flagFields) {
+    const a = x.match(/^amend-check (\d{4}-\d{2}-\d{2})$/);
+    const key = a ? "amend-check" : x === "primary" || x === "live" ? x : null;
+    if (!key || seen.has(key)) return { err: `unknown or repeated flag "${x}"` };
+    seen.add(key);
+    if (key === "amend-check") flags.amend = a[1]; else flags[key] = true;
+  }
+  return { cat, url, nd: !!dm.nd, date: dm.nd ? null : dm[2], acc: am[1], flags };
+}
+/** Parse one unverified marker. Returns { err } or { cat, rqs }. */
+function parseMarker(t, F) {
+  const bad = "unverified marker needs a category and at least one RQ-NNN";
+  if (!t.closed || !t.body.startsWith(" ")) return { err: bad };
+  const f = t.body.slice(1).split(" · ").map((x) => x.trim());
+  if (f.length !== 2) return { err: bad };
+  if (!Object.prototype.hasOwnProperty.call(F.categories, f[0])) return { err: f[0] === "" ? bad : `unknown category "${f[0]}"` };
+  const rqs = f[1].split(",").map((x) => x.trim());
+  if (!rqs.length || !rqs.every((x) => /^RQ-\d{3,}$/.test(x))) return { err: bad };
+  return { cat: f[0], rqs };
+}
+
+/** Research events by RQ id: { type, ts, failed }. */
+function researchIndex(j) {
+  const m = new Map();
+  for (const e of j.events) {
+    if (!RESEARCH_TYPES.includes(e.type) || !isStr(e.payload.id)) continue;
+    const q = Array.isArray(e.payload.queries) ? e.payload.queries : [];
+    m.set(e.payload.id, { type: e.type, ts: e.ts, failed: e.payload.outcome === "failed" && q.some((x) => isStr(x) && x.trim() !== "") });
+  }
+  return m;
+}
+
+const BRIEF_SECTION_RE = /^S[1-8]$/;
+function fileOwner(rel) {
+  const m = rel.match(/^\.lvr\/docs\/sections\/S(\d+)-(.*)\.md$/);
+  if (m) return m[1] === "4" && m[2] === "additions" ? "lvr-add-feature" : `S${m[1]}`;
+  if (/^\.lvr\/docs\/research\//.test(rel)) return "S0";
+  return "S9";
+}
+
+/** The analysis behind `cite check` and lint group I. `files` = project-relative paths to scan, in order. `state` = a valid state object or null. */
+function citeAnalyze({ dir, files, all, state, journal, F, today }) {
+  const findings = [];
+  const warnings = [];
+  const stats = { files: 0, tags: 0, groups: 0, by_category: {}, unverified: 0, brief_items: 0 };
+  const rq = researchIndex(journal);
+  const recorded = new Set();
+  if (state) for (const s of Object.values(state.pipeline.sections)) for (const [aid, a] of Object.entries(s.answers ?? {})) if (!a.skipped) recorded.add(aid);
+  const sectionDone = (sid) => state?.pipeline.sections[sid]?.status === "done";
+  const scanned = [];
+  const texts = new Map();
+  for (const rel of files) {
+    const t = tryReadLF(path.join(dir, rel));
+    if (t === null) continue;
+    scanned.push(rel);
+    texts.set(rel, t);
+  }
+  const fileIdx = new Map(scanned.map((r, i) => [r, i]));
+
+  // Domain Brief: item sources (for I11) and rows (for I13)
+  const briefText = texts.get(BRIEF_FILE) ?? tryReadLF(path.join(dir, BRIEF_FILE));
+  const briefSource = new Map();
+  if (briefText !== null) {
+    const bl = prepareLines(briefText, BRIEF_FILE).code;
+    for (const tb of findTables(bl)) {
+      const hc = tb.cells.map((c) => cleanCell(c).toLowerCase());
+      const si = hc.findIndex((c) => c.startsWith("source"));
+      for (const r of tb.rows) {
+        const cells = splitRow(bl[r]);
+        const id = cleanCell(cells[0] ?? "");
+        if (/^U-\d{2,}$/.test(id)) briefSource.set(id, si >= 0 ? (cells[si] ?? "") : "");
+      }
+    }
+  }
+  const unverifiedText = (s) => /\[unverified:/.test(s) || /\bunverified\b/i.test(s.replace(/\[unverified:[^\]]*\]?/g, " "));
+
+  const decisionSeen = new Set();
+  for (const rel of scanned) {
+    stats.files++;
+    const text = texts.get(rel);
+    const { code, plain } = prepareLines(text, rel);
+    const heads = parseHeadings(code.join("\n"));
+    const fileOwnerId = fileOwner(rel);
+    const lineOwner = new Map(); // brief rows -> owner
+    const add = (id, codeName, line0, message, claimLine) => findings.push({
+      id, group: "I", code: codeName, file: rel, line: line0 + 1, message, owner: lineOwner.get(line0) ?? fileOwnerId, kind: "bundle_gap", needs_model: false,
+      claim: claimOf(claimLine ?? code[line0] ?? ""), _file: fileIdx.get(rel), _seq: findings.length,
+    });
+
+    // zones and tables
+    const exempt = new Set();
+    const tables = findTables(code);
+    const sourceRows = new Set();
+    for (const tb of tables) {
+      exempt.add(tb.header); exempt.add(tb.sep);
+      const isSource = tb.cells.some((c) => cleanCell(c).toLowerCase().startsWith("source"));
+      for (const r of tb.rows) {
+        if (/^total/i.test(cleanCell(splitRow(code[r])[0] ?? ""))) { exempt.add(r); continue; }
+        if (isSource) sourceRows.add(r);
+      }
+    }
+    for (const h of heads) exempt.add(h.line);
+    const zone = new Set();
+    const zoneSection = (title) => { for (const h of heads) if (h.text === title) { zone.add(h.line); for (let i = 1; i <= bodyOf(code, heads, h).length; i++) zone.add(h.line + i); } };
+    if (rel === "RESEARCH.md" || /^\.lvr\/docs\/sections\/S5-.*\.md$/.test(rel) || /^\.lvr\/docs\/research\/.*\.md$/.test(rel)) code.forEach((_, i) => zone.add(i));
+    else if (/^\.lvr\/docs\/sections\/S2-.*\.md$/.test(rel)) zoneSection("Prices quoted");
+    else if (rel === "OVERVIEW.md") zoneSection("What it costs");
+
+    // Domain Brief rows (I13) + owners
+    if (rel === BRIEF_FILE) {
+      for (const tb of tables) {
+        const rowsU = tb.rows.filter((r) => /^U-\d{2,}$/.test(cleanCell(splitRow(code[r])[0] ?? "")));
+        if (!rowsU.length) continue;
+        const hc = tb.cells.map((c) => cleanCell(c).toLowerCase());
+        const secI = hc.indexOf("section"), becI = hc.indexOf("became");
+        stats.brief_items += rowsU.length;
+        if (secI < 0 || becI < 0) { add("I13", "brief_unresolved", tb.header, "Domain Brief table lacks the Section or Became column."); continue; }
+        for (const r of rowsU) {
+          const cells = splitRow(code[r]);
+          const uid = cleanCell(cells[0]);
+          const sec = cleanCell(cells[secI] ?? "");
+          if (!BRIEF_SECTION_RE.test(sec)) { add("I13", "brief_unresolved", r, `Domain Brief item ${uid} has no target Section (S1–S8).`); continue; }
+          lineOwner.set(r, sec);
+          if (state && sectionDone(sec) && !/\bS(?:10|[0-9])\.q[0-9]+\b|\bD-\d{3,}\b/.test(cleanCell(cells[becI] ?? ""))) {
+            add("I13", "brief_unresolved", r, `Domain Brief item ${uid} never became a question or decision, but ${sec} is done: record the answer id or decision id in Became.`);
+          }
+        }
+      }
+    }
+    // re-own findings already added for brief rows (I13 above were added before owners of later rows were known)
+    for (const f of findings) if (f.file === rel && f.line !== null && lineOwner.has(f.line - 1)) f.owner = lineOwner.get(f.line - 1);
+
+    code.forEach((cl, li) => {
+      const pl = plain[li];
+      if (pl.trim() === "") return;
+      const tags = scanTags(pl);
+      const hasTag = tags.length > 0;
+      // groups: consecutive tags with only whitespace between
+      const groups = [];
+      for (const t of tags) {
+        const last = groups[groups.length - 1];
+        if (last && pl.slice(last[last.length - 1].end, t.start).trim() === "") last.push(t); else groups.push([t]);
+      }
+      for (const g of groups) {
+        // parse and check each tag
+        const cites = [];
+        const marks = [];
+        for (const t of g) {
+          if (t.kind === "cite") {
+            stats.tags++;
+            const p = parseCite(t, F);
+            if (p.err) { add("I3", "malformed_cite", li, `Malformed tag: ${p.err}.`); t.bad = true; t.cat = null; continue; }
+            t.p = p; t.cat = p.cat;
+            const def = F.categories[p.cat];
+            let drop = false;
+            if (p.nd) {
+              if (def.clock === "standard" ? !p.flags.live : true) {
+                add("I4", "missing_date", li, def.clock === "standard" ? `No date for a ${p.cat} fact: give pub or upd from the page, or add live if the value was read off the live page.` : `A ${p.cat} source needs its published date; n.d. is not allowed.`);
+                drop = true;
+              }
+            }
+            const chk = (d) => { // returns parsed day or null (and reports)
+              const x = parseDay(d);
+              if (!x.ok) { add("I5", "bad_date", li, `Impossible date ${d}.`); drop = true; return null; }
+              if (x.day > today.day) { add("I5", "bad_date", li, `Date ${d} is after today (${today.iso}).`); drop = true; return null; }
+              return x.day;
+            };
+            const accDay = chk(p.acc);
+            const pubDay = p.date ? chk(p.date) : null;
+            if (p.flags.amend) chk(p.flags.amend);
+            if (pubDay !== null && accDay !== null && pubDay > accDay) { add("I5", "bad_date", li, `Published date ${p.date} is after the access date ${p.acc}.`); drop = true; }
+            if (!drop) { t.pubDay = pubDay; t.accDay = accDay; cites.push(t); }
+          } else {
+            stats.unverified++;
+            const p = parseMarker(t, F);
+            if (p.err) { add("I3", "malformed_cite", li, `Malformed tag: ${p.err}.`); t.bad = true; continue; }
+            t.p = p; t.cat = p.cat;
+            marks.push(t);
+          }
+        }
+        // group-level I3
+        const catsOf = g.filter((t) => t.cat);
+        const hasCiteTag = g.some((t) => t.kind === "cite"), hasMarkTag = g.some((t) => t.kind === "unv");
+        const distinct = [...new Set(catsOf.map((t) => t.cat))];
+        let groupBad = false;
+        if (hasCiteTag && hasMarkTag) { add("I3", "malformed_cite", li, "Malformed tag: cite and unverified marker in one claim."); groupBad = true; }
+        else if (distinct.length > 1) { add("I3", "malformed_cite", li, `Malformed tag: mixed categories in one claim (${distinct.join(", ")}).`); groupBad = true; }
+        if (distinct.length === 1) { stats.groups++; stats.by_category[distinct[0]] = (stats.by_category[distinct[0]] ?? 0) + 1; }
+        if (groupBad) continue;
+        // markers: I9 then I10
+        for (const t of marks) {
+          const refs = t.p.rqs.map((id) => ({ id, ev: rq.get(id) }));
+          let any = false;
+          for (const r of refs) if (!r.ev || !r.ev.failed) { add("I9", "unverified_no_queries", li, `${r.id} is not a failed research_logged or context_research event with queries.`); any = true; }
+          if (any) continue;
+          const max = F.categories[t.p.cat].max_age_days;
+          let newest = refs[0];
+          for (const r of refs) if ((eventDay(r.ev.ts) ?? -Infinity) > (eventDay(newest.ev.ts) ?? -Infinity)) newest = r;
+          const ed = eventDay(newest.ev.ts);
+          const age = ed === null ? 0 : Math.max(0, today.day - ed);
+          if (age > max) add("I10", "unverified_stale", li, `Failed research ${newest.id} is ${age} days old (limit ${max} for ${t.p.cat}): try the research again.`);
+        }
+        // cite group: freshness and source rule
+        if (!cites.length) continue;
+        const cat = cites[0].cat;
+        const def = F.categories[cat];
+        const max = def.max_age_days;
+        const ageOf = (day) => today.day - day;
+        let step1 = true;
+        let pool = cites;
+        if (def.clock === "amendment") {
+          const amends = cites.map((t) => t.p.flags.amend).filter(Boolean).map((d) => parseDay(d).day);
+          if (!amends.length) { add("I8", "amendment_unchecked", li, "Regulation cited without an amendment check: confirm there is no newer amendment and add amend-check YYYY-MM-DD."); step1 = false; }
+          else {
+            const age = ageOf(Math.max(...amends));
+            if (age > max) { add("I6", "expired", li, `Amendment check is ${age} days old (limit ${max}): search for newer amendments again.`); step1 = false; }
+          }
+        } else {
+          const asof = (t) => (def.clock === "published" ? t.pubDay : t.p.flags.live ? t.accDay : t.pubDay ?? t.accDay);
+          const fresh = cites.filter((t) => ageOf(asof(t)) <= max);
+          if (!fresh.length) {
+            const age = Math.min(...cites.map((t) => ageOf(asof(t))));
+            add("I6", "expired", li, `Expired ${cat} fact: the newest source is ${age} days old (limit ${max}): research it again.`);
+            step1 = false;
+          } else pool = fresh;
+        }
+        if (step1 && def.key_fact) {
+          const domains = new Set(pool.map((t) => registrableDomain(t.p.url)));
+          if (!pool.some((t) => t.p.flags.primary) && domains.size < 2) add("I7", "single_source", li, `Key ${cat} fact rests on one non-primary source (${[...domains][0]}): add a primary source or a second independent one.`);
+        }
+      }
+
+      // line-level checks
+      const noTags = (() => { let s = pl; for (const t of [...tags].reverse()) s = s.slice(0, t.start) + " ".repeat(t.end - t.start) + s.slice(t.end); return s; })();
+      const bare = /\bunverified\b/i.test(noTags);
+      if (bare) add("I9", "unverified_no_queries", li, 'Bare "unverified" with no research log: research the fact, or log the failed research and write [unverified: <category> · RQ-NNN].');
+      for (const [name, re] of MEMORY_PHRASES) { re.lastIndex = 0; if (re.test(noTags)) add("I2", "memory_source", li, `Cites model memory ("${name}"): research the fact and cite it, or log the failed research and use an [unverified: …] marker.`); }
+      if (!tags.some((t) => t.kind === "cite")) {
+        const used = [];
+        for (const [name, re] of RECO_PHRASES) { re.lastIndex = 0; if (re.test(noTags) && !used.some((u) => u.includes(name) || name.includes(u))) { used.push(name); add("I12", "unsourced_recommendation", li, `Recommendation leans on "${name}" with no citation: cite the research it rests on.`); } }
+      }
+      // I1: missing source
+      if (!exempt.has(li)) {
+        const inTable = sourceRows.has(li);
+        const kind = inTable ? "table" : zone.has(li) ? sourceKind(noTags) : null;
+        if (kind && !hasTag && !bare) {
+          const ids = [...cl.matchAll(ANSWER_ID_G)].map((m) => m[0]);
+          if (ids.some((id) => !state || recorded.has(id))) { /* a recorded answer is the source */ }
+          else if (ids.length) add("I1", "missing_source", li, `Answer id ${ids[0]} is not a recorded answer, so it cannot be the source.`);
+          else add("I1", "missing_source", li, kind === "table" ? "No source on this row of a Source table: add a [cite: …] tag, an [unverified: …] marker, or the answer id it came from." : `States a ${kind} with no source: add a [cite: …] tag, an [unverified: …] marker, or the answer id it came from.`);
+        }
+      }
+    });
+
+    // I12: whole sections
+    for (const h of heads) {
+      if (!/^Recommended/i.test(h.text) && h.text !== "Stack comparison and trade-offs") continue;
+      const body = bodyOf(plain, heads, h);
+      if (!body.some((l) => scanTags(l).some((t) => t.kind === "cite"))) add("I12", "unsourced_recommendation", h.line, `Recommendation section "${h.text}" has no citation: cite the research behind it.`);
+    }
+
+    // I11: designer_filled decisions resting on an unverified fact
+    const restsOnUnverified = (txt) => unverifiedText(txt) || [...txt.matchAll(/\bU-\d{2,}\b/g)].some((m) => briefSource.has(m[0]) && unverifiedText(briefSource.get(m[0])));
+    const i11 = (did, li, txt) => {
+      const key = `${rel}|${did}`;
+      if (decisionSeen.has(key)) return;
+      if (restsOnUnverified(txt)) { decisionSeen.add(key); add("I11", "designer_filled_unverified", li, `designer_filled decision ${did} rests on an unverified fact: ask the user to confirm it, or record it as an S6 blocking risk.`); }
+    };
+    if (rel === "DECISIONS.md") {
+      code.forEach((cl, li) => {
+        if (!/^\|\s*D-\d{3,}\s*\|/.test(cl)) return;
+        const cells = splitRow(cl);
+        if ((cells[cells.length - 1] ?? "").replace(/[*`]/g, "").trim() === "designer_filled") i11(cells[0], li, cl);
+      });
+    }
+    if (rel === "ASSUMPTIONS.md") {
+      for (const h of heads) {
+        if (h.level !== 2 || !/^D-\d{3,}\b/.test(h.text) || !h.text.endsWith("(designer_filled)")) continue;
+        i11(h.text.match(/^D-\d{3,}/)[0], h.line, [code[h.line], ...bodyOf(code, heads, h)].join("\n"));
+      }
+    }
+    code.forEach((cl, li) => {
+      const m = cl.match(/\*\*(D-\d{3,})\*\*.*status:\s*designer_filled/);
+      if (m) i11(m[1], li, cl);
+    });
+  }
+
+  // state.json decisions (--all only)
+  const stateFindings = [];
+  if (all && state) {
+    for (const d of state.decisions) {
+      if (d.status !== "designer_filled") continue;
+      const txt = `${d.summary} ${d.rationale ?? ""}`;
+      const rests = unverifiedText(txt) || [...txt.matchAll(/\bU-\d{2,}\b/g)].some((m) => briefSource.has(m[0]) && unverifiedText(briefSource.get(m[0])));
+      if (rests) stateFindings.push({ id: "I11", group: "I", code: "designer_filled_unverified", file: ".lvr/state.json", line: null, message: `designer_filled decision ${d.id} rests on an unverified fact: ask the user to confirm it, or record it as an S6 blocking risk.`, owner: d.section, kind: "bundle_gap", needs_model: false, claim: claimOf(`${d.id} ${d.summary}`), _decision: d.id });
+    }
+    stateFindings.sort((a, b) => decNum(a._decision) - decNum(b._decision));
+  }
+
+  findings.sort((a, b) => a._file - b._file || (a.line ?? 0) - (b.line ?? 0) || parseInt(a.id.slice(1), 10) - parseInt(b.id.slice(1), 10) || a._seq - b._seq);
+  const out = [...findings, ...stateFindings].map((f) => Object.fromEntries(Object.entries(f).filter(([k]) => !k.startsWith("_"))));
+
+  if (state && sectionDone("S0") && briefText === null) warnings.push({ code: "NO_DOMAIN_BRIEF", message: "S0 is done but .lvr/docs/research/domain-brief.md does not exist (a project started before ticket 26): /lvr-continue builds it." });
+  if (!journal.exists) warnings.push({ code: "NO_JOURNAL", message: "There is no journal, so no RQ id resolves: every unverified marker is reported as I9." });
+
+  const needs = scanned.length ? [
+    ["I1", "Check prose facts the script cannot see (no number: rules, availability, \"free\", \"supports X\", competitor facts) for a cite tag, an unverified marker, or an answer id; facts restated outside the zones carry the same tag as their source line."],
+    ["I3", "Check that each cite's category fits the fact (a price tagged market or general dodges the 30-day limit)."],
+    ["I6", "Check that each cited page really states the claim, and that primary, live and amend-check are honest."],
+    ["I7", "Check that sources counted as independent are not one source republished, and that disagreeing sources are recorded as a conflict with the winner named."],
+    ["I12", "Check that every recommendation traces to the research (a U-NN item or a cite), not to taste."],
+  ].map(([id, message]) => ({ id, group: "I", file: "all scanned files", message, owner: "S9", kind: "bundle_gap", needs_model: true })) : [];
+  return { findings: out, needs_model: needs, stats, warnings, files: scanned };
+}
+
+/** Files `cite check --all` scans, project-relative, in spec order. */
+function citeAllFiles(dir) {
+  const out = [];
+  for (const sub of [".lvr/docs/sections", ".lvr/docs/research"]) {
+    let names = [];
+    try { names = fs.readdirSync(path.join(dir, sub)).filter((f) => f.endsWith(".md")).sort(); } catch { /* none */ }
+    for (const f of names) { const p = `${sub}/${f}`; try { if (fs.statSync(path.join(dir, p)).isFile()) out.push(p); } catch { /* skip */ } }
+  }
+  for (const f of BUNDLE_FILES) { try { if (fs.statSync(path.join(dir, f)).isFile()) out.push(f); } catch { /* skip */ } }
+  return out;
+}
+
+function cmdCiteCheck({ dir, flags }) {
+  const list = flags[FILE_LIST] ?? [];
+  if (flags.all && list.length) throw fail("MISSING_FLAG", "Give --all or --file, not both.", { flag: "all" });
+  if (!flags.all && !list.length) throw fail("MISSING_FLAG", "Give --all or at least one --file PATH.", { flag: "all" });
+  const F = loadFreshness(flags.freshness);
+  let files;
+  if (flags.all) files = citeAllFiles(dir);
+  else {
+    files = [];
+    let realDir = dir;
+    try { realDir = fs.realpathSync(dir); } catch { /* keep */ }
+    for (const f of list) {
+      const abs = path.resolve(dir, f);
+      const outside = (base, p) => { const r = path.relative(base, p); return r === ".." || r.startsWith(".." + path.sep) || path.isAbsolute(r); };
+      let real = abs;
+      try { real = fs.realpathSync(abs); } catch { /* missing */ }
+      if (outside(dir, abs) || outside(realDir, real)) throw fail("PATH_OUTSIDE_PROJECT", "That file is outside the project folder.", { path: f });
+      let st = null;
+      try { st = fs.statSync(abs); } catch { /* missing */ }
+      if (!st || !st.isFile()) throw fail("FILE_NOT_FOUND", `File not found: ${f}`, { path: f });
+      if (!/\.md$/i.test(abs)) throw fail("INVALID_PATH", "cite check reads Markdown (.md) files only.", { path: f });
+      const rel = relPath(dir, abs);
+      if (!files.includes(rel)) files.push(rel);
+    }
+  }
+  const ls = loadState(dir);
+  const warnings0 = [];
+  let state = null;
+  if (ls.kind === "valid") state = ls.state;
+  else warnings0.push({ code: "NO_STATE", message: `state.json is ${ls.kind === "absent" ? "missing" : ls.kind === "unreadable" ? "not readable" : "invalid"}: any answer id (S<n>.q<n>) counts as a source, and decisions and Section statuses are not checked.` });
+  const journal = readJournal(dir);
+  const today = todayInfo();
+  const r = citeAnalyze({ dir, files, all: !!flags.all, state, journal, F, today });
+  return {
+    today: today.iso, clean: r.findings.length === 0, files: r.files, findings: r.findings, needs_model: r.needs_model, stats: r.stats,
+    warnings: [...warnings0, ...r.warnings],
+  };
+}
+
+// ----- research log
+const isCalendarDate = (s) => isStr(s) && /^\d{4}-\d{2}-\d{2}$/.test(s) && parseDay(s).ok;
+
+/** Fields of research_logged / context_research (spec 07 §5). `forLog`: a payload that carries `id` is refused (the script assigns it). */
+function validateResearch(type, p, forLog) {
+  if (forLog) { if (p.id !== undefined) throw invalid("id", "absent (the script assigns RQ-NNN)"); }
+  else if (p.id !== undefined && !/^RQ-\d{3,}$/.test(p.id)) throw invalid("id", "RQ-NNN");
+  if (p.section === undefined || !(p.section === null || /^S[0-9]$/.test(p.section))) throw invalid("section", "S0..S9 or null");
+  if (type === "research_logged" && !RESEARCH_PURPOSES.includes(p.purpose)) throw invalid("purpose", RESEARCH_PURPOSES.join("|"));
+  if (type === "context_research") {
+    if (!["brief", "scan"].includes(p.scope)) throw invalid("scope", "brief|scan");
+    if (p.scope === "brief" && p.section !== "S0") throw invalid("section", "S0 when scope is brief");
+    if (p.scope === "scan" && !/^S[1-8]$/.test(p.section ?? "")) throw invalid("section", "S1..S8 when scope is scan");
+    if (!Array.isArray(p.findings) || !p.findings.every((x) => isStr(x) && /^U-\d{2,}$/.test(x))) throw invalid("findings", "an array of U-NN ids");
+    if (p.note !== undefined && !isStr(p.note)) throw invalid("note", "a string");
+    if (p.scope === "brief" && !p.findings.length) throw invalid("findings", "at least one U-NN id when scope is brief");
+    if (p.scope === "scan" && !p.findings.length && !(isStr(p.note) && p.note.trim() !== "")) throw invalid("note", "a non-empty string saying why when findings is empty");
+  }
+  if (!isStr(p.topic) || p.topic.trim() === "") throw invalid("topic", "a non-empty string");
+  if (!Array.isArray(p.queries) || !p.queries.length || !p.queries.every((x) => isStr(x) && x.trim() !== "")) throw invalid("queries", "an array of at least one non-empty string");
+  if (!["found", "failed"].includes(p.outcome)) throw invalid("outcome", "found|failed");
+  if (p.sources !== undefined && !Array.isArray(p.sources)) throw invalid("sources", "an array");
+  const srcs = p.sources ?? [];
+  const today = todayInfo();
+  srcs.forEach((s, i) => {
+    const at = `sources[${i}]`;
+    if (!isObj(s)) throw invalid(at, "an object");
+    if (!isStr(s.url) || !/^https?:\/\/[^\s/?#]+\S*$/.test(s.url)) throw invalid(`${at}.url`, "an http:// or https:// URL");
+    if (s.title !== undefined && s.title !== null && !isStr(s.title)) throw invalid(`${at}.title`, "a string or null");
+    for (const k of ["published", "updated"]) {
+      if (s[k] === undefined || s[k] === null) continue;
+      const d = isStr(s[k]) ? parseDay(s[k]) : null;
+      if (!d || !d.ok) throw invalid(`${at}.${k}`, "YYYY, YYYY-MM, YYYY-MM-DD or null");
+    }
+    if (!isCalendarDate(s.accessed)) throw invalid(`${at}.accessed`, "YYYY-MM-DD");
+    if (parseDay(s.accessed).day > today.day) throw invalid(`${at}.accessed`, `a date not after today (${today.iso})`);
+    for (const k of ["primary", "live"]) if (s[k] !== undefined && typeof s[k] !== "boolean") throw invalid(`${at}.${k}`, "true or false");
+  });
+  if (p.outcome === "found" && !srcs.length) throw invalid("sources", "at least one source when outcome is found");
+  if (p.outcome === "failed" && !(isStr(p.reason) && p.reason.trim() !== "")) throw invalid("reason", "a non-empty string when outcome is failed");
+  if (p.reason !== undefined && p.reason !== null && !isStr(p.reason)) throw invalid("reason", "a string or null");
+  if (p.conflicts !== undefined) {
+    if (!Array.isArray(p.conflicts)) throw invalid("conflicts", "an array");
+    p.conflicts.forEach((c, i) => {
+      if (!isObj(c) || !isStr(c.claim) || !isStr(c.kept) || !Array.isArray(c.dropped) || !c.dropped.every(isStr) || !isStr(c.why)) throw invalid(`conflicts[${i}]`, "{ claim, kept, dropped: [url], why }");
+    });
+  }
+}
+
+/** `research log` / `journal append --type research_logged|context_research`: assigns RQ-NNN (max + 1 across both types) under the lock. */
+function researchAppend(dir, type, payload) {
+  if (!fs.existsSync(path.join(dir, ".lvr"))) throw fail("NO_LVR", "No .lvr folder here; this is not an LVR project folder.");
+  validateResearch(type, payload, true);
+  return withLock(dir, "research log", () => {
+    const j = readJournal(dir);
+    let max = 0;
+    for (const e of j.events) {
+      if (!RESEARCH_TYPES.includes(e.type)) continue;
+      const m = isStr(e.payload.id) ? e.payload.id.match(/^RQ-(\d+)$/) : null;
+      if (m) max = Math.max(max, parseInt(m[1], 10));
+    }
+    const id = `RQ-${String(max + 1).padStart(3, "0")}`;
+    try {
+      const r = appendLocked(dir, type, { id, ...payload });
+      return { ...r, id };
+    } catch (e) {
+      if (e instanceof LvrError && e.extra) e.extra = { ...e.extra, id };
+      throw e;
+    }
+  });
+}
+
+async function cmdResearchLog({ dir, flags }) {
+  const payload = await readPayloadInput(flags);
+  if (payload === null) throw fail("MISSING_FLAG", "Give the research step with --payload JSON or --in FILE|-.", { flag: "payload" });
+  return researchAppend(dir, flags.context ? "context_research" : "research_logged", payload);
 }
 
 // ---------------------------------------------------------------- 12. commands
@@ -2784,8 +3389,17 @@ const COMMANDS = {
     run: async ({ dir, flags }) => {
       const type = need(flags, "type");
       const payload = (await readPayloadInput(flags)) ?? {};
+      if (RESEARCH_TYPES.includes(type) && !flags["no-state"]) return researchAppend(dir, type, payload); // the script assigns the RQ id
       return checkpoint(dir, type, payload, { noState: !!flags["no-state"] });
     },
+  },
+  "research log": {
+    help: "Log one research step (RQ-NNN assigned, journal + checkpoint). (--payload JSON | --in FILE|-) [--context: context_research instead of research_logged]",
+    flags: ["payload", "in", "context"], run: cmdResearchLog,
+  },
+  "cite check": {
+    help: "Check citations, unverified markers and freshness (read-only; findings I1-I13). --all | --file PATH (repeatable) [--freshness PATH]",
+    flags: ["all", "file", "freshness"], run: async (c) => cmdCiteCheck(c),
   },
   "journal check": {
     help: "Report journal health (gaps, duplicates, corrupt lines, truncated tail, CRLF, BOM).", flags: [],
@@ -2926,10 +3540,10 @@ const COMMANDS = {
     },
   },
   "lint run": {
-    help: "Gap lint A-H over the bundle (read-only). [--group A,C] [--journal: journal one gap_found per finding]", flags: ["group", "journal"],
+    help: "Gap lint A-I over the bundle (read-only; group I = cite check). [--group A,C] [--journal: journal one gap_found per finding]", flags: ["group", "journal"],
     run: async (c) => cmdLint(c),
   },
-  crosscheck: { help: "The S9 cross-check list over the bundle (read-only): rules X1-X7, findings carry their lint id.", flags: [], run: async (c) => cmdCrosscheck(c) },
+  crosscheck: { help: "The S9 cross-check list over the bundle (read-only): rules X1-X8, findings carry their lint id.", flags: [], run: async (c) => cmdCrosscheck(c) },
   "blueprint emit": {
     help: "Derive blueprint.json from state + bundle; writes only on drift (generated_at ignored). [--check: write nothing] [--in FILE|-: JSON with stack, idea_summary_en, costs the bundle cannot supply]",
     flags: ["check", "in"], run: cmdBlueprintEmit,

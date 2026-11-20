@@ -11,7 +11,7 @@ The resume skill of the LVR pipeline. It picks up any interrupted or parked LVR 
 
 Before any check, question, or file write:
 
-1. Read `references/principles.md` (the Constitution). All 13 principles bind this skill — especially 10 (State discipline) and 13 (Disk is memory).
+1. Read `references/principles.md` (the Constitution). All 14 principles bind this skill — especially 10 (State discipline), 13 (Disk is memory), and 14 (Research what the user doesn't know).
 2. Read `references/conventions.md` (the operational manual). It owns the state schema (§2), journal event list (§3), Section map (§5), Folder Gate (§6), and tier tables (§7); the steps below reference it instead of repeating it.
 3. Interact in the user's language from the first message. The messages below are the English source; translate them when speaking. Artifacts and stored values follow the conventions (English source of truth).
 4. **Script helper (preferred when Node is available).** This skill ships `scripts/lvr.mjs` (Node ≥22, nothing to install). `<skill-dir>` = the folder holding this SKILL.md (use the base directory the harness reports; otherwise look for `lvr-<this-skill>/scripts/lvr.mjs` in the skills directories listed in INSTALL.md). Once per session run `node "<skill-dir>/scripts/lvr.mjs" version`. If it prints JSON with `"lvr_schema":1`, run the `Script:` command given at each step below (`LVR` = `node "<skill-dir>/scripts/lvr.mjs" --dir "<PROJECT_DIR>"`) and act on its JSON. If `node` is missing, the command cannot start, or `lvr_schema` differs, say once (English source): "Node.js is not available here, so I'll do the bookkeeping by hand." Then follow each step's prose — the prose is the fallback and stays authoritative for behavior. Never hand-edit `.lvr/` files to work around a script error (`"ok":false`): report its `code` plainly and stop that step. On any non-zero exit (`"ok":false`) stop the step, show the error and follow `error.details.hint`; exit code 3 means the event was journaled (`journaled_seq`) or blocked but `state.json` was NOT updated (`STATE_LAGS`, `STATE_MISSING`, `STATE_INVALID`, `STATE_SEQ_UNKNOWN`, `JOURNAL_BEHIND_STATE`): do not continue the interview, run `/lvr-continue` (its Step 2 maps each code to the exact command). Pass long text through `--in -` with a quoted heredoc (`<<'EOF'`) or a PowerShell here-string (`@'…'@ |`), never inline in double quotes.
@@ -22,7 +22,8 @@ Before any check, question, or file write:
 2. **Load or rebuild** the state (journal replay when damaged).
 3. **Tier check** — cross-model resume rules.
 4. **Progress summary** — plain language, User Language.
-5. **Offer the right next action** and, on confirmation, resume into it.
+4b. **Web research check** — before any Section or compile work; no web → explain how to enable it and stop.
+5. **Offer the right next action** and, on confirmation, resume into it (a missing or partial Domain Brief and the current Section's scan come first).
 
 Every step is idempotent: re-running `/lvr-continue` is always safe.
 
@@ -87,6 +88,7 @@ Replay the whole journal in `seq` order onto a fresh state object (shape per con
 | `error` | `project.status` = "error" (remember the status before it); keep the payload for the summary |
 | `resume`, and the opening events `session_start`, `handoff_started`, `recheck_started`, `feature_started`, `brand_started` | restore the status remembered at the last `error` (conventions §2); otherwise no state effect (`section_start`, `section_done`, `section_blocked`, `answer_recorded` restore it too, before their own effect) |
 | `context_guard_triggered`, `truncation_recovered` | informational — no state effect |
+| `research_logged`, `context_research` | informational — no state effect; the Domain Brief file and the Section Records hold the findings (a `context_research` with scope `scan` marks that Section's scan as done) |
 
 Three things the journal cannot supply directly:
 
@@ -136,6 +138,14 @@ Print it in the user's language, plain and non-technical — the owner must unde
 
 Journal `resume` (payload: position + tier-check result) before offering actions, if not already appended in Step 2.
 
+## Step 4b — Web research check
+
+Runs when the next action is Section work or the S9 compile (Step 5b or 5c) — every tier, every run: the harness may have changed since the last session. Same check as the init skill's Step 1 (conventions §7 and §10): one real search with a neutral query that is not about the user's idea, then one page fetch; pass = a result URL and readable page text.
+
+- Pass → journal `research_logged` (`section` = the current Section, `purpose` "web_check", `outcome` "found").
+- Fail → journal it with `outcome` "failed" and the `reason`, then say (English source): "I can't do web research in this session (\<cause\>). LVR never continues from memory, so I'm stopping here — your project is safe on disk, nothing changed." Add the enable steps from conventions §10 for this harness (Claude Code, Codex CLI, Gemini CLI, OpenCode, or a web search + fetch MCP server), then: "Run `/lvr-continue` again once web research works." Stop. Status reporting (Step 4) and handoff guidance (5d, 5e) need no web.
+- Script: `LVR research log --in -` with `{"section":"<S>","purpose":"web_check","topic":"web research check","queries":["<query>","fetch <url>"],"sources":[…],"outcome":"found"}` (failed: `"sources":[]`, `"outcome":"failed"`, `"reason":"…"`).
+
 ## Step 5 — Offer the right next action
 
 Pick ONE primary offer from the state; act on the user's confirmation.
@@ -151,7 +161,11 @@ Script: the same commands as the init skill's Section loop engine: `LVR answer r
 Order of offers:
 
 1. **Open loop-backs exist** → offer to answer them first (the S6 return path): ask the targeted questions in the affected earlier Section (S1–S4), close each entry with `loop_back_closed` + one checkpoint when resolved, then return to S6.
-2. **Otherwise resume the current Section** at the exact micro-batch boundary:
+2. **Research first** (principle 14), before composing any batch:
+   - S0 is `done` and `.lvr/docs/research/domain-brief.md` is missing (a project started before the brief existed, or a session that died) or says `Status: in progress` → build or finish it now: the init skill's Step 4 step 8 and `references/sections/S0-domain-brief.md` §1 and §4 — continue at the first heading with no rows; never redo a logged step.
+   - The current Section (S1–S8) has no `context_research` event with scope `scan` for it → run the init engine's step 1b (scan, "Things you may not know") before the next batch. Items already shown keep their `Became` cells.
+   - Init skill not installed → do both from conventions §10 directly (it holds the brief's columns, the scan rules, and the cite syntax).
+3. **Otherwise resume the current Section** at the exact micro-batch boundary:
    - **Load the Section's procedure** per the tier's reload discipline (conventions §7). Find it in this order: (1) the installed `lvr-init-new-idea` skill — check the harness skill list, then known skills directories (`~/.claude/skills/`, `<cwd>/.claude/skills/`, `~/.agents/skills/`), then an `lvr-init-new-idea/` folder beside this skill — and use its `### S<NN>` procedure block plus its `references/sections/` bank files; (2) not found, or the procedure block is missing → **degraded fallback, loudly**:
      - Reload `state.json` + the current Section Record.
      - Re-derive the next micro-batch from the Section's **exit criteria** (conventions §5): every not-yet-satisfied criterion becomes one targeted question, composed from the recorded answers, phrased in User Language with a one-line reason it matters. Use bank files if present; otherwise the model's own interview judgment.
@@ -160,11 +174,11 @@ Order of offers:
    - **Compose the batch from recorded answers**: check `sections.<S>.answers` (and the record) before composing every batch. NEVER re-ask anything recorded or skipped. Batch size per the current tier (T1 up to 3, T2 up to 2, T3 exactly 1). Keep both controls visible: **skip** (recorded, never blocks) and **"cukup" / that's enough for this Section** (jump to the exit-criteria check).
    - **All exit criteria already satisfied but the Section is not done** (the session died between the check and the `section_done` write) → ask nothing: write the record, close the Section (`section_done`), continue to the next Section.
    - From the first new answer onward, follow the init skill's Section loop engine (its "Section loop engine" section): one checkpoint per answer, the same record shape, decisions `D-NNN` with statuses per principle 12.
-   - **S0 special case**: `S0.q1` not recorded → the idea was never captured; run the S0 capture fresh (nothing is being re-asked). Recorded → continue at the language/slug confirmation steps.
+   - **S0 special case**: `S0.q1` not recorded → the idea was never captured; run the S0 capture fresh (nothing is being re-asked). Recorded → continue at the language, slug, and market confirmation steps that are not yet recorded, then close S0 and build the Domain Brief.
 
 ### c. Scope locked, S9 not `done` (bundle absent, partial, or fully written but S9 unclosed)
 
-Offer to finish generation (S9): the remaining files per the conventions §8 list, one file per turn (T3: one file section per turn, append-chunks), `doc_generated` + one checkpoint per file. Existing bundle files are skipped; a 0-byte file, or a file missing the structure conventions §8 requires, counts as *missing required structure* — it is offered as remaining work (the same class as truncation recovery, conventions §7), never as existing-and-skipped. Regenerating one happens only on an explicit per-file user request. When no file is missing, the remaining work is closing S9 (`section_done` + one checkpoint).
+Offer to finish generation (S9). First the freshness re-check: `LVR cite check --all`; research every expired fact again and update the records that hold it, so nothing is compiled stale. Then the remaining files per the conventions §8 list, one file per turn (T3: one file section per turn, append-chunks), `doc_generated` + one checkpoint per file. Existing bundle files are skipped; a 0-byte file, or a file missing the structure conventions §8 requires, counts as *missing required structure* — it is offered as remaining work (the same class as truncation recovery, conventions §7), never as existing-and-skipped. Regenerating one happens only on an explicit per-file user request. When no file is missing, the remaining work is closing S9 (`section_done` + one checkpoint).
 
 ### d. Bundled (S9 done, `handoff` open)
 
@@ -183,7 +197,7 @@ Offer the next skill: `/lvr-build` (execute the next unverified milestone), `/lv
 
 ## Checkpoint discipline
 
-Same as init (conventions §9): one journal write + one state write together, at event boundaries. This skill appends `resume` on every run, `tier_changed` + probe events on a tier change, and everything the resumed work emits (`answer_recorded`, `section_start`/`section_done`, `loop_back_closed`, `doc_generated`, `scope_locked`, `error`, …). The journal is append-only: never rewrite, reorder, or delete lines.
+Same as init (conventions §9): one journal write + one state write together, at event boundaries. This skill appends `resume` on every run, `tier_changed` + probe events on a tier change, the web research check (`research_logged`), and everything the resumed work emits (`answer_recorded`, `section_start`/`section_done`, `context_research`, `research_logged`, `loop_back_closed`, `doc_generated`, `scope_locked`, `error`, …). The journal is append-only: never rewrite, reorder, or delete lines.
 
 ## Never list
 
@@ -193,3 +207,4 @@ Same as init (conventions §9): one journal write + one state write together, at
 - Never rewrite or reorder journal lines — append only. (Conventions §3)
 - Never degrade silently: a missing init skill, an untranslatable journal event, an unrecoverable answer, a guessed tier — all said aloud, in User Language.
 - Never push through a failed capability probe — refuse; the state on disk is safe. (Conventions §7)
+- Never continue Section work or the compile without web research, and never fill a research gap from memory — explain how to enable web tools and stop. (Principle 14)

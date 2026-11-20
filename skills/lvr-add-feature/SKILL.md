@@ -68,7 +68,7 @@ Script: `LVR journal append --type feature_research --payload '{…}'`
 
 Follow `references/feature-capture.md` §2. Reuse evidenced rows from `RESEARCH.md`; research only the new service, data class, platform capability, or legal constraint this feature introduces.
 
-Every new claim carries source URL + access date, or an explicit `unverified` flag. No web access → say so loudly and keep claims `unverified`. Journal `feature_research` (payload: claims added, sources, unverified count). One checkpoint.
+Every new claim carries a cite group, or an `[unverified: <category> · RQ-NNN]` marker after logged research failed (conventions §10); log each research step as `research_logged` (`purpose` "feature"). Web research is required (principle 14): no web search or page fetch → explain how to enable it (conventions §10) and stop — never research from memory. Journal `feature_research` (payload: claims added, sources, unverified count). One checkpoint.
 
 ## Step 5 — Impact analysis
 

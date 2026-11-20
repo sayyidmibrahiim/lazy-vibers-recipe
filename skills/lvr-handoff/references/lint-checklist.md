@@ -1,13 +1,13 @@
 # Gap-lint checklist (/lvr-handoff)
 
-The operational bundle lint. Run every check literally, groups A–H in order, before any emission. One line per check; the check id (A1, B4, …) goes into the `gap_found` journal payload. The embedded required-headings lists and the `blueprint.json` schema (group H) mirror the S9 skeletons in `lvr-init-new-idea/references/bundle/templates.md` — embedded here so the lint works with no other skill installed. When that skill IS installed, its templates are the richer source for fix instructions.
+The operational bundle lint. Run every check literally, groups A–I in order, before any emission. One line per check; the check id (A1, B4, …) goes into the `gap_found` journal payload. The embedded required-headings lists and the `blueprint.json` schema (group H) mirror the S9 skeletons in `lvr-init-new-idea/references/bundle/templates.md` — embedded here so the lint works with no other skill installed. When that skill IS installed, its templates are the richer source for fix instructions.
 
 Two finding kinds:
 
 - **Bundle gap** — owner is a Section/skill (owner table at the bottom). Collected for the fix-now/abort offer.
 - **Self-fix** — owner is the handoff itself (H1, H2). Journaled `gap_found`, then fixed automatically at the Emit step; never user-facing.
 
-Script: `node "<skill-dir>/scripts/lvr.mjs" --dir "<PROJECT_DIR>" lint run [--group A,C] [--journal]` executes the mechanical part of every check below and returns `findings[]` (`{id, group, file, message, owner, kind}`; messages are fixed text). `needs_model[]` lists, always and never guessed, the checks that need your judgment (the model performs them literally from this file; a script finding never replaces them): B19 (English GFM; Mermaid fences and unfilled placeholders are scripted), B21 (stack and entity names; display name and feature names are scripted), C4 (Why and confirm lines are specific; filled is scripted), D3 (machine-checkable; known vague phrases are scripted), D4 (exact commands and expected outputs; steps under 25 characters or vague are scripted), D5 (each procedure really covers its criterion; counts are scripted), D6 (a real end-to-end smoke pass; numbering, thin steps and a near-empty definition are scripted), E3 (the two cost tables agree), E4 (every price in the OVERVIEW.md and RESEARCH.md cost tables names a source; the date or `unverified` flag on every row, and a Source cell that is not empty, only a date or only a placeholder (`TBD`, `n/a`, `-`, `?`) wherever the table has a Source column, are scripted; an `unverified` row needs no Source), G3 (concrete product description; non-empty is scripted), G5 (the "milestone is done only when its VERIFICATION procedure passes" rule is stated; the three file mentions are scripted), H4 (no contradiction with `decisions[]`; a broken `stack.reasons_ref` is scripted). Every other check here is scripted in full: that is the whole list of twelve. `crosscheck` is the S9 view over the same checks (rules X1–X7: X1 = B5, B9, F1, F4; X2 = C1–C3; X3 = C4, C5; X4 = B21; X5 = B15, D4, D5; X6 = E4; X7 = A). Without Node the model executes the whole file literally.
+Script: `node "<skill-dir>/scripts/lvr.mjs" --dir "<PROJECT_DIR>" lint run [--group A,C] [--journal]` executes the mechanical part of every check below and returns `findings[]` (`{id, group, file, message, owner, kind}`; messages are fixed text). `needs_model[]` lists, always and never guessed, the checks that need your judgment (the model performs them literally from this file; a script finding never replaces them): B19 (English GFM; Mermaid fences and unfilled placeholders are scripted), B21 (stack and entity names; display name and feature names are scripted), C4 (Why and confirm lines are specific; filled is scripted), D3 (machine-checkable; known vague phrases are scripted), D4 (exact commands and expected outputs; steps under 25 characters or vague are scripted), D5 (each procedure really covers its criterion; counts are scripted), D6 (a real end-to-end smoke pass; numbering, thin steps and a near-empty definition are scripted), E3 (the two cost tables agree), E4 (every price in the OVERVIEW.md and RESEARCH.md cost tables names a source; the date or `unverified` flag on every row, and a Source cell that is not empty, only a date or only a placeholder (`TBD`, `n/a`, `-`, `?`) wherever the table has a Source column, are scripted; an `unverified` row needs no Source), G3 (concrete product description; non-empty is scripted), G5 (the "milestone is done only when its VERIFICATION procedure passes" rule is stated; the three file mentions are scripted), H4 (no contradiction with `decisions[]`; a broken `stack.reasons_ref` is scripted). Every other check here is scripted in full: that is the whole list of twelve. `crosscheck` is the S9 view over the same checks (rules X1–X8: X1 = B5, B9, F1, F4; X2 = C1–C3; X3 = C4, C5; X4 = B21; X5 = B15, D4, D5; X6 = E4; X7 = A; X8 = I). Group I is the citation check (`cite check --all`, conventions §10): `lint run` includes its findings and its `needs_model` items (I1, I3, I6, I7, I12); `--group I` runs it alone. Without Node the model executes the whole file literally.
 
 Reporting rule: a file that already failed a presence check (group A) is not re-checked in later groups — one finding per missing file, not two. Every finding is plain language: what is wrong, where, and who fixes it.
 
@@ -131,6 +131,26 @@ G3–G6 are the "thin AGENTS.md" checks: failing any one is a gap finding, never
 
 The `ref` / `*_ref` values are logical pointers `<file>#<id>`, not Markdown anchors: the id is the feature (`F-01`), decision (`D-003`) or milestone (`M0`) id that starts the target heading or table row, and `costs` names the `## Cost table` section (`RESEARCH.md#cost-table`).
 
+## I. Citations — every fact sourced, fresh, and honest (principles 1 and 14)
+
+Material: `.lvr/docs/sections/*.md`, `.lvr/docs/research/*.md`, every bundle Markdown file except CLAUDE.md/GEMINI.md, `state.json → decisions[]`, the journal's `research_logged`/`context_research` events, and `references/freshness.json`. Skip fenced code, inline code, HTML comments, and VERIFICATION.md `## Build log — …` sections. Syntax, limits, and the key-fact rule: conventions §10. Exact zone and message rules: `docs/spec/07-research.md` §6 in the LVR repository (the script applies them).
+
+- I1 every row of a table with a Source column, and every line stating a price, a fee or rate percentage, or a version in RESEARCH.md, the S5 record, the Domain Brief, the S2 `## Prices quoted` section and the OVERVIEW `## What it costs` section, carries a cite group, an `[unverified: …]` marker, or the answer id of a recorded answer (total rows exempt)
+- I2 no source is model memory ("model knowledge", "from memory", "assistant's memory", "no live check", "training data", "knowledge cutoff")
+- I3 every `[cite: …]` tag and `[unverified: …]` marker follows the syntax: known category, http(s) URL, `pub`/`upd` date or `n.d.`, `acc` date, known flags once each; one category per claim
+- I4 every cite has a date: `n.d.` only with `live` (never for `statistic` or `regulation`)
+- I5 no impossible date, no date after today, no published date after the access date
+- I6 no fact past its freshness limit (the freshest source counts; regulations: the newest `amend-check`)
+- I7 every key fact (`price`, `quota`, `version`, `legal`, `regulation`) has a fresh `primary` source or two fresh sources from different sites
+- I8 every regulation cite group has an `amend-check` date
+- I9 no bare "unverified": every marker names failed, logged research (`RQ-NNN` with `outcome` failed and queries)
+- I10 no marker whose newest failed research is older than the category limit (try again)
+- I11 no `designer_filled` decision (state, DECISIONS.md, ASSUMPTIONS.md, record lines) rests on an unverified fact
+- I12 no recommendation leans on "best practice", "industry standard", or "experts recommend" without a cite; every recommendation section holds at least one cite
+- I13 every Domain Brief item names its Section (S1–S8), and once that Section is done its `Became` cell holds an answer id or decision id
+
+A missing Domain Brief in a project whose S0 is done is reported as a warning (an older project), not a finding: `/lvr-continue` builds it.
+
 ## Owners
 
 | Group | Owning Section/skill | How it gets fixed |
@@ -143,3 +163,4 @@ The `ref` / `*_ref` values are logical pointers `<file>#<id>`, not Markdown anch
 | F4 | S9 cross-check | S9 procedure |
 | G3–G6 | S9 (AGENTS.md authored there) | S9 procedure; precise per-file instruction if init skill absent |
 | G1–G2, H1–H3 | this skill | Emit step, automatic — never user-facing |
+| I | the Section that owns the file (a section record → that Section; the Domain Brief → S0, an item → its Section; bundle files → S9) | research the fact again (`research log`), fix the record, then S9 re-compiles the bundle lines that repeat it |

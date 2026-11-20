@@ -26,7 +26,7 @@ Only what this feature changes:
 - new data class → legal/regional storage constraint;
 - new platform capability → current support status.
 
-Every claim: source URL + access date, or explicit `unverified`. Reuse existing `RESEARCH.md` rows when the claim is already evidenced; cite the row instead of re-researching.
+Every claim: a cite group, or an `[unverified: <category> · RQ-NNN]` marker after logged research failed (conventions §10). Reuse existing `RESEARCH.md` rows when the claim is already evidenced and its tag is within its freshness limit (`references/freshness.json`): copy the tag instead of re-researching.
 
 ## 3. Impact matrix
 

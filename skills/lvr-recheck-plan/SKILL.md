@@ -80,8 +80,8 @@ Script: `LVR journal append --type recheck_research_refresh --payload '{…}'` p
 
 After the audit pass, take every R2 finding plus any finding whose evidence is a dated or unsourced claim:
 
-1. Re-verify live with web search/fetch when the harness provides it. Record source URL + access date.
-2. No web access → say so loudly in the report, keep the claim `unverified`, and never write a fake access date.
+1. Re-verify live with web search/fetch. Record the new cite tag (conventions §10; limits in `references/freshness.json`) and log the step as `research_logged` (`purpose` "recheck").
+2. No web search or page fetch → stop before refreshing anything: explain how to enable web research (conventions §10). Web research is required (principle 14); never keep a claim from memory and never write a fake access date.
 3. Update every file that repeats the refreshed claim: `RESEARCH.md`, `OVERVIEW.md`, `blueprint.json`, and `SPEC/*` when the claim is an API or platform fact. Never leave the old number in a second file.
 4. Journal `recheck_research_refresh` per claim (payload: claim, old value, new value, source, access date, files updated).
 5. A refresh that changes a cost or an MVP constraint is a user-decision finding, not a mechanical fix: present it before editing budget or scope text.

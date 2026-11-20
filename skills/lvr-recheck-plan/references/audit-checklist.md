@@ -19,14 +19,14 @@ Owner values: `S9` (bundle compile), `S8`, `S7`, `S6`, `S5`, `S2`, `lvr-handoff`
 
 | ID | Check | Default severity | Owner |
 |---|---|---|---|
-| R2.1 | Every price or cost in `RESEARCH.md`, `OVERVIEW.md`, and `blueprint.json` carries a source URL + access date, or an explicit `unverified` flag. | major | S5 |
-| R2.2 | Every price/cost row older than 90 days is re-verified live now; the refreshed row carries the new source + access date. | major | S5 |
-| R2.3 | Competitor and pricing-model claims older than 180 days are re-verified live, or explicitly kept as historical with a `stale` note. | minor | S5 |
-| R2.4 | Legal, Terms-of-Service, regional-availability, and external-API claims older than 90 days are re-verified live. | blocking | S5 |
-| R2.5 | No claim reads as certain without a source; anything unverifiable is flagged `unverified` in place, never softened with vague language. | major | S5 |
+| R2.1 | Every price or cost in `RESEARCH.md` and `OVERVIEW.md` carries a cite group or a logged `[unverified: price · RQ-NNN]` marker (conventions §10); `blueprint.json` costs match those rows. | major | S5 |
+| R2.2 | Every price/cost row past its `price` limit (`references/freshness.json`: 30 days) is re-verified live now; the refreshed row carries a new cite tag. | major | S5 |
+| R2.3 | Competitor and pricing-model claims past the `market` limit (90 days) are re-verified live, or explicitly kept as historical with a `stale` note. | minor | S5 |
+| R2.4 | Legal, Terms-of-Service, regulation, regional-availability, and external-API/version claims past their limit (`legal` and `regulation` 60 days, `version` and `quota` 30; a regulation is also re-checked for newer amendments) are re-verified live. | blocking | S5 |
+| R2.5 | No claim reads as certain without a source; anything unverifiable carries an `[unverified: …]` marker naming its failed, logged research, never softened with vague language. | major | S5 |
 | R2.6 | Cost totals in `blueprint.json` equal the `RESEARCH.md` cost table and the totals shown in `OVERVIEW.md`. | major | S9 |
 
-Refresh rule: use real web search/fetch when the harness provides it. When it does not, say so loudly in the report, keep the claim `unverified`, and never write a fake access date.
+Refresh rule: use real web search/fetch — it is required (principle 14). Without it, stop before refreshing and explain how to enable web research (conventions §10); never keep a claim from memory and never write a fake access date. `cite check --all` lists every expired tag (conventions §10).
 
 ## R3 — Cross-file coherence
 

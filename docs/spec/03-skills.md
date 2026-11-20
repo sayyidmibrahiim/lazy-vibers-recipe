@@ -9,14 +9,14 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 **Precondition**: none — the Folder Gate decides (`01-state.md`).
 
 **Flow**:
-1. Folder Gate → proceed / create subfolder / refuse with pointers.
-2. S0 intake: capture idea verbatim, detect + confirm User Language, propose slug + name.
+1. Folder Gate → proceed / create subfolder / refuse with pointers; then the web research check (spec 07 §1) before anything is written — fail → explain how to enable web search + fetch, stop.
+2. S0 intake: capture idea verbatim, detect + confirm User Language, propose slug + name, confirm the market (country); then the Domain Brief (spec 07 §2).
 3. **Booster bootstrap** (core check → install → interactive failure handling; `05-boosters.md`).
-4. Sections S1–S8 in order with checkpoints; S6 loop-backs as specified; scope lock mandatory before S8.
+4. Sections S1–S8 in order with checkpoints, each opened by its per-Section scan and "Things you may not know" (spec 07 §2); S6 loop-backs as specified; scope lock mandatory before S8.
 5. S9 compile the Blueprint Bundle.
 6. Suggest `/lvr-handoff`.
 
-**Never**: re-ask a recorded answer · generate the bundle before scope lock · write NC-licensed content into any LVR file · answer a factual question from memory when it can be verified (mark `unverified` or research).
+**Never**: re-ask a recorded answer · generate the bundle before scope lock · write NC-licensed content into any LVR file · answer a factual question from memory (research and cite it; `unverified` only after logged research failed) · continue without web research.
 
 **Interruption**: safe anywhere; resume is `/lvr-continue`'s job.
 
@@ -28,7 +28,8 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 1. Read `.lvr/state.json`. Missing → explain and suggest `/lvr-init-new-idea` (with Folder Gate guidance). Corrupt → rebuild by journal replay, report what was reconstructed.
 2. Print a plain-language progress summary: project name, current Section, answered/total, pending loop-backs, booster status, last activity time.
 3. Offer the right next action: retry the failed step (if the loaded status is `error`) / resume interview / answer pending loop-back / finish S9 generation (if scope locked, bundle incomplete) / run handoff (if bundled, handoff open) / suggest `build`, `add-feature` or `recheck-plan` (if bundled, handoff done).
-4. Resume the current Section exactly where it stopped (micro-batch boundary).
+4. Before any Section work: the web research check (spec 07 §1; fail → journal it, explain, stop). Then finish a missing or partial Domain Brief (S0 done) and the current Section's scan if not yet journaled.
+5. Resume the current Section exactly where it stopped (micro-batch boundary).
 
 **Never**: skip ahead of scope lock · re-ask answered questions.
 
@@ -37,7 +38,7 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 **Precondition**: S1–S8 `done` + scope locked.
 
 **Flow**:
-1. **Gap lint** (`lvr.mjs lint run`; judgment checks come back as `needs_model`) — checklist: every bundle file exists and non-empty · every milestone has measurable acceptance criteria + verification procedure · every `assumed` decision appears in ASSUMPTIONS.md · every decision has rationale · cost table present · OVERVIEW.md present · `blueprint.json` matches state · no contradictions with `decisions[]`.
+1. **Gap lint** (`lvr.mjs lint run`; judgment checks come back as `needs_model`) — checklist: every bundle file exists and non-empty · every milestone has measurable acceptance criteria + verification procedure · every `assumed` decision appears in ASSUMPTIONS.md · every decision has rationale · cost table present · OVERVIEW.md present · `blueprint.json` matches state · no contradictions with `decisions[]` · every claim cited, fresh, and sourced per spec 07 (group I = `cite check --all`).
 2. Gaps → report in plain language + offer to jump back to the owning Section. Journal: `gap_found`.
 3. Emit `blueprint.json` (schema in `04-bundle.md`; `lvr.mjs blueprint emit`).
 4. Write harness adapters: `CLAUDE.md`, `GEMINI.md` (one-line pointers to AGENTS.md), verify AGENTS.md against the agents.md spec (`lvr.mjs handoff stubs`).
@@ -53,7 +54,7 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 **Flow**:
 1. Open: journal `recheck_started`; inventory state, journal, Section Records, all 20 bundle files.
 2. Audit: run `references/audit-checklist.md` groups R1–R6 literally — decision integrity, evidence freshness, cross-file coherence, feasibility/risk, bundle self-sufficiency, state/artifact consistency. Every failure is a finding `RC-NN` with severity, evidence, owner, fix; journal `recheck_finding`.
-3. Refresh: re-verify stale (price/cost > 90 days, legal/ToS/API > 90 days, competitor claims > 180 days) or unsourced claims live; update every file repeating the claim; journal `recheck_research_refresh`. No web access → claim stays `unverified`, stated loudly.
+3. Refresh: re-verify claims past their freshness limit (`references/freshness.json`; `cite check --all` lists them) or unsourced claims live; update every file repeating the claim; journal `recheck_research_refresh`. No web research → stop with the enable guidance (spec 07 §1); never refresh from memory. (Full alignment with spec 07: ticket 33.)
 4. Report: write `.lvr/recheck/RECHECK-<date>.md` (never overwrite a prior report); split fixes into mechanical and user-decision.
 5. Apply: mechanical one file per turn (`recheck_fix_applied`); user-decision fixes only after an explicit answer, recorded as `D-NNN`; `blueprint.json` regenerated from state + bundle when stale.
 6. Re-audit R3, R6, and every touched group; append results; journal `recheck_done`.
@@ -67,7 +68,7 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 **Flow**:
 1. Open: journal `feature_started`; derive next `F-NN`, `D-NNN`, `M<n>` from files on disk.
 2. Capture per `references/feature-capture.md`: verbatim request, English name, named user, complete click path, failure cases, priority confirmed aloud.
-3. Targeted research: only new services, data classes, platform facts, legal constraints; source + date or `unverified`.
+3. Targeted research: only new services, data classes, platform facts, legal constraints; cite tags per spec 07 (`unverified` only after logged research failed). No web research → stop with the enable guidance. (Full alignment: ticket 29.)
 4. Impact analysis: every affected bundle file with exact edit; no new bundle files.
 5. Scope decision: extend milestone, append milestone, or Parking Lot; explicit answer recorded as `D-NNN user_confirmed`.
 6. Apply append-only, one file per turn, `feature_applied` per file; state decision + milestone appended; `blueprint.json` regenerated. A parked feature gets a requirements row marked parked, a Parking Lot scope row, and a `USER_FLOWS.md` section marked `(parked — see SCOPE.md)`; no milestone.
@@ -112,7 +113,7 @@ Post-lock captures and their decision lines live in `.lvr/docs/sections/S4-addit
 
 Loaded by every LVR skill before any work. The list below is a summary; the full English text is `skills/lvr-principles.md`, which every skill ships byte-for-byte as `references/principles.md`.
 
-1. **Evidence-first** — claims carry sources and dates; if unverifiable, say so explicitly.
+1. **Evidence-first** — every factual claim, recommendation, price, regulation, version and statistic carries a source URL, a published/updated date and an access date; the freshest primary source wins and conflicts are recorded; key facts need two independent sources or one primary source; freshness limits come from `freshness.json`; `unverified` only after research really failed, with the queries logged; a decision resting on an unverified fact is never `designer_filled` — the user confirms it or it becomes an S6 blocking risk.
 2. **Anti-yes-man** — if the user's idea has a gap, show it immediately with a concrete fix option. Disagreement is a duty, not a risk.
 3. **Recheck before agreeing AND before disagreeing** — verify, then take a position.
 4. **Allowed to say "I don't know"** — followed immediately by "let me research".
@@ -125,3 +126,4 @@ Loaded by every LVR skill before any work. The list below is a summary; the full
 11. **License discipline** — NC content is a runtime dependency, never vendored.
 12. **Fill what the user couldn't ask** — the owner is non-technical: they cannot name what they don't know. Important decisions that were never surfaced are made proactively, recorded with status `designer_filled`, and shown visibly for correction — never silent, never buried. The gap between what users say and what they need is the pipeline's job, not theirs.
 13. **Disk is memory** — the pipeline's memory lives in `.lvr/`, never in the context window. Any model able to follow the skill files finishes what any model started: checkpoint on pressure, reload from disk instead of improvising, continue truncated work instead of regenerating (spec 06).
+14. **Research what the user doesn't know** — a Domain Brief after S0 and a scan before each Section surface the rules, costs and pitfalls the owner cannot ask about, shown in User Language with source and date; each becomes a question or a cited `designer_filled` decision; recommendations cite the research, never an unsourced "best practice"; no web research → stop, never continue on memory (spec 07).

@@ -8,14 +8,17 @@ Each Section has: **purpose**, **question strategy**, **booster routing**, **out
 - Every question is phrased in **plain language oriented to the outcome** ("Do you already pay for a server somewhere?" not "Do you have VPS infrastructure?"), spoken in **User Language**, with a one-line reason why it matters.
 - Controls always visible: **skip** (recorded, does not block), **cukup/that's enough for this Section** (jump to exit criteria check).
 - Every answer → `answer_recorded` (checkpoint). Answers are never re-asked once recorded.
+- **Research what the user doesn't know** (principle 14, spec 07 §2): before the first batch of each Section S1–S8 the Conductor runs a per-Section scan (S1–S4: at least one targeted search; S5: the research itself; S6–S8: the freshness re-check `cite check --all` plus searches as needed) and shows the open Domain Brief and scan items for that Section as "Things you may not know", in User Language, each with source and date. Each item becomes a question (counts toward the batch size) or a `designer_filled` decision that cites it. Journal: `context_research` per research step.
+- **Evidence** (principle 1, spec 07 §3–4): every fact the Conductor states carries a cite tag (source URL, published/updated date, access date) within its freshness limit from `freshness.json`; `unverified` only after logged research failed. Web research is required: without it the skills stop (spec 07 §1).
 
 ## S0 — Intake
 
 - Purpose: capture the raw idea fully, detect User Language.
 - Questions: none structured — free-form "tell me everything in your head", multi-paragraph encouraged. Ask clarifying mini-questions only if the idea is under ~2 sentences.
 - Booster: none.
-- Output: `S0-intake.md` (verbatim idea + language + working slug); `project.idea_raw`, `user_language`.
-- Exit: idea recorded, slug + display name proposed and confirmed (name can still change at S9 branding step).
+- Output: `S0-intake.md` (verbatim idea + language + working slug + market); `project.idea_raw`, `user_language`.
+- Exit: idea recorded, slug + display name proposed and confirmed (name can still change at S9 branding step), market (country) confirmed.
+- **Domain Brief** (after S0 closes, before S1's first batch): `.lvr/docs/research/domain-brief.md` — 8–15 cited items on the market's rules and regulations, typical and hidden costs, failure modes, key terms, and what similar users expect; each with an id `U-NN`, a source, and a target Section. Journal `context_research` (scope `brief`). Spec 07 §2.
 
 ## S1 — Context awal (what & for whom)
 
@@ -27,14 +30,14 @@ Each Section has: **purpose**, **question strategy**, **booster routing**, **out
 ## S2 — Kondisi (resources & constraints)
 
 - Purpose: what the user already has and can pay: devices, accounts (Apple Developer, Play Console, domains), hosting/VPS, monthly budget ceiling, willingness to run commands at all.
-- Booster: internal cost fact-sheets + web verification of current prices (each price recorded with source + date; unverifiable → flagged).
+- Booster: internal cost fact-sheets as a lead list + live web verification of every price quoted (cite tag with source + dates, `price` limit 30 days; research that fails is logged and the price carries an `[unverified: …]` marker — it never decides a `designer_filled` decision).
 - Output: `S2-kondisi.md`; feeds `DECISIONS.md` (platform/budget) and `HANDOVER.md` (deploy target).
 - Exit: budget ceiling + deployment surface + accounts list recorded. **Hard rule**: if the chosen platform needs a paid account the user lacks (e.g. iOS → Apple Developer), surface it NOW with price and ask to proceed/defer — do not defer to research.
 
 ## S3 — Data & privasi
 
 - Purpose: login? personal data? payments/money? third-party services? where data may legally live.
-- Booster: none.
+- Booster: none; the Domain Brief's regulation items for the user's market feed the questions and decisions (a legal decision cites its `U-NN` item).
 - Output: `S3-data.md`; feeds `SPEC/data-model.md` (auth, PII), `SPEC/api.md`, `SECURITY.md`.
 - Exit: data inventory + auth yes/no + payments yes/no recorded.
 
@@ -50,15 +53,15 @@ Each Section has: **purpose**, **question strategy**, **booster routing**, **out
 ## S5 — Deep research
 
 - Purpose: competitor scan, comparable products, tech stack candidates with **reasons**, cost table, availability in the user's region (payment gateways, app stores).
-- Booster: browserbase `competitor-analysis` or Firecrawl MCP + web search. Fallback: model knowledge, **every claim flagged `unverified`**.
-- Rules: every claim carries source + access date (journal + RESEARCH.md). Research happens in English sources; results summarized in English.
+- Booster: web search + page fetch (required — spec 07 §1); browserbase `competitor-analysis` or Firecrawl MCP add depth. There is no model-knowledge fallback: without web research the skill stops.
+- Rules: every claim carries a cite tag (spec 07 §3) and is journaled (`research_logged`); key facts need two independent sources or one primary source; recommendations cite the research they rest on. Research uses English sources plus primary local sources for the user's market (regulators, local price pages); results summarized in English. `cite check` on the record is clean before S5 closes.
 - Output: `S5-research.md`; becomes `RESEARCH.md`.
 - Exit: ≥2 stack options with trade-offs + a recommended stack with reasons + cost table.
 
 ## S6 — Feasibility loop
 
 - Purpose: confront research findings with answers; open conflicts, risks, cost surprises.
-- Mechanics: each finding → `risk` (blocks) or `note` (informational). Any risk → **loop-back is mandatory, not optional**: open `loop_backs[]` entry, jump to the affected earlier Section (S1–S4), ask targeted questions, close the entry on resolution, return to S6. Repeat until no blocking risks.
+- Mechanics: each finding → `risk` (blocks) or `note` (informational). An unverified key fact that a decision or the plan rests on is a `risk` unless the user confirms it. Any risk → **loop-back is mandatory, not optional**: open `loop_backs[]` entry, jump to the affected earlier Section (S1–S4), ask targeted questions, close the entry on resolution, return to S6. Repeat until no blocking risks.
 - Output: risk list appended to `S5-research.md`; loop-backs in state.
 - Exit: zero blocking risks (or risk consciously accepted by user → becomes a decision with rationale).
 
@@ -83,7 +86,7 @@ Each Section has: **purpose**, **question strategy**, **booster routing**, **out
 - Purpose: compile section records + decisions + milestones into the Blueprint Bundle (file specs in `04-bundle.md`).
 - Booster: OpenSpec pattern (structure), SimpleEnglish document rules, humanizer pass, karpathy+ponytail principles for `CODE_STYLE.md`.
 - Mechanics: see compilation order in `04-bundle.md`. Every generated file → `doc_generated` + checkpoint.
-- Exit: all bundle files exist and pass the internal consistency check (same stack names, same entity names, no contradictions with `decisions[]`).
+- Exit: all bundle files exist and pass the internal consistency check (same stack names, same entity names, no contradictions with `decisions[]`) and the citation check (crosscheck X8 = `cite check --all`, spec 07 §6).
 
 ## S10 — Build (optional)
 

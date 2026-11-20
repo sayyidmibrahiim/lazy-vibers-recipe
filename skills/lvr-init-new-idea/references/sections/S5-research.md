@@ -1,16 +1,17 @@
 # S5 research guide — Deep research
 
-Work guide for Section S5. The English text is the source; research runs on English sources and findings are summarized in English (conventions §4). S5 is mostly Conductor work — the few user questions are at the bottom. Record: `PROJECT_DIR/.lvr/docs/sections/S5-research.md`; findings are appended to it per sub-query, never held whole in context (principle 13).
+Work guide for Section S5. The English text is the source; research runs on English sources plus the primary local sources of the user's market, and findings are summarized in English (conventions §4). S5 is mostly Conductor work — the few user questions are at the bottom. Record: `PROJECT_DIR/.lvr/docs/sections/S5-research.md`; findings are appended to it per sub-query, never held whole in context (principle 13).
 
-Booster note: competitor-analysis / web search (browserbase `competitor-analysis`, or the Firecrawl MCP; status in `boosters.core`). Present → real web research. Any other status → model-knowledge fallback with EVERY claim flagged `unverified` (ADR-0004 degraded mode), and the record opens with `Booster: competitor-analysis (degraded — model-knowledge fallback)` so S9 surfaces it in OVERVIEW.md.
+Web research is required (principle 14): the web research check passed before this project started, and there is no model-knowledge fallback. If search or fetch stops working mid-Section, stop with the enable guidance (conventions §10) — never fill the gap from memory. Booster note: competitor-analysis (browserbase `competitor-analysis`, or the Firecrawl MCP; status in `boosters.core`) adds depth when `installed`; without it, research with the plain web tools and write `Booster: competitor-analysis (degraded — plain web search used)` into the record.
 
-## Claim discipline (principle 1)
+## Claim discipline (principles 1 and 14)
 
-- Every claim line is one of exactly two shapes:
-  - `<claim> (source: <URL>, accessed <YYYY-MM-DD>)`
-  - `<claim> unverified` — model knowledge, explicitly flagged, loud. Nothing in between.
-- Reuse, do not re-research, what the S2 fact-sheet already verified: cite the S2 record's price rows instead of re-fetching them. Re-verify live only rows being newly quoted here.
-- Any price shown to the user follows the S2 rule: verified with source + date, or `unverified` next to the number.
+- Every claim line or row carries a cite group (conventions §10): `<claim> [cite: <category> · <url> · <pub|upd date or n.d.> · acc <date>( · primary)( · live)]`. Key facts (`price`, `quota`, `version`, `legal`, `regulation`) need one primary source or two independent sites; regulations carry `amend-check`.
+- Research that really fails: log it (`LVR research log`, `outcome: "failed"`, the queries and the reason), then write `[unverified: <category> · RQ-NNN]`. A recommendation or `designer_filled` decision never rests on it: ask the user, or S6 treats it as a blocking risk.
+- Log every research step with `LVR research log --in -` (`purpose: "s5"`); when sources disagree, record the conflict (`conflicts[]`) and keep the freshest primary source.
+- Reuse what S2 or the Domain Brief already cited: copy the tag with the claim. A copied tag past its freshness limit is researched again (the `cite check` I6 finding).
+- Recommendations cite the research they rest on (a `U-NN` item or a cite tag); "best practice" alone is never a reason.
+- Before S5 closes: `LVR cite check --file .lvr/docs/sections/S5-research.md` is clean.
 
 ## Sub-query plan (chunking by tier, conventions §7)
 
@@ -25,10 +26,10 @@ T1 runs the four outputs as full queries. T2 splits each output into sub-queries
 
 Competitor scan — ≥3 rows; direct = solves the same problem, adjacent = the workaround users tolerate:
 
-| Product | What it does | Pricing model | Lesson for this idea | Source (accessed) |
+| Product | What it does | Pricing model | Lesson for this idea | Source |
 |---|---|---|---|---|
 
-Stack trade-offs — ≥2 candidates; the recommendation is argued after the table, not inside it:
+Stack trade-offs — ≥2 candidates; the recommendation is argued after the table, not inside it, and cites the rows and items it rests on (`cite check` I12 flags a recommendation section with no citation). Factual cells (prices, limits, availability) carry their cite group in the cell:
 
 | Dimension | Option A | Option B |
 |---|---|---|
@@ -39,10 +40,10 @@ Stack trade-offs — ≥2 candidates; the recommendation is argued after the tab
 | Regional availability | | |
 | Maintenance burden | | |
 
-Cost table — build on the S2 fact-sheet; cite its rows, add what is new:
+Cost table — build on the S2 record's `## Prices quoted` rows (copy their tags); add what is new. Every row's Source cell holds a cite group, an `[unverified: …]` marker, or the answer id of a user-stated cost:
 
-| Item | Price | Type | Source (accessed) | Status |
-|---|---|---|---|---|
+| Item | Price | Type | Source |
+|---|---|---|---|
 
 Plus a `## Regional availability` subsection: payment gateways that work in the user's market, store availability when a store is in play, and data-location constraints inherited from S2/S3.
 
@@ -61,11 +62,3 @@ Bank order is not ask order; ask only when a finding needs a fact no record hold
 ### 3. Does the new cost fit
 - **Ask:** "The stack I would recommend adds <X> per month. Does that still fit your ceiling?"
 - **Why it matters:** a cost surprise belongs on the table now; one the user does not resolve lands in S6 as a blocking risk.
-
-## Degraded mode (booster missing)
-
-No live research happens. Every line carries `unverified`, and the record starts:
-
-> Booster: competitor-analysis (degraded — model-knowledge fallback). Everything below is model knowledge, unverified; prices and availability especially may be stale.
-
-Keep the four outputs and their structure — the shape survives, the certainty does not. S6 still runs; its confrontations simply cite `unverified` rows.

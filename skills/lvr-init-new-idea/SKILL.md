@@ -11,7 +11,7 @@ Opening skill of the LVR pipeline. It turns the user's target directory into an 
 
 Before any check, question, or file write:
 
-1. Read `references/principles.md` (the Constitution). All 13 principles bind this skill.
+1. Read `references/principles.md` (the Constitution). All 14 principles bind this skill.
 2. Read `references/conventions.md` (the operational manual). It owns the state schema, journal event list, Folder Gate details, and model-tier tables; the steps below reference it instead of repeating it.
 3. Interact in the user's language from the first message. The messages below are the English source; translate them when speaking. Artifacts and stored values follow the conventions (English source of truth).
 4. **Script helper (preferred when Node is available).** This skill ships `scripts/lvr.mjs` (Node ≥22, nothing to install). `<skill-dir>` = the folder holding this SKILL.md (use the base directory the harness reports; otherwise look for `lvr-<this-skill>/scripts/lvr.mjs` in the skills directories listed in INSTALL.md). Once per session run `node "<skill-dir>/scripts/lvr.mjs" version`. If it prints JSON with `"lvr_schema":1`, run the `Script:` command given at each step below (`LVR` = `node "<skill-dir>/scripts/lvr.mjs" --dir "<PROJECT_DIR>"`) and act on its JSON. If `node` is missing, the command cannot start, or `lvr_schema` differs, say once (English source): "Node.js is not available here, so I'll do the bookkeeping by hand." Then follow each step's prose — the prose is the fallback and stays authoritative for behavior. Never hand-edit `.lvr/` files to work around a script error (`"ok":false`): report its `code` plainly and stop that step. On any non-zero exit (`"ok":false`) stop the step, show the error and follow `error.details.hint`; exit code 3 means the event was journaled (`journaled_seq`) or blocked but `state.json` was NOT updated (`STATE_LAGS`, `STATE_MISSING`, `STATE_INVALID`, `STATE_SEQ_UNKNOWN`, `JOURNAL_BEHIND_STATE`): do not continue the interview, run `/lvr-continue` (its Step 2 maps each code to the exact command). Pass long text through `--in -` with a quoted heredoc (`<<'EOF'`) or a PowerShell here-string (`@'…'@ |`), never inline in double quotes.
@@ -20,13 +20,13 @@ Before any check, question, or file write:
 
 Run in this order:
 
-1. **Folder Gate** — decide where the project folder is (refuse, proceed in place, or create a subfolder).
+1. **Folder Gate + web research check** — decide where the project folder is (refuse, proceed in place, or create a subfolder); then confirm web search and page fetch work, or stop before anything is written.
 2. **Model tier + capability probe** — refuse early if this model cannot run the pipeline.
 3. **Booster bootstrap** — core Boosters present, or their absence explicitly chosen by the user.
-4. **S0 intake** — idea verbatim, User Language, slug + display name; first `state.json`.
-5. **Section loop (S1 onward)** — the generic engine below.
+4. **S0 intake + Domain Brief** — idea verbatim, User Language, slug + display name, market; first `state.json`; then the researched brief of what the user doesn't know.
+5. **Section loop (S1 onward)** — the generic engine below; every Section opens with its research scan.
 
-The journal starts immediately after the gate selects the project folder; the first `state.json` is written at the start of S0. The order is deliberate: the probe runs before the booster bootstrap so an incapable model is refused before any install work, and booster statuses are known before S0 records them in state.
+The journal starts immediately after the gate selects the project folder and the web research check passes; the first `state.json` is written at the start of S0. The order is deliberate: the web check runs before anything is written (a harness without web research cannot run LVR, and a clean folder lets the user simply re-run), the probe runs before the booster bootstrap so an incapable model is refused before any install work, and booster statuses are known before S0 records them in state.
 
 ## Step 1 — Folder Gate
 
@@ -77,10 +77,14 @@ Non-empty, no markers, no `.lvr/` → ask (English source): "This folder has loo
 
 ### After any passing check
 
-1. Create `PROJECT_DIR/.lvr/`.
-2. Start `PROJECT_DIR/.lvr/journal.ndjson`: line 1 `session_start` (payload: skill name + cwd), line 2 the gate event (`folder_gate_passed` or `folder_gate_subfolder_created`).
+1. **Web research check** (principle 14, conventions §7 and §10) — before anything is written. Run one real web search with a neutral query that is not about the user's idea (for example `Node.js release schedule`), then fetch one result page and read its text. Pass: the search returned at least one result URL and the fetch returned readable page text (not an error, a login wall, or an empty page). Keep the query, the URL, the page title, and today's date for step 4.
+   - Fail → say (English source): "I can't do web research in this session (\<cause: no web search tool | no page-fetch tool | the error text\>). LVR never plans from memory — every price, rule and recommendation must come from a current source — so I'm stopping before I write anything. To turn web research on: Claude Code — allow the WebSearch and WebFetch tools (on Amazon Bedrock web search is not available, so add a search MCP server). Codex CLI — set `web_search = "live"` in `~/.codex/config.toml`, or start it with `codex --search`. Gemini CLI — keep the google_web_search and web_fetch tools enabled in settings.json (on Antigravity CLI, check its web tools are on). OpenCode — allow web search when it asks and pick a provider (`/connect`). Any harness — add a web search + fetch MCP server such as Firecrawl, Brave Search or Exa, with its API key. Then run `/lvr-init-new-idea` again\<, inside `\<slug\>/` when the gate created that folder\>." Stop the skill. Write nothing (no `.lvr/`, no journal); a subfolder the gate just created stays empty.
+2. Create `PROJECT_DIR/.lvr/`.
+3. Start `PROJECT_DIR/.lvr/journal.ndjson`: line 1 `session_start` (payload: skill name + cwd), line 2 the gate event (`folder_gate_passed` or `folder_gate_subfolder_created`).
    - Script: `LVR journal append --dir "<PROJECT_DIR>" --type session_start --payload '{"skill":"lvr-init-new-idea","cwd":"<cwd>"}'`, then `--type folder_gate_passed` or `--type folder_gate_subfolder_created`. The first append creates `.lvr/` and the journal; `seq` and `ts` are assigned for you.
-3. Journal lines: `{"ts": <ISO-8601 UTC>, "seq": <n>, "type": "...", "payload": { ... }}`; `seq` starts at 1 and increments per line; payloads are free-form objects carrying the ids named in each step below. Append every later event; never rewrite.
+4. Journal the web research check: `research_logged` with `section` null, `purpose` "web_check", the query and `fetch <url>` as `queries`, the fetched page as the one source (`live` true), `outcome` "found".
+   - Script: `LVR research log --in -` with `{"section":null,"purpose":"web_check","topic":"web research check","queries":["<query>","fetch <url>"],"sources":[{"url":"<url>","title":"<title>","accessed":"<YYYY-MM-DD>","primary":false,"live":true}],"outcome":"found"}`.
+5. Journal lines: `{"ts": <ISO-8601 UTC>, "seq": <n>, "type": "...", "payload": { ... }}`; `seq` starts at 1 and increments per line; payloads are free-form objects carrying the ids named in each step below. Append every later event; never rewrite.
 
 ## Step 2 — Model tier + capability probe
 
@@ -118,9 +122,11 @@ Goal: every core Booster installed, or its absence explicitly chosen by the user
 | humanizer (de-slop pass) | `blader/humanizer` | MIT | S9 | `npx skills add blader/humanizer` |
 | karpathy-guidelines | `multica-ai/andrej-karpathy-skills` | MIT | S9 (CODE_STYLE), S10 | `npx skills add multica-ai/andrej-karpathy-skills` |
 | ponytail | `DietrichGebert/ponytail` | MIT | S9 (CODE_STYLE), S10 | `npx skills add DietrichGebert/ponytail` |
-| competitor-analysis / web search | `browserbase/skills` or Firecrawl MCP | MIT | S5 | `npx skills add browserbase/skills`, or configure the Firecrawl MCP server |
+| competitor-analysis (research depth) | `browserbase/skills` or Firecrawl MCP | MIT | S5 | `npx skills add browserbase/skills`, or configure the Firecrawl MCP server |
 | Playwright MCP | `microsoft/playwright-mcp` | MIT | S10 verification (when a build runs) | configure the Playwright MCP server |
 | agents.md spec | `agentsmd/agents.md` | spec text, permissive | S9 | `npx skills add agentsmd/agents.md`, or fetch the spec text at use time |
+
+Web research itself is not in this table: it is a required capability, checked in Step 1, with no "continue degraded" choice. The competitor-analysis booster only adds depth on top of it.
 
 Alternative mechanisms, tried in order when the preferred one fails: Claude Code plugin (`claude plugin marketplace add <repo>`, then install) → manual copy of the booster's skill folder into this harness's skills directory.
 
@@ -143,7 +149,7 @@ Run this loop once per core booster, in the table order above, then move to the 
 
 ## Step 4 — S0 intake
 
-Purpose: capture the raw idea fully; detect User Language; propose slug + display name. No structured questions in S0 — those start at S1.
+Purpose: capture the raw idea fully; detect User Language; propose slug + display name; confirm the market. No structured questions in S0 — those start at S1. When S0 closes, the Domain Brief is built before S1 starts (step 8).
 
 1. **Open the Section**: journal `section_start` (payload: section "S0"). Write the first `PROJECT_DIR/.lvr/state.json`, shape per conventions §2, with:
    - `schema_version`: 1
@@ -163,6 +169,8 @@ Purpose: capture the raw idea fully; detect User Language; propose slug + displa
    - Script: `LVR answer record --section S0 --in -` with `{"q":"<question>","a":"<reply>","project":{"user_language":"<code>"}}`.
 5. **Slug + display name**: propose a kebab-case slug and a Title Case display name. Slug rules: lowercase letters, digits, hyphens; 2–4 words from the idea's core noun phrase (the base slug — a `-2` suffix the Folder Gate adds for a taken folder name does not count); transliterate non-Latin scripts into English words (e.g. "aplikasi kasir warung" → `warung-cashier` / "Warung Cashier"). Say: "Working name: \*\*\<Name\>\*\* (slug: `\<slug\>`). Keep it, or rename?" If the gate already created a subfolder and the user changes the slug, rename that subfolder (it contains only `.lvr/` at this point). Record as `S0.q3`; journal `answer_recorded`; set `project.slug` and `project.name`. Checkpoint.
    - Script: `LVR slug make --text "<english words>"` / `LVR slug validate --slug <slug>` before proposing; on confirmation `LVR answer record --section S0 --in -` with `{"q":"<question>","a":"<reply>","project":{"slug":"<slug>","name":"<Name>"}}`.
+5b. **Market**: infer the country where the product will be used from the idea text (and the language as a weak hint). Say (English source): "I'll research the rules and costs for \<country\> — is that where people will use it? If it's more than one country, name the main one." Record the reply as the next S0 answer (`S0.q4` unless clarifying replies took earlier ids); journal `answer_recorded`. Checkpoint. The Domain Brief researches this market.
+   - Script: `LVR answer record --section S0 --in -` with `{"q":"<question>","a":"<reply>"}`.
 6. **Write the Section Record** `PROJECT_DIR/.lvr/docs/sections/S0-intake.md` (create the folders):
 
    ```markdown
@@ -178,6 +186,7 @@ Purpose: capture the raw idea fully; detect User Language; propose slug + displa
 
    - User Language: <code> (detected, confirmed by user)
    - Slug: `<slug>` · Display name: <name>
+   - Market: <country> (<S0 answer id>)
 
    ## Decisions this Section
 
@@ -186,7 +195,9 @@ Purpose: capture the raw idea fully; detect User Language; propose slug + displa
 
 7. **Close the Section**: update state — `sections.S0` = `{ "status": "done", "record": "S0-intake.md", "started_at": ..., "completed_at": ..., "answers": { ... } }`; `current_section` = "S1". Journal `section_done`. One checkpoint.
    - Script: `LVR journal append --type section_done --payload '{"section":"S0","record":"S0-intake.md"}'`
-8. Continue immediately into the Section loop (S1) unless the user pauses.
+8. **Domain Brief** (principle 14) — research what a person in the user's position usually does not know about this idea in this market: rules and regulations, typical and hidden costs, common failure modes, key terms, what similar users expect. Procedure, search lists, and the file template: `references/sections/S0-domain-brief.md` §1. Write `PROJECT_DIR/.lvr/docs/research/domain-brief.md`, appending one heading per research step (T2: one step per sub-query; T3: one step per turn), 8–15 items, each with a `U-NN` id, a cite group (conventions §10), and a target Section. Journal each step as `context_research` (scope `brief`). Show nothing to the user yet: each item is presented in its target Section (engine step 1b). Close when all five headings are filled and `cite check` on the brief is clean.
+   - Script: per step `LVR research log --context --in -` with `{"section":"S0","scope":"brief","topic":"<heading>","queries":["…"],"sources":[…],"outcome":"found","findings":["U-01","U-02"]}`; at the end `LVR cite check --file .lvr/docs/research/domain-brief.md` until `clean` is true.
+9. Continue immediately into the Section loop (S1) unless the user pauses.
 
 ## Section loop engine (S1 onward)
 
@@ -194,10 +205,12 @@ Generic procedure for every Section. Per-Section procedures for S0–S9 live in 
 
 1. **Start** — journal `section_start` (payload: the Section id); set `sections.<S>` = `{ "status": "in_progress", "started_at": <now> }`; `current_section` = \<S\>. Checkpoint (journal + state).
    - Script: `LVR journal append --type section_start --payload '{"section":"<S>"}'`
+1b. **Context research** (principle 14) — once per Section, before its first batch (a loop-back into the Section does not repeat it): run the per-Section scan (`references/sections/S0-domain-brief.md` §2 — S1–S4 at least one targeted search; S5 the research itself; S6–S8 the freshness re-check `LVR cite check --all`, researching every expired fact again, plus searches as needed), append new items to the brief, and journal it as `context_research` (scope `scan`). Then show the open items targeted at this Section as "Things you may not know" (§3 of that file: User Language, source site + date each) and turn each into a question (it counts toward the batch size) or a `designer_filled` decision whose rationale cites the item and its tag — an item whose source is an `[unverified: …]` marker is always a question. Record the `Became` cell, and one `## Context research` line in the Section Record (S6 has no record of its own: its line goes under `## Risks (S6)` in `S5-research.md`).
+   - Script: `LVR research log --context --in -` with `{"section":"<S>","scope":"scan","topic":"…","queries":["…"],"sources":[…],"outcome":"found","findings":["U-11"]}` (`"findings":[]` plus `"note"` when nothing is new).
 2. **Load** — follow the tier's reload discipline (conventions §7): T1/T2 load this Section's procedure block and its Boosters at Section start; T3 loads, every turn, only principles + `state.json` + this Section's procedure block + the current record — never the transcript.
 3. **Micro-batch loop** — batch size by tier: T1 up to 3, T2 up to 2, T3 exactly 1 (conventions §7). Phrase every question in User Language, plain and outcome-oriented, with a one-line reason it matters; choose the next batch from the previous answers. After EVERY answer: journal `answer_recorded` (payload `{ "section", "answer_id", "q", "a", "skipped" }` — `q` as asked, `a` verbatim, both User Language; `a` null for skipped) + state write (`sections.<S>.answers["<S>.qNN"] = { "q", "a", "skipped" }`, `q` stored as asked in User Language) — one checkpoint per answer. Bank question numbers are a suggested pool order; the authoritative id is `S<N>.qNN`, assigned at ask time within the Section. Keep both controls visible with every batch: **skip** (recorded with `"skipped": true`; never blocks) and **"cukup" / that's enough for this Section** (jumps straight to the exit-criteria check). A deferral ("later") is not a skip: the question stays open and may be re-asked in a targeted batch. Only an explicit skip — or leaving it unanswered at the exit check, which fires the `assumed` fallback — records `skipped: true`. Never re-ask a recorded answer — check `answers` before composing each batch.
    - Script: after every answer `LVR answer record --section <S> --in -` with `{"q":"<as asked>","a":"<verbatim>"}` (add `"skipped":true` for a skip; the id `<S>.q<n>` is assigned for you). Answers can never be silently overwritten (`ANSWER_EXISTS`).
-4. **Decisions** — any decision surfaced in the Section goes into `decisions[]` (`D-NNN`, status `user_confirmed | assumed | designer_filled` per principle 12) at the checkpoint where it is made; `assumed` and `designer_filled` also land in ASSUMPTIONS.md at S9. Status follows who decided: an explicit user choice made in conversation is `user_confirmed` even if the topic was designer-surfaced; `designer_filled` is only for decisions the user never made themselves.
+4. **Decisions** — any decision surfaced in the Section goes into `decisions[]` (`D-NNN`, status `user_confirmed | assumed | designer_filled` per principle 12) at the checkpoint where it is made; `assumed` and `designer_filled` also land in ASSUMPTIONS.md at S9. Status follows who decided: an explicit user choice made in conversation is `user_confirmed` even if the topic was designer-surfaced; `designer_filled` is only for decisions the user never made themselves. A decision that rests on a fact cites it in its rationale (a `U-NN` item or a cite tag, conventions §10); one that rests on an unverified fact is never `designer_filled` — ask the user, or it becomes an S6 blocking risk (principle 1).
    - Script: put `"decisions":[{"section":"<S>","summary":"…","rationale":"…","status":"user_confirmed"}]` in the same `answer record` input (ids `D-NNN` are assigned), or use `LVR decision record --event <carrier-event> --payload '{…}' --decision '{…}'` at the checkpoint where it is made.
 5. **Exit-criteria check** — when the questions are done or the user says enough, verify every exit criterion this Section's procedure lists. Unmet → say specifically what is missing (plain language) and run one more targeted batch. If the user still wants to move on with criteria unmet, mark the Section `blocked`, record the unmet criteria in its record, and stop before the next Section — never silently advance past unmet exit criteria. Journal `section_blocked` (payload: the Section id + the unmet criteria) as part of that checkpoint. Unblock path: when the user later supplies what was missing, re-run the exit-criteria check; on pass the Section closes normally (`section_done`, its record updated with the resolved criteria). Blocked sections resume like in-progress ones via /lvr-continue.
    - Script: `LVR journal append --type section_blocked --payload '{"section":"<S>","unmet":["…"]}'`
@@ -270,6 +283,9 @@ Purpose: problem, target users, platform shape, what "working" means for the use
 
 ## Booster
 <pm-skills: installed | degraded — internal bank used>
+
+## Context research
+<scan RQ id> · items shown: <U-ids> · became: <answer ids, decision ids>
 ```
 
 ### S2 — Conditions
@@ -278,7 +294,7 @@ Purpose: what the user already has and can pay — devices, accounts, hosting, b
 
 **Booster** — none; the internal bank plus its cost fact-sheet is the S2 booster. Bank: `references/sections/S2-conditions.md`.
 
-**Price verification (principle 1)** — the bank's fact-sheet is a snapshot dated 2026-11-08. Before quoting ANY price to the user: re-verify it live (web search or fetch the source) and name source + access date with the number; cannot verify → say the number is `unverified` and move on. Never quote from memory.
+**Price verification (principle 1)** — the bank's fact-sheet is a lead list last read 2026-11-08, older than the 30-day `price` limit. Before quoting ANY price to the user: read it live from the source, quote it with its cite tag (conventions §10), and log the step (`LVR research log`, `purpose: "claim"`). Research that really fails → log it as failed, quote the number with `[unverified: price · RQ-NNN]`, say so plainly, and treat it as a question for the user — never the basis of a `designer_filled` decision. Never quote from memory.
 
 **Question strategy** — establish in this order: devices in hand; what the user already pays for; the monthly budget ceiling; then route by the S1 platform shape (store in play → store fees and accounts; website → domain; hands-on plausible → willingness to run commands); close with admin email, paying from the user's country, data-location preference, and weekly maintenance time.
 
@@ -299,7 +315,7 @@ Purpose: what the user already has and can pay — devices, accounts, hosting, b
 - [ ] Deployment surface and devices/accounts list recorded.
 - [ ] Every paid account the platform needs surfaced with a verified price and a recorded proceed/defer answer.
 
-**Section Record** — `S2-kondisi.md` on the shared S1 skeleton, plus one row added under a `## Prices quoted` heading: every price shown to the user with source URL + access date, `unverified` flagged where applicable.
+**Section Record** — `S2-kondisi.md` on the shared S1 skeleton, plus a `## Prices quoted` table (`| Item | Price quoted | Type | Source |`): one row per price shown to the user, its Source cell a cite group or an `[unverified: price · RQ-NNN]` marker. S5, S9 and the bundle copy these tags; `cite check` checks them.
 
 ### S3 — Data & privacy
 
@@ -319,6 +335,7 @@ Purpose: login, personal data, payments, third-party services, where data may le
 - Offline-first local storage (when the user wants offline) → `designer_filled` — the user cannot enumerate caching, sync, or conflict choices; record them proactively, show visibly for correction.
 - Privacy-policy page at launch (any login, any personal data, any store presence) → `designer_filled` — app-store review rejects without one; never a question, always a recorded decision.
 - Account/data deletion path → `designer_filled` (erasure is a duty, not a feature request).
+- The privacy-policy, deletion, and any other legal decision cites the Domain Brief or scan item behind it (`per U-NN` + its tag); with no cited rule for the user's market, research it now (`LVR research log`) or ask — never a legal claim from memory.
 
 **Exit criteria** (engine step 5; cite the satisfying answer id or decision id):
 
@@ -360,11 +377,11 @@ Purpose: feature expectations captured in detail, iteratively, until the user sa
 
 ### S5 — Deep research
 
-Purpose: competitor scan, stack candidates with reasons, cost table, regional availability. Record: `S5-research.md` (becomes `RESEARCH.md` at S9). Mostly AI work: the Conductor does the research; the user is asked only targeted questions when findings demand a fact no record holds. English is the source; research runs on English sources, summarized in English (conventions §4); questions are spoken in User Language at runtime. At Section start also set `project.status` = "researching" (conventions §2).
+Purpose: competitor scan, stack candidates with reasons, cost table, regional availability. Record: `S5-research.md` (becomes `RESEARCH.md` at S9). Mostly AI work: the Conductor does the research; the user is asked only targeted questions when findings demand a fact no record holds. English is the source; research runs on English sources plus the primary local sources of the user's market, summarized in English (conventions §4); questions are spoken in User Language at runtime. At Section start also set `project.status` = "researching" (conventions §2). The S5 research is this Section's scan (engine step 1b): start with the Domain Brief items targeted at S5.
 
-**Booster** — competitor-analysis / web search (browserbase `competitor-analysis`, or the Firecrawl MCP; status in `boosters.core`). `installed` → load at Section start (T3: only this one, drop after use) and run real web research per the bank. Any other status → model-knowledge fallback where EVERY claim is written with an explicit `unverified` flag — loud degraded mode (ADR-0004), never memory dressed as research — and the record carries `Booster: competitor-analysis (degraded — model-knowledge fallback)` so S9 surfaces it in OVERVIEW.md.
+**Booster** — web research is required and was checked in Step 1; there is no model-knowledge fallback. If search or fetch stops working mid-Section, stop with the enable guidance (conventions §10) and resume with `/lvr-continue` — never fill the gap from memory. competitor-analysis (browserbase `competitor-analysis`, or the Firecrawl MCP; status in `boosters.core`) adds depth: `installed` → load at Section start (T3: only this one, drop after use). Any other status → research with the plain web tools and write `Booster: competitor-analysis (degraded — plain web search used)` into the record so S9 surfaces it in OVERVIEW.md.
 
-**Claim discipline (principle 1)** — every claim in the record carries a source URL + access date, or an explicit `unverified` flag; nothing in between. Reuse, do not re-research, what the S2 fact-sheet verified: cite the S2 record's price rows; re-verify live only rows being newly quoted.
+**Claim discipline (principles 1 and 14)** — every claim in the record carries a cite group (conventions §10); key facts have one primary source or two independent sites; the freshest primary source wins and conflicts are recorded. `unverified` only after logged research failed: `[unverified: <category> · RQ-NNN]`. Log every research step (`LVR research log`, `purpose: "s5"`). Reuse what S2 and the Domain Brief already cited by copying the tag with the claim; a copied tag past its freshness limit is researched again. Recommendations cite the research they rest on — never an unsourced "best practice". Bank: `references/sections/S5-research.md`.
 
 **Work strategy** — four outputs, in order (templates and sub-query lists: `references/sections/S5-research.md`):
 
@@ -382,7 +399,7 @@ Purpose: competitor scan, stack candidates with reasons, cost table, regional av
 **Decision surfaces**:
 
 - Recommended stack → presented in plain language; the user's pick or acceptance → `D-NNN user_confirmed`; skipped → `assumed` (the recommendation stands).
-- A recommendation resting on a free tier → its paid fallback (tier + price, verified or `unverified`) recorded next to it as `designer_filled` — a non-technical user cannot know free tiers have cliffs.
+- A recommendation resting on a free tier → its paid fallback (tier + cited price) recorded next to it as `designer_filled` — a non-technical user cannot know free tiers have cliffs. A paid-fallback price that stays `[unverified: …]` makes the decision a question for the user instead (principle 1).
 
 **Exit criteria** (engine step 5; cite the record section, answer id, or decision id):
 
@@ -390,7 +407,7 @@ Purpose: competitor scan, stack candidates with reasons, cost table, regional av
 - [ ] ≥2 stack options with a trade-offs table.
 - [ ] One recommended stack with reasons tied to the S1–S4 answers and S2 resources.
 - [ ] Cost table present, built on the S2 fact-sheet, with regional payment-gateway availability for the user's market.
-- [ ] Every claim carries source + access date or an explicit `unverified` flag.
+- [ ] Every claim carries a cite group or a logged `[unverified: …]` marker; `LVR cite check --file .lvr/docs/sections/S5-research.md` is clean.
 
 **Section Record** — `PROJECT_DIR/.lvr/docs/sections/S5-research.md`:
 
@@ -398,9 +415,9 @@ Purpose: competitor scan, stack candidates with reasons, cost table, regional av
 # S5 — Deep research
 
 ## Booster
-<competitor-analysis: installed | degraded — model-knowledge fallback>
+<competitor-analysis: installed | degraded — plain web search used>
 
-<findings, appended per sub-query; every claim: source URL + access date, or `unverified`>
+<findings, appended per sub-query; every claim: a cite group, or `[unverified: <category> · RQ-NNN]` after logged failed research>
 
 ## Competitor scan
 ## Stack options and trade-offs
@@ -416,6 +433,9 @@ Purpose: competitor scan, stack candidates with reasons, cost table, regional av
 
 ## Exit criteria
 - [<x>] <criterion> — evidence: <record section, answer id, or decision id>
+
+## Context research
+<RQ ids of the S5 research steps> · brief items handled: <U-ids> · became: <answer ids, decision ids>
 ```
 
 ### S6 — Feasibility loop
@@ -424,7 +444,7 @@ Purpose: confront the S5 findings with the recorded answers; surface conflicts, 
 
 **Booster** — none. The working material is the S5 record plus the S1–S4 records.
 
-**Work strategy** — walk every S5 finding (competitor lessons, stack trade-offs, cost rows, regional constraints, `unverified` claims) and classify each:
+**Work strategy** — first the freshness re-check (engine step 1b: `LVR cite check --all`; research every expired fact again and update every record that repeats it). Then walk every S5 finding (competitor lessons, stack trade-offs, cost rows, regional constraints, `[unverified: …]` claims) and classify each. An unverified key fact that a recommendation, a decision, or the plan rests on is `blocking` unless the user confirms it aloud (record that as a `user_confirmed` decision):
 
 - `blocking` — it contradicts a recorded answer or makes the plan unbuildable or unaffordable (cost busts the S2 ceiling; the S3 "no login" answer collides with what features need; a regional rule forbids the data plan).
 - `note` — informational; shapes later documents, blocks nothing.
@@ -523,7 +543,7 @@ Script: `LVR journal append --type scope_locked --payload '{"in_mvp":["F-01"],"p
 - **<S7.qNN> <question, User Language>** — <answer verbatim> · _EN: <summary>_
 (always at least the confirmation: the skip attempt + re-ask, then the explicit yes)
 
-## Decisions this Section / Exit criteria
+## Decisions this Section / Exit criteria / Context research
 <engine step-6 shape, as the S1–S4 skeleton>
 ```
 
@@ -553,7 +573,7 @@ Script: close S8 with `LVR journal append --type section_done --payload '{"secti
 **Decision surfaces**:
 
 - Milestone order and grouping → `designer_filled`, shown at the review (a non-technical user cannot sequence builds); explicit user choices between offered options → `user_confirmed`.
-- Cost/effort figures are rough estimates with their basis stated — real prices keep principle-1 discipline (source + date, or `unverified`).
+- Cost/effort figures are rough estimates with their basis stated — real prices carry their cite tag copied from S2/S5 (or an `[unverified: …]` marker), checked fresh by the engine step 1b re-check.
 
 **Exit criteria** (engine step 5; cite the milestone id):
 
@@ -579,7 +599,7 @@ Script: close S8 with `LVR journal append --type section_done --payload '{"secti
 - **<S8.qNN> <question, User Language>** — <answer verbatim> · _EN: <summary>_
 (or "None — the review passed without corrections.")
 
-## Decisions this Section / Exit criteria
+## Decisions this Section / Exit criteria / Context research
 <engine step-6 shape, as the S1–S4 skeleton>
 ```
 
@@ -600,9 +620,10 @@ Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the 2
    - every `assumed` and `designer_filled` decision is listed in ASSUMPTIONS.md with why + how to replace or confirm it;
    - stack, entity, and feature names are identical across all files (conventions §8 format rules);
    - every milestone acceptance criterion has a VERIFICATION.md procedure (exact commands, expected outputs, what to look at);
-   - every price in the OVERVIEW.md and RESEARCH.md cost tables cites its S2 fact-sheet row — source + access date, or `unverified` (principle 1);
+   - every price in the OVERVIEW.md and RESEARCH.md cost tables cites its S2 or S5 row (principle 1);
+   - every claim in the records and the bundle carries a valid, fresh cite group or a logged `[unverified: …]` marker; no memory sources; no unsourced recommendation; no `designer_filled` decision on an unverified fact; every Domain Brief item became a question or decision (principles 1 and 14; conventions §10) — an expired fact is researched again, never compiled stale;
    - all 20 files exist and are non-empty.
-   - Script: `LVR crosscheck` runs this whole list (rules X1–X7, read-only) over the drafted bundle and returns `findings[]` with exact messages; fix only what it reports, with targeted edits, then run it again until `clean` is true. Its `needs_model[]` items (stack and entity names identical across files; Why and confirm lines specific; verification steps exact and covering their criterion; OVERVIEW and RESEARCH prices really sourced; also the cost tables agree) are yours to check by reading — the script never guesses them. A duplicated `## F-NN` block or an F-NN that exists in only some files is reported by the script (X1). Parked features keep a `SPEC/requirements.md` block marked parked, a `SCOPE.md` row, and a `USER_FLOWS.md` heading marked `(parked — see SCOPE.md)` (conventions §5); the script checks all three.
+   - Script: `LVR crosscheck` runs this whole list (rules X1–X8, read-only; X8 = `cite check --all`, findings I1–I13) over the drafted bundle and returns `findings[]` with exact messages; fix only what it reports, with targeted edits, then run it again until `clean` is true. Its `needs_model[]` items (stack and entity names identical across files; Why and confirm lines specific; verification steps exact and covering their criterion; OVERVIEW and RESEARCH prices really sourced; also the cost tables agree) are yours to check by reading — the script never guesses them. A duplicated `## F-NN` block or an F-NN that exists in only some files is reported by the script (X1). Parked features keep a `SPEC/requirements.md` block marked parked, a `SCOPE.md` row, and a `USER_FLOWS.md` heading marked `(parked — see SCOPE.md)` (conventions §5); the script checks all three.
 3. **SimpleEnglish document-rules pass** — short sentences, active voice, jargon defined on first use (principle 7); applies to all bundle files, strictest for OVERVIEW.md; never fights GFM structure.
 4. **Humanizer de-slop pass** — concrete and specific, no filler (principle 6); rewrite slop lines, never drop content.
 5. **Emit blueprint.json** — the exact schema v1 in `references/bundle/templates.md` §19, derived from `state.json`: regenerate it, never hand-edit it. Write the one-line CLAUDE.md + GEMINI.md stubs (exact line in the templates).
@@ -656,4 +677,6 @@ The full rules live in `references/principles.md`; these are the ones this skill
 - Never re-ask a recorded answer — check `sections.<S>.answers` before composing every batch; the captured idea (S0.q1 / `idea_raw`) is covered by the same rule: later Sections' gap-fill questions must not re-collect what the idea text already answers. (Principle 10)
 - Never generate any Blueprint Bundle file before scope lock (S7) — compilation happens only at S9. (Conventions §5 hard rules)
 - Never vendor NC-licensed content into any LVR file — NC boosters are runtime dependencies only: credit, never copy. (Principle 11)
-- Never answer a verifiable fact from memory — cite source + access date, or mark it `unverified` and move on. (Principle 1)
+- Never answer a checkable fact from memory — research it and cite it (conventions §10); `[unverified: …]` only after logged research failed, and never as the basis of a `designer_filled` decision. (Principle 1)
+- Never continue without web research — no web search or page fetch → explain how to enable it and stop. (Principle 14)
+- Never let an item from the Domain Brief or a Section scan go unhandled — each becomes a question or a cited decision. (Principle 14)

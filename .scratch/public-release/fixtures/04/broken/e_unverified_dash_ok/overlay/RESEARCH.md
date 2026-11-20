@@ -39,10 +39,10 @@ Built on the S2 fact-sheet (verified 2026-11-07) plus S5 additions. v1 total rec
 |---|---|---|---|---|
 | Vercel Hobby (app hosting, deploy, TLS) | USD 0/month — Hobby terms say personal, non-commercial use (caveat → R-4) | monthly | S2 row: vercel.com/pricing (2026-11-07) | verified (S2) |
 | Supabase Free (Postgres 500 MB, Auth, Storage 1 GB, 50k MAU) | USD 0/month — pauses after 1 week of inactivity (caveat → R-2) | monthly | S2 row: supabase.com/pricing (2026-11-07) | verified (S2) |
-| Email sender for admin password reset (D-012) | USD 0 on a free tier (Resend-class, ~3.000 emails/month) | monthly | - | unverified |
+| Email sender for admin password reset (D-012) | USD 0 on a free tier (Resend-class, ~3.000 emails/month) | monthly | - | [unverified: price · RQ-001] |
 | Custom domain (.com) | deferred — free `*.vercel.app` subdomain first (D-007); renewal USD 19.98/yr if ever needed (first year USD 12.08 on sale) | yearly | S2 row: namecheap.com (2026-11-07) | verified (S2) |
 | Payment gateway (Midtrans/Xendit-class: QRIS, virtual account) | parked with the gateway (D-011): MDR ~2–3% per transaction when unparked | per-transaction | model knowledge, no live check (2026-11-07) | unverified |
-| Vercel Pro / Supabase Pro (paid fallback, D-018) | USD 20/month per seat / ~USD 25/month | monthly | S2 row (Vercel, verified) / model knowledge (Supabase, unverified) | mixed — see D-018 |
+| Vercel Pro / Supabase Pro (paid fallback, D-018) | USD 20/month per seat / ~USD 25/month | monthly | S2 row (Vercel, verified) / model knowledge (Supabase, [unverified: price · RQ-003]) | mixed — see D-018 |
 
 ### Regional availability
 
