@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "D6",
+   "VERIFICATION.md \"## Global smoke test\" step 2 is too thin (\"Try it.\"): give the exact action and the expected result."
+  ]
+ ],
+ "crosscheck": []
+}

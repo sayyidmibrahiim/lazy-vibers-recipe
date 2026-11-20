@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "E4",
+   "RESEARCH.md cost row \"Vercel Hobby (app hosting, deploy, TLS)\" has no source date and no \"unverified\" flag."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X6",
+   "E4",
+   "RESEARCH.md cost row \"Vercel Hobby (app hosting, deploy, TLS)\" has no source date and no \"unverified\" flag."
+  ]
+ ]
+}

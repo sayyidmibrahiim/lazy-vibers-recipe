@@ -32,7 +32,7 @@ Format rules (all files): GitHub-flavored Markdown · English source · no Merma
 ## Compilation order (S9)
 
 1. Draft each file from section records + `decisions[]` + `milestones[]`.
-2. **Cross-check pass**: every F-… has a USER_FLOWS entry and requirements entry; every decision has a DECISIONS.md row; every non-confirmed decision (`assumed` + `designer_filled`) is in ASSUMPTIONS.md; stack names identical across files.
+2. **Cross-check pass**: every F-… has a USER_FLOWS entry and requirements entry; every decision has a DECISIONS.md row; every non-confirmed decision (`assumed` + `designer_filled`) is in ASSUMPTIONS.md; stack names identical across files. `lvr.mjs crosscheck` runs this list mechanically (feature coverage including parked features, decisions mirror, ASSUMPTIONS, display and feature names, acceptance criterion vs VERIFICATION, cost sources, file presence) and leaves the judgment items (stack and entity names, specificity) to the model.
 3. SimpleEnglish document-rules pass.
 4. Humanizer pass (de-slop).
 5. Emit `blueprint.json` + harness adapters.
@@ -44,7 +44,7 @@ The 20-file list above is fixed. The v1 skills change the bundle by editing thos
 
 | Skill | Bundle effect | Side artifacts (never in the bundle) |
 |---|---|---|
-| `/lvr-handoff` | regenerates `blueprint.json`, refreshes the entry prompt | `HANDOFF-PROMPT.md` |
+| `/lvr-handoff` | regenerates `blueprint.json`, refreshes the entry prompt; rewrites a `CLAUDE.md` / `GEMINI.md` that is not exactly the stub, after copying it to `<file>.bak-<date>` (never lost silently) | `HANDOFF-PROMPT.md`, `CLAUDE.md.bak-<date>`, `GEMINI.md.bak-<date>` |
 | `/lvr-recheck-plan` | fixes confirmed findings in place; regenerates `blueprint.json` when stale | `.lvr/recheck/RECHECK-<date>.md` |
 | `/lvr-add-feature` | appends the requirement, flow, scope, milestone, verification, decision, assumption, research, and cost rows | `.lvr/docs/sections/S4-additions.md` |
 | `/lvr-build` | appends `## Build log — <ts>` sections to the end of `VERIFICATION.md`; never edits a requirement or an acceptance criterion | `state.project.status`, `state.milestones[].verified`, `state.deployment` |
@@ -65,7 +65,7 @@ Rules: existing ids are never renumbered; earlier `VERIFICATION.md` entries and 
   "decisions_count": { "confirmed": 12, "assumed": 3, "designer_filled": 5 },
   "milestones": [ { "id": "M0", "goal": "...", "verified": false,
                     "acceptance_count": 4, "ref": "MILESTONES.md#M0" } ],
-  "costs": { "monthly_usd": 0, "one_time_usd": 0, "table_ref": "RESEARCH.md#costs" },
+  "costs": { "monthly_usd": 0, "one_time_usd": 0, "table_ref": "RESEARCH.md#cost-table" },
   "capabilities": [ { "name": "...", "kind": "skill|mcp|plugin", "license": "MIT",
                       "nc": false, "install": "npx skills add ..." } ],
   "pointers": { "agents": "AGENTS.md", "overview": "OVERVIEW.md",
@@ -73,4 +73,4 @@ Rules: existing ids are never renumbered; earlier `VERIFICATION.md` entries and 
 }
 ```
 
-Rules: `blueprint.json` is a **derived** file — regenerate, never hand-edit; `.lvr/state.json` remains the pipeline's own source of truth. The `ref` / `*_ref` values are logical pointers `<file>#<id>`, not Markdown anchors: the id is the feature (`F-01`), decision (`D-003`) or milestone (`M0`) id that starts the target heading or table row, and `costs` names the `## Cost table` section.
+Rules: `blueprint.json` is a **derived** file — regenerate, never hand-edit (`lvr.mjs blueprint emit`: refuses, writing nothing, when a feature id has two requirements blocks or an F-NN has no requirements block; writes only when a field other than `generated_at` drifts; `stack`, `idea_summary_en` and money totals the bundle does not state in a parseable way are kept from the existing file or supplied by the model); `.lvr/state.json` remains the pipeline's own source of truth. The `ref` / `*_ref` values are logical pointers `<file>#<id>`, not Markdown anchors: the id is the feature (`F-01`), decision (`D-003`) or milestone (`M0`) id that starts the target heading or table row, and `costs` names the `## Cost table` section (`RESEARCH.md#cost-table`).

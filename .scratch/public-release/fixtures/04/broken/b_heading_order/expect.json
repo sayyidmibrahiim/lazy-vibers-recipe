@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "B8",
+   "File SPEC/architecture.md has the heading \"## Data flow\" out of order; it must come after \"## Components\"."
+  ]
+ ],
+ "crosscheck": []
+}

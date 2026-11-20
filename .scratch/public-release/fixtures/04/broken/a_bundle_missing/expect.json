@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "A0",
+   "The Blueprint Bundle is missing entirely: Section S9 (Compile) has not run."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X7",
+   "A0",
+   "The Blueprint Bundle is missing entirely: Section S9 (Compile) has not run."
+  ]
+ ]
+}

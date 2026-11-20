@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "G1",
+   "File CLAUDE.md is not exactly the one-line stub; handoff stubs rewrites it."
+  ]
+ ],
+ "crosscheck": []
+}

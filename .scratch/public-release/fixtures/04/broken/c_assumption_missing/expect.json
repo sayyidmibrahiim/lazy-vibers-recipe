@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "C4",
+   "Decision D-021 is designer_filled but has no block in ASSUMPTIONS.md."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X3",
+   "C4",
+   "Decision D-021 is designer_filled but has no block in ASSUMPTIONS.md."
+  ]
+ ]
+}

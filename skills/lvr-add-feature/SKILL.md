@@ -115,7 +115,7 @@ Apply the impact table, one file per turn, append-only unless the row is a requi
 - **ASSUMPTIONS.md** — append every new `assumed` / `designer_filled` decision.
 - **RESEARCH.md, OVERVIEW.md** — new evidence rows and owner-visible feature/cost lines.
 - **CAPABILITIES.md, HANDOVER.md, CODE_STYLE.md** — only when the matrix says so.
-- **`blueprint.json`** — regenerate from state + bundle in the existing file's schema v1 shape (the full schema is in the `lvr-handoff` skill's lint checklist, group H), never hand-edit.
+- **`blueprint.json`** — regenerate from state + bundle in the existing file's schema v1 shape (the full schema is in the `lvr-handoff` skill's lint checklist, group H), never hand-edit. Script: `LVR blueprint emit` (it keeps the stack and summary already in the file; `--check` previews the drift).
 - **State** — append the decision; append the milestone entry (`verified: false`) when a milestone was added. Never touch done Sections or existing milestone entries.
 
 After each file: journal `feature_applied` (payload: F-NN, file, action) + state write. One checkpoint per file.

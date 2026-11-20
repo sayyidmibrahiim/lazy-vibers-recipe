@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "D6",
+   "VERIFICATION.md \"## Global smoke test\" has no numbered steps."
+  ]
+ ],
+ "crosscheck": []
+}

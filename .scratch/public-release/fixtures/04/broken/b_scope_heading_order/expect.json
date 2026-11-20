@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "B13",
+   "File SCOPE.md has the heading \"## Parking Lot (recorded, never deleted)\" out of order; it must come after \"## In MVP\"."
+  ]
+ ],
+ "crosscheck": []
+}

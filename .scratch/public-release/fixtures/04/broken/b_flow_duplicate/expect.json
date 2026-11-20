@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "B9",
+   "File USER_FLOWS.md has 2 \"## F-01 — <name>\" sections (lines 5, 26); a feature has exactly one."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X1",
+   "B9",
+   "File USER_FLOWS.md has 2 \"## F-01 — <name>\" sections (lines 5, 26); a feature has exactly one."
+  ]
+ ]
+}

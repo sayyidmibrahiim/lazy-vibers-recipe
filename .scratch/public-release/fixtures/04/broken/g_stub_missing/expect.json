@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "G2",
+   "File GEMINI.md is missing; handoff stubs writes it."
+  ]
+ ],
+ "crosscheck": []
+}

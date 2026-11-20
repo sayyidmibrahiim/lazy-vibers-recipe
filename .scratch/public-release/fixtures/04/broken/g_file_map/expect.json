@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "G6",
+   "AGENTS.md \"## File map\" does not point to SPEC/api.md."
+  ]
+ ],
+ "crosscheck": []
+}

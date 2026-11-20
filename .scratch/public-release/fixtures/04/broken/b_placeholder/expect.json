@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "B20",
+   "File HANDOVER.md has the unfilled placeholder \"<your name>\" at line 48."
+  ]
+ ],
+ "crosscheck": []
+}

@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "B4",
+   "File SPEC/prd.md is missing the heading \"## Goals\"."
+  ]
+ ],
+ "crosscheck": []
+}

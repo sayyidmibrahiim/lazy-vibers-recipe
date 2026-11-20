@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "F3",
+   "SCOPE.md does not cite the scope-lock decision id (D-NNN) under the title."
+  ]
+ ],
+ "crosscheck": []
+}

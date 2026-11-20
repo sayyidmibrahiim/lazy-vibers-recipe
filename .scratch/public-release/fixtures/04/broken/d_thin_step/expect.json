@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "D4",
+   "VERIFICATION.md section M1 step 1 is too thin (\"Check it.\"): give the exact command or action and the expected result."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X5",
+   "D4",
+   "VERIFICATION.md section M1 step 1 is too thin (\"Check it.\"): give the exact command or action and the expected result."
+  ]
+ ]
+}

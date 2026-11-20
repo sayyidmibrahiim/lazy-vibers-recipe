@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "E2",
+   "RESEARCH.md \"## Cost table\" has no cost table (columns Item | Price | Type | Source)."
+  ]
+ ],
+ "crosscheck": []
+}

@@ -1,0 +1,19 @@
+{
+ "lint": [
+  [
+   "D1",
+   "Feature F-06 is in the MVP but lands in no milestone."
+  ],
+  [
+   "F1",
+   "SCOPE.md lists F-06, which is not in the S4 record, requirements or milestones."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X1",
+   "F1",
+   "SCOPE.md lists F-06, which is not in the S4 record, requirements or milestones."
+  ]
+ ]
+}

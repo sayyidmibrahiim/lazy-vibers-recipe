@@ -1,0 +1,19 @@
+{
+ "lint": [
+  [
+   "B5",
+   "File SPEC/requirements.md has no \"## F-04 — <name>\" block."
+  ],
+  [
+   "H2",
+   "blueprint.json is out of date: features[3] differs from state.json and the bundle; blueprint emit rewrites it."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X1",
+   "B5",
+   "File SPEC/requirements.md has no \"## F-04 — <name>\" block."
+  ]
+ ]
+}

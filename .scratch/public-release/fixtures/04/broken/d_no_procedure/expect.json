@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "D4",
+   "VERIFICATION.md section M1 has no procedure (needs numbered steps with commands and expected outputs)."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X5",
+   "D4",
+   "VERIFICATION.md section M1 has no procedure (needs numbered steps with commands and expected outputs)."
+  ]
+ ]
+}

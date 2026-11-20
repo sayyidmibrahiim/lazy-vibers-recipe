@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "C2",
+   "File DECISIONS.md has a row for D-099 that is not in state.json decisions[]."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X2",
+   "C2",
+   "File DECISIONS.md has a row for D-099 that is not in state.json decisions[]."
+  ]
+ ]
+}

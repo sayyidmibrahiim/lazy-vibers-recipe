@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "G4",
+   "AGENTS.md \"## How to load context\" must give the read order DECISIONS.md, SPEC/, MILESTONES.md, VERIFICATION.md."
+  ]
+ ],
+ "crosscheck": []
+}

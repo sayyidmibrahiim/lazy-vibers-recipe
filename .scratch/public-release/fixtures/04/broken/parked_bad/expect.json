@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "F4",
+   "Parked feature F-05 has a USER_FLOWS.md heading that is not marked \"(parked — see SCOPE.md)\"."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X1",
+   "F4",
+   "Parked feature F-05 has a USER_FLOWS.md heading that is not marked \"(parked — see SCOPE.md)\"."
+  ]
+ ]
+}

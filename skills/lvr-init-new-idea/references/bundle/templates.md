@@ -153,7 +153,7 @@ Schema v1, stable — consumers: web UI, external harnesses (the canonical schem
   "decisions_count": { "confirmed": 12, "assumed": 3, "designer_filled": 5 },
   "milestones": [ { "id": "M0", "goal": "...", "verified": false,
                     "acceptance_count": 4, "ref": "MILESTONES.md#M0" } ],
-  "costs": { "monthly_usd": 0, "one_time_usd": 0, "table_ref": "RESEARCH.md#costs" },
+  "costs": { "monthly_usd": 0, "one_time_usd": 0, "table_ref": "RESEARCH.md#cost-table" },
   "capabilities": [ { "name": "...", "kind": "skill|mcp|plugin", "license": "MIT",
                       "nc": false, "install": "npx skills add ..." } ],
   "pointers": { "agents": "AGENTS.md", "overview": "OVERVIEW.md",
@@ -161,7 +161,7 @@ Schema v1, stable — consumers: web UI, external harnesses (the canonical schem
 }
 ```
 
-Fill: derived from `.lvr/state.json` plus the bundle (refs, counts) — regenerate it, never hand-edit it; `.lvr/state.json` stays the pipeline's source of truth. The `ref` / `*_ref` values are logical pointers `<file>#<id>`, not Markdown anchors: the id is the feature (`F-01`), decision (`D-003`) or milestone (`M0`) id that starts the target heading or table row, and `costs` names the `## Cost table` section.
+Fill: derived from `.lvr/state.json` plus the bundle (refs, counts) — regenerate it, never hand-edit it; `.lvr/state.json` stays the pipeline's source of truth. The `ref` / `*_ref` values are logical pointers `<file>#<id>`, not Markdown anchors: the id is the feature (`F-01`), decision (`D-003`) or milestone (`M0`) id that starts the target heading or table row, and `costs` names the `## Cost table` section (`RESEARCH.md#cost-table`).
 
 ## 20. CLAUDE.md and GEMINI.md — harness stubs
 Both files carry exactly this one line and nothing else:

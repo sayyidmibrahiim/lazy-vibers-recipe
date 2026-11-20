@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "G5",
+   "AGENTS.md \"## Working rules\" does not mention SECURITY.md (security rules)."
+  ]
+ ],
+ "crosscheck": []
+}

@@ -1,0 +1,23 @@
+{
+ "lint": [
+  [
+   "B14",
+   "File MILESTONES.md has no \"## M3 — <name>\" block."
+  ],
+  [
+   "B15",
+   "File VERIFICATION.md has no \"## M3 — <name>\" section."
+  ],
+  [
+   "H2",
+   "blueprint.json is out of date: milestones[3].acceptance_count differs from state.json and the bundle; blueprint emit rewrites it."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X5",
+   "B15",
+   "File VERIFICATION.md has no \"## M3 — <name>\" section."
+  ]
+ ]
+}

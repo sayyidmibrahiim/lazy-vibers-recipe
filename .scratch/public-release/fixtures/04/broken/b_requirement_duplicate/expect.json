@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "B5",
+   "File SPEC/requirements.md has 2 \"## F-01 — <name>\" blocks (lines 5, 14); a feature has exactly one."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X1",
+   "B5",
+   "File SPEC/requirements.md has 2 \"## F-01 — <name>\" blocks (lines 5, 14); a feature has exactly one."
+  ]
+ ]
+}

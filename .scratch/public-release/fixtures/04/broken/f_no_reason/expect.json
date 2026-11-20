@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "F2",
+   "Parking Lot row \"Automatic payment gateway (QRIS / virtual account)\" in SCOPE.md has no one-line reason."
+  ]
+ ],
+ "crosscheck": []
+}

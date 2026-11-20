@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "A11",
+   "File SECURITY.md is missing."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X7",
+   "A11",
+   "File SECURITY.md is missing."
+  ]
+ ]
+}

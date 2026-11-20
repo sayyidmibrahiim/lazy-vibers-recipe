@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "C4",
+   "ASSUMPTIONS.md block D-003 has no confirm-instruction line (\"**How to replace or confirm:**\", \"**How to confirm:**\" or \"**How to replace:**\") with content."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X3",
+   "C4",
+   "ASSUMPTIONS.md block D-003 has no confirm-instruction line (\"**How to replace or confirm:**\", \"**How to confirm:**\" or \"**How to replace:**\") with content."
+  ]
+ ]
+}

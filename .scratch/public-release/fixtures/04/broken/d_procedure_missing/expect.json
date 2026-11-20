@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "D5",
+   "VERIFICATION.md section M2 has 4 procedures but MILESTONES.md lists 5 acceptance criteria; every criterion needs its own procedure."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X5",
+   "D5",
+   "VERIFICATION.md section M2 has 4 procedures but MILESTONES.md lists 5 acceptance criteria; every criterion needs its own procedure."
+  ]
+ ]
+}

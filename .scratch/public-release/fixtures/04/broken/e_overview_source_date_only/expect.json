@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "E4",
+   "OVERVIEW.md cost row \"Vercel Hobby (app hosting)\" has no real source in its Source cell (\"checked 2026-11-07\"): name where the price came from, not only a date or a placeholder."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X6",
+   "E4",
+   "OVERVIEW.md cost row \"Vercel Hobby (app hosting)\" has no real source in its Source cell (\"checked 2026-11-07\"): name where the price came from, not only a date or a placeholder."
+  ]
+ ]
+}

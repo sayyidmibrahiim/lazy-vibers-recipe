@@ -4,7 +4,8 @@
 // Usage: node lvr.mjs <group> <cmd> [flags]   (see --help). Output: one JSON object on stdout.
 //
 // Sections, in order: 1 constants, 2 errors/args/io, 3 journal, 4 schema (validate/canonical/write/lock),
-// 5 reducer, 6 checkpoint (journal + state), 7 replay, 8 gate, 9 slug, 10 probe, 11 booster, 12 commands/main.
+// 5 reducer, 6 checkpoint (journal + state), 7 replay, 8 gate, 9 slug, 10 probe, 11 booster, 11b bundle lint/crosscheck/blueprint/handoff,
+// 12 commands/main.
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -83,7 +84,7 @@ const sha256 = (s) => crypto.createHash("sha256").update(s).digest("hex");
 const ptrEsc = (s) => String(s).replace(/~/g, "~0").replace(/\//g, "~1");
 const secNum = (s) => parseInt(String(s).slice(1), 10);
 
-const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss"]);
+const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check"]);
 const OPTIONAL_VALUE_FLAGS = new Set(["compare"]);
 const REPEAT_FLAGS = new Set(["decision"]);
 const GLOBAL_FLAGS = ["dir", "pretty", "help", "version"];
@@ -1630,6 +1631,876 @@ function detectBoosters(dir, boosters) {
   });
 }
 
+// ---------------------------------------------------------------- 11b. bundle: lint, crosscheck, blueprint, handoff
+// Read-only checks over the Blueprint Bundle (lint-checklist.md groups A-H; the S9 cross-check is a view over the same checks).
+// Judgment checks are never guessed: they come back as `needs_model` items for the model. Writes (handoff only):
+// blueprint.json, CLAUDE.md, GEMINI.md, HANDOFF-PROMPT.md, each atomic, confined to the project folder, only when the bytes would change.
+const BUNDLE_FILES = [
+  "AGENTS.md", "OVERVIEW.md", "DECISIONS.md", "SPEC/prd.md", "SPEC/requirements.md", "SPEC/data-model.md", "SPEC/api.md", "SPEC/architecture.md",
+  "USER_FLOWS.md", "CODE_STYLE.md", "SECURITY.md", "RESEARCH.md", "SCOPE.md", "MILESTONES.md", "VERIFICATION.md", "ASSUMPTIONS.md", "HANDOVER.md", "CAPABILITIES.md",
+];
+const FILE_MAP_TARGETS = [...BUNDLE_FILES.slice(1), "blueprint.json", "CLAUDE.md", "GEMINI.md"];
+const STUB_LINE = "Read [AGENTS.md](AGENTS.md) — the builder entry point for this project.";
+const LINT_GROUPS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+const DECISIONS_HEADER = "| ID | Decision | Rationale | Alternatives considered | Date | Status |";
+const CAPABILITIES_HEADER = "| Name | Kind | License | Install | Notes |";
+const VAGUE_RE = /\b(looks? (?:good|fine|right|nice)|works? (?:well|fine|properly|correctly)|works? as expected|user-friendly|easy to use|feels? (?:good|right)|fast enough|good enough|performs? well|is intuitive)\b/i;
+const HTML_OK_RE = /^(?:\/|!--|https?:|mailto:|(?:a|b|i|p|br|hr|em|kbd|sub|sup|div|img|pre|ul|ol|li|table|thead|tbody|tr|td|th|code|span|strong|details|summary|center|h[1-6])(?:\s|\/|$))/i;
+
+const selfFixId = (id) => ["G1", "G2", "H1", "H2", "H3"].includes(id);
+const ownerOf = (id) => (selfFixId(id) ? "lvr-handoff" : id[0] === "D" ? "S8" : ["F1", "F2", "F3"].includes(id) ? "S7 or S9" : "S9");
+
+/** Headings outside code fences: [{level, text, line}] (line is 0-based). */
+function parseHeadings(text) {
+  const out = [];
+  let fence = null;
+  text.split("\n").forEach((ln, i) => {
+    const f = ln.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (f) { if (!fence) fence = f[1][0]; else if (f[1][0] === fence) fence = null; return; }
+    if (fence) return;
+    const m = ln.match(/^(#{1,6})[ \t]+(.+?)(?:[ \t]+#+)?[ \t]*$/);
+    if (m) out.push({ level: m[1].length, text: m[2].trim(), line: i });
+  });
+  return out;
+}
+/** Body lines (array) of heading h: up to the next heading of the same or a higher level. */
+function bodyOf(lines, heads, h) {
+  const next = heads.find((x) => x.line > h.line && x.level <= h.level);
+  return lines.slice(h.line + 1, next ? next.line : lines.length);
+}
+/** Text with fenced code blocks blanked (line numbers preserved). */
+function blankFences(text) {
+  let fence = null;
+  return text.split("\n").map((ln) => {
+    const f = ln.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (f) { if (!fence) fence = f[1][0]; else if (f[1][0] === fence) fence = null; return ""; }
+    return fence ? "" : ln;
+  }).join("\n");
+}
+/** `<token>` names that appear inside fenced blocks or inline code spans of a file. */
+function codeTokens(text) {
+  const out = new Set();
+  let fence = null;
+  for (const ln of text.split("\n")) {
+    const f = ln.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (f) { if (!fence) fence = f[1][0]; else if (f[1][0] === fence) fence = null; continue; }
+    const seg = fence ? [ln] : [...ln.matchAll(/`([^`]*)`/g)].map((m) => m[1]);
+    for (const x of seg) for (const m of x.matchAll(/<([A-Za-z][^<>\n]{0,60})>/g)) out.add(m[1]);
+  }
+  return out;
+}
+const countNumbered = (lines) => lines.filter((l) => /^\d+[.)]\s+\S/.test(l)).length;
+/** Steps of a procedure: each numbered (or, failing that, bulleted) item with its continuation lines, as one string. */
+function stepsOf(lines) {
+  const numbered = lines.some((l) => /^\d+[.)]\s+\S/.test(l));
+  const start = numbered ? /^\d+[.)]\s+\S/ : /^[-*]\s+\S/;
+  const out = [];
+  for (const l of lines) {
+    if (start.test(l)) out.push(l.replace(/^(?:\d+[.)]|[-*])\s+/, ""));
+    else if (out.length && /^(?:\s+\S|```|~~~)/.test(l)) out[out.length - 1] += ` ${l.trim()}`;
+    else if (out.length && l.trim() !== "" && !/^#/.test(l)) out[out.length - 1] += ` ${l.trim()}`;
+  }
+  return out;
+}
+/** A step is thin when it is vague or too short to carry a command/action plus an expected result. */
+/** A Source cell names something once dates, placeholders and filler words are removed. */
+const hasRealSource = (cell) => cell.toLowerCase().replace(/\d{4}-\d{2}-\d{2}/g, " ").replace(/\b(?:accessed|checked|verified|retrieved|as of|on|date|tbd|tba|todo|fixme|xxx|n\/a|na|none|unknown|source|pending|later)\b/g, " ").replace(/[^\p{L}\p{N}]/gu, "").length >= 3;
+const thinStep = (t) => normWs(t).length < 25 || VAGUE_RE.test(t);
+const normWs = (s) => s.replace(/\s+/g, " ").trim();
+const normRow = (s) => normWs(s.replace(/`/g, "")).replace(/\s*\|\s*/g, " | ");
+
+function labelled(lines, label) {
+  const re = new RegExp(`^- \\*\\*${label}:\\*\\*[ \\t]*(.*)$`, "i");
+  const i = lines.findIndex((l) => re.test(l));
+  if (i < 0) return null;
+  const inline = lines[i].match(re)[1].trim();
+  const rest = [];
+  for (let k = i + 1; k < lines.length; k++) { if (/^- \*\*[^*]+:\*\*/.test(lines[k])) break; rest.push(lines[k]); }
+  return { inline, rest };
+}
+function criteriaOf(lines) {
+  const a = labelled(lines, "Acceptance criteria");
+  if (!a) return null;
+  const items = [];
+  for (const l of a.rest) {
+    const m = l.match(/^\s*(?:\d+[.)]|[-*])\s+(\S.*)$/);
+    if (m) items.push(m[1]);
+    else if (items.length && /^\s+\S/.test(l)) items[items.length - 1] += " " + l.trim();
+  }
+  if (!items.length && a.inline) {
+    const parts = a.inline.split(/(?:^|\s)\d+[.)]\s+/).map((s) => s.trim()).filter(Boolean);
+    items.push(...(parts.length ? parts : [a.inline]));
+  }
+  return items;
+}
+
+function decisionRows(text) {
+  const rows = [];
+  text.split("\n").forEach((ln, i) => {
+    if (!/^\|\s*D-\d{3,}\s*\|/.test(ln)) return;
+    const cells = splitRow(ln);
+    rows.push({ id: cells[0], cells, line: i + 1 });
+  });
+  return rows;
+}
+function assumptionBlocks(text) {
+  const lines = text.split("\n");
+  const heads = parseHeadings(text);
+  const out = [];
+  for (const h of heads) {
+    if (h.level !== 2 || !/^D-\d{3,}\b/.test(h.text)) continue;
+    const m = h.text.match(/^(D-\d{3,}) — (.+) \((assumed|designer_filled)\)$/);
+    const body = bodyOf(lines, heads, h).join("\n");
+    const why = body.match(/\*\*Why:\*\*[ \t]*(\S.*)/);
+    const conf = body.match(/\*\*How to (?:replace or confirm|confirm|replace):\*\*[ \t]*(\S.*)/);
+    out.push({ id: h.text.match(/^D-\d{3,}/)[0], heading: h.text, wellFormed: !!m, status: m ? m[3] : null, why: why ? why[1].trim() : "", confirm: conf ? conf[1].trim() : "" });
+  }
+  return out;
+}
+
+function parseMoney(cell) {
+  if (cell === undefined) return null;
+  const c = cell.replace(/\*/g, "");
+  const m = c.match(/USD\s*([0-9][0-9.,]*)/i);
+  if (m) {
+    let n = m[1].replace(/[.,]+$/, "");
+    if (n.includes(",") && n.includes(".")) n = n.replace(/,/g, "");
+    else if (/^\d{1,3}(,\d{3})+$/.test(n)) n = n.replace(/,/g, "");
+    else n = n.replace(",", ".");
+    const v = Number(n);
+    return Number.isFinite(v) ? v : null;
+  }
+  if (/(?:^|[^0-9])0(?:[.,]0+)?(?![0-9.,])/.test(c) && !/[1-9]/.test(c.replace(/\(.*?\)/g, ""))) return 0;
+  return null;
+}
+
+/** All the bundle's facts in one place, parsed lazily and cached. Throws the state errors like the other commands. */
+function makeBundle(dir) {
+  needLvr(dir);
+  const ls = loadState(dir);
+  if (ls.kind === "absent") throw fail("STATE_MISSING", "There is no state.json in this project.");
+  if (ls.kind === "unreadable") throw fail("STATE_UNREADABLE", `state.json is not valid JSON: ${ls.error}`);
+  if (ls.kind === "invalid") throw fail("STATE_INVALID", `state.json has ${ls.errors.length} error(s); run state validate.`, { errors: ls.errors });
+  const st = ls.state;
+  const cache = new Map();
+  const memo = (k, f) => { if (!cache.has(k)) cache.set(k, f()); return cache.get(k); };
+  const b = {
+    dir, st, name: st.project.name, j: readJournal(dir),
+    text: (f) => memo("t:" + f, () => {
+      const p = path.join(dir, f);
+      try { if (!fs.statSync(p).isFile()) return null; } catch { return null; }
+      return tryReadLF(p);
+    }),
+    present: (f) => b.text(f) !== null && b.text(f).trim() !== "",
+    lines: (f) => memo("l:" + f, () => (b.text(f) ?? "").split("\n")),
+    heads: (f) => memo("h:" + f, () => parseHeadings(b.text(f) ?? "")),
+    /** Body lines of the level-2 section `## title` (null when missing or the file is missing). */
+    section: (f, title, level = 2) => {
+      const h = b.heads(f).find((x) => x.level === level && x.text === title);
+      return h ? bodyOf(b.lines(f), b.heads(f), h) : null;
+    },
+    decisions: () => st.decisions,
+    inMvp: () => memo("inmvp", () => b.scope().inMvp),
+    scope: () => memo("scope", () => {
+      const out = { inMvp: new Map(), parked: new Map(), unnamedParked: [], title: [] };
+      const lines = b.lines("SCOPE.md");
+      const heads = b.heads("SCOPE.md");
+      const sec = (title) => { const h = heads.find((x) => x.level === 2 && x.text === title); return h ? bodyOf(lines, heads, h) : []; };
+      const parkH = heads.find((x) => x.level === 2 && x.text.startsWith("Parking Lot"));
+      const read = (body, target, other) => {
+        for (const l of body) {
+          const m = l.match(/^[-*] +\*\*(F-\d{2,})\*\* *(.*)$/);
+          if (m) target.set(m[1], m[2]);
+          else if (other && /^[-*] +\S/.test(l) && !/^[-*] +\*\(/.test(l)) other.push(l.replace(/^[-*] +/, ""));
+        }
+      };
+      read(sec("In MVP"), out.inMvp, null);
+      read(parkH ? bodyOf(lines, heads, parkH) : [], out.parked, out.unnamedParked);
+      const first = heads.find((x) => x.level === 2);
+      out.title = lines.slice(0, first ? first.line : lines.length);
+      return out;
+    }),
+    reqBlocks: () => memo("req", () => {
+      const lines = b.lines("SPEC/requirements.md"), heads = b.heads("SPEC/requirements.md");
+      return heads.filter((h) => h.level === 2 && /^F-\d{2,} — /.test(h.text)).map((h) => {
+        const body = bodyOf(lines, heads, h).join("\n");
+        const s = body.match(/\*\*Status:\*\*\s*([^·\n]+)/);
+        const status = s ? (/^\s*in-?MVP/i.test(s[1]) ? "in-MVP" : /^\s*parked/i.test(s[1]) ? "parked" : s[1].trim()) : null;
+        return { id: h.text.slice(0, h.text.indexOf(" — ")), name: h.text.slice(h.text.indexOf(" — ") + 3).trim(), status, line: h.line + 1 };
+      });
+    }),
+    flowSections: () => memo("flows", () => b.heads("USER_FLOWS.md").filter((h) => h.level === 2 && /^F-\d{2,} — /.test(h.text)).map((h) => {
+      const rest = h.text.slice(h.text.indexOf(" — ") + 3).trim();
+      const mk = rest.match(/\s*\((in-MVP|parked — see SCOPE\.md)\)\s*$/);
+      return { id: h.text.slice(0, h.text.indexOf(" — ")), name: mk ? rest.slice(0, mk.index).trim() : rest, marker: mk ? mk[1] : null, line: h.line + 1 };
+    })),
+    s4Ids: () => memo("s4", () => {
+      const ids = new Set();
+      const rd = path.join(dir, ".lvr", "docs", "sections");
+      let files = [];
+      try { files = fs.readdirSync(rd); } catch { /* none */ }
+      for (const f of files.filter((x) => /^S4-.*\.md$/.test(x))) {
+        const t = tryReadLF(path.join(rd, f));
+        if (t) for (const h of parseHeadings(t)) { const m = h.text.match(/^(F-\d{2,})\b/); if (m && h.level >= 2) ids.add(m[1]); }
+      }
+      return ids;
+    }),
+    milestoneBlocks: () => memo("mb", () => {
+      const lines = b.lines("MILESTONES.md"), heads = b.heads("MILESTONES.md");
+      return heads.filter((h) => h.level === 2 && /^M\d+ — /.test(h.text)).map((h) => {
+        const body = bodyOf(lines, heads, h);
+        const goal = labelled(body, "Goal"), del = labelled(body, "Deliverables");
+        return { id: h.text.slice(0, h.text.indexOf(" — ")), name: h.text.slice(h.text.indexOf(" — ") + 3), goal: goal ? goal.inline : null,
+          deliverables: del ? (del.inline + del.rest.join("")).trim() : null, criteria: criteriaOf(body) };
+      });
+    }),
+    verifySection: (id) => {
+      const h = b.heads("VERIFICATION.md").find((x) => x.level === 2 && new RegExp(`^${id} — `).test(x.text));
+      return h ? bodyOf(b.lines("VERIFICATION.md"), b.heads("VERIFICATION.md"), h) : null;
+    },
+    capabilities: () => memo("caps", () => {
+      const t = b.text("CAPABILITIES.md");
+      if (!t) return [];
+      return readTable(t, ["name", "kind", "license", "install"]).filter((r) => r.name).map((r) => {
+        const kind = (r.kind.toLowerCase().match(/skill|mcp|plugin/) || ["skill"])[0];
+        const inst = r.install.match(/`([^`]+)`/);
+        const notes = r.notes ?? "";
+        return { name: r.name, kind, license: r.license, nc: /\bNC\b|non-?commercial/i.test(r.license) || /runtime-dependency-only/i.test(notes), install: inst ? inst[1] : r.install.trim() };
+      });
+    }),
+    blueprint: () => memo("bp", () => {
+      const t = b.text("blueprint.json");
+      if (t === null) return { kind: "missing" };
+      try { return { kind: "ok", value: JSON.parse(t) }; } catch (e) { return { kind: "invalid", error: e.message }; }
+    }),
+  };
+  return b;
+}
+
+/** Feature ids by source, plus the union that must be classified in SCOPE.md. */
+function featureUniverse(b) {
+  const ids = new Set(b.s4Ids());
+  for (const r of b.reqBlocks()) ids.add(r.id);
+  for (const r of b.flowSections()) ids.add(r.id);
+  for (const m of b.st.milestones) for (const f of m.features) ids.add(f);
+  return ids;
+}
+/** Ids that appear on more than one block: [[id, [line, ...]], ...] sorted by id. */
+const dupIds = (blocks) => {
+  const m = new Map();
+  for (const x of blocks) m.set(x.id, [...(m.get(x.id) ?? []), x.line]);
+  return [...m].filter(([, ls]) => ls.length > 1).sort((a, c) => idCmp(a[0], c[0]));
+};
+const idCmp = (a, c) => parseInt(a.slice(2), 10) - parseInt(c.slice(2), 10);
+
+// ----- the blueprint.json derivation (shared by lint H2, blueprint emit, and the crosscheck names rule)
+function validateBlueprint(bp) {
+  const e = [];
+  const T = (p, v, ok, what) => { if (v !== undefined && !ok(v)) e.push(`${p}: expected ${what}`); };
+  const str = (v) => isStr(v), bool = (v) => typeof v === "boolean", num = (v) => typeof v === "number" && Number.isFinite(v), arr = Array.isArray;
+  if (!isObj(bp)) return ["(root): expected an object"];
+  const exact = (p, o, keys) => {
+    if (o === undefined) return false; // reported as missing by the parent
+    if (!isObj(o)) { e.push(`${p}: expected an object`); return false; }
+    const at = (k) => (p === "(root)" ? k : `${p}.${k}`);
+    for (const k of keys) if (!(k in o)) e.push(`${at(k)}: missing`);
+    for (const k of Object.keys(o)) if (!keys.includes(k)) e.push(`${at(k)}: unknown key`);
+    return true;
+  };
+  exact("(root)", bp, ["schema_version", "generated_at", "project", "stack", "features", "decisions_count", "milestones", "costs", "capabilities", "pointers"]);
+  if (bp.schema_version !== 1) e.push("schema_version: expected 1");
+  if ("generated_at" in bp) T("generated_at", bp.generated_at, isIso, "an ISO timestamp");
+  if (exact("project", bp.project, ["slug", "name", "user_language", "idea_summary_en", "status"])) for (const k of ["slug", "name", "user_language", "idea_summary_en", "status"]) if (k in bp.project) T(`project.${k}`, bp.project[k], str, "a string");
+  if (exact("stack", bp.stack, ["primary", "components", "reasons_ref"])) {
+    T("stack.primary", bp.stack.primary, str, "a string");
+    T("stack.components", bp.stack.components, (v) => arr(v) && v.every(str), "an array of strings");
+    T("stack.reasons_ref", bp.stack.reasons_ref, (v) => isStr(v) && /^DECISIONS\.md#D-\d{3,}$/.test(v), "DECISIONS.md#D-NNN");
+  }
+  if (!arr(bp.features)) e.push("features: expected an array");
+  else bp.features.forEach((f, i) => { if (exact(`features[${i}]`, f, ["id", "name", "in_mvp", "flows_ref"])) { T(`features[${i}].id`, f.id, (v) => /^F-\d{2,}$/.test(v), "F-NN"); T(`features[${i}].name`, f.name, str, "a string"); T(`features[${i}].in_mvp`, f.in_mvp, bool, "true or false"); T(`features[${i}].flows_ref`, f.flows_ref, str, "a string"); } });
+  if (exact("decisions_count", bp.decisions_count, ["confirmed", "assumed", "designer_filled"])) for (const k of ["confirmed", "assumed", "designer_filled"]) T(`decisions_count.${k}`, bp.decisions_count[k], (v) => Number.isInteger(v) && v >= 0, "a count");
+  if (!arr(bp.milestones)) e.push("milestones: expected an array");
+  else bp.milestones.forEach((m, i) => { if (exact(`milestones[${i}]`, m, ["id", "goal", "verified", "acceptance_count", "ref"])) { T(`milestones[${i}].id`, m.id, (v) => /^M\d+$/.test(v), "M<n>"); T(`milestones[${i}].goal`, m.goal, str, "a string"); T(`milestones[${i}].verified`, m.verified, bool, "true or false"); T(`milestones[${i}].acceptance_count`, m.acceptance_count, (v) => Number.isInteger(v) && v >= 0, "a count"); T(`milestones[${i}].ref`, m.ref, str, "a string"); } });
+  if (exact("costs", bp.costs, ["monthly_usd", "one_time_usd", "table_ref"])) { T("costs.monthly_usd", bp.costs.monthly_usd, num, "a number"); T("costs.one_time_usd", bp.costs.one_time_usd, num, "a number"); T("costs.table_ref", bp.costs.table_ref, str, "a string"); }
+  if (!arr(bp.capabilities)) e.push("capabilities: expected an array");
+  else bp.capabilities.forEach((c, i) => { if (exact(`capabilities[${i}]`, c, ["name", "kind", "license", "nc", "install"])) { T(`capabilities[${i}].name`, c.name, str, "a string"); T(`capabilities[${i}].kind`, c.kind, (v) => ["skill", "mcp", "plugin"].includes(v), "skill|mcp|plugin"); T(`capabilities[${i}].license`, c.license, str, "a string"); T(`capabilities[${i}].nc`, c.nc, bool, "true or false"); T(`capabilities[${i}].install`, c.install, str, "a string"); } });
+  if (exact("pointers", bp.pointers, ["agents", "overview", "verification", "state"])) for (const k of ["agents", "overview", "verification", "state"]) T(`pointers.${k}`, bp.pointers[k], str, "a string");
+  return e;
+}
+
+/** Leaf paths that differ between two JSON values (generated_at is ignored by the caller). */
+function jsonDiff(a, c, p = "", out = []) {
+  if (Array.isArray(a) && Array.isArray(c)) {
+    for (let i = 0; i < Math.max(a.length, c.length); i++) jsonDiff(a[i], c[i], `${p}[${i}]`, out);
+  } else if (isObj(a) && isObj(c)) {
+    for (const k of new Set([...Object.keys(a), ...Object.keys(c)])) jsonDiff(a[k], c[k], p ? `${p}.${k}` : k, out);
+  } else if (JSON.stringify(a) !== JSON.stringify(c)) out.push(p || "(root)");
+  return out;
+}
+
+const BLUEPRINT_KEYS = ["schema_version", "generated_at", "project", "stack", "features", "decisions_count", "milestones", "costs", "capabilities", "pointers"];
+const ordBp = (bp) => Object.fromEntries(BLUEPRINT_KEYS.filter((k) => k in bp).map((k) => [k, bp[k]]));
+const serializeBp = (bp) => JSON.stringify(ordBp(bp), null, 2) + "\n";
+
+/** Derive blueprint.json from state + bundle. Judgment fields (stack, idea summary, money totals the tables do not state in USD)
+ *  come from `input`, else from the existing file; what none of those supply is listed in `missing`. generated_at is left to the writer. */
+function deriveBlueprint(b, input = {}) {
+  const st = b.st;
+  const old = b.blueprint().kind === "ok" && isObj(b.blueprint().value) ? b.blueprint().value : {};
+  const preserved = [];
+  const missing = [];
+  const pick = (field, fromInput, fromOld, fromBundle) => {
+    if (fromInput !== undefined) { preserved.push(`${field} (input)`); return fromInput; }
+    if (fromBundle !== undefined && fromBundle !== null) return fromBundle;
+    if (fromOld !== undefined) { preserved.push(`${field} (existing blueprint.json)`); return fromOld; }
+    missing.push(field);
+    return null;
+  };
+  const s0 = (() => {
+    const t = tryReadLF(path.join(b.dir, ".lvr", "docs", "sections", "S0-intake.md"));
+    const m = t && t.match(/^> Summary \(EN\):[ \t]*([\s\S]*?)(?:\n\n|\n(?!>)|$)/m);
+    return m ? m[1].replace(/\n> ?/g, " ").trim() : undefined;
+  })();
+  const project = {
+    slug: st.project.slug, name: st.project.name, user_language: st.project.user_language,
+    idea_summary_en: input.idea_summary_en ?? old.project?.idea_summary_en ?? s0 ?? (missing.push("project.idea_summary_en"), null),
+    status: st.project.status,
+  };
+  if (input.idea_summary_en !== undefined) preserved.push("project.idea_summary_en (input)");
+  else if (old.project?.idea_summary_en !== undefined) preserved.push("project.idea_summary_en (existing blueprint.json)");
+  else if (s0 !== undefined) preserved.push("project.idea_summary_en (S0 record)");
+
+  const oldStack = isObj(old.stack) ? old.stack : {};
+  const inStack = isObj(input.stack) ? input.stack : {};
+  let reasons = inStack.reasons_ref ?? oldStack.reasons_ref;
+  if (reasons === undefined) {
+    const cand = [...st.decisions].reverse().find((d) => /\bstack\b/i.test(d.summary) && ["S5", "S3", "S2"].includes(d.section));
+    if (cand) reasons = `DECISIONS.md#${cand.id}`;
+  }
+  const stack = {
+    primary: pick("stack.primary", inStack.primary, oldStack.primary),
+    components: pick("stack.components", inStack.components, oldStack.components),
+    reasons_ref: reasons ?? (missing.push("stack.reasons_ref"), null),
+  };
+
+  const scopeOk = b.present("SCOPE.md");
+  const features = b.reqBlocks().slice().sort((x, y) => idCmp(x.id, y.id)).map((r) => ({
+    id: r.id, name: r.name, in_mvp: scopeOk ? b.scope().inMvp.has(r.id) : r.status === "in-MVP", flows_ref: `USER_FLOWS.md#${r.id}`,
+  }));
+  const decisions_count = { confirmed: 0, assumed: 0, designer_filled: 0 };
+  for (const d of st.decisions) decisions_count[d.status === "user_confirmed" ? "confirmed" : d.status]++;
+  const mblocks = b.milestoneBlocks();
+  const milestones = st.milestones.map((m) => ({
+    id: m.id, goal: m.goal, verified: m.verified === true,
+    acceptance_count: (mblocks.find((x) => x.id === m.id)?.criteria ?? []).length, ref: `MILESTONES.md#${m.id}`,
+  }));
+
+  const cost = b.section("OVERVIEW.md", "What it costs") ?? [];
+  const row = (re) => { const l = cost.find((x) => x.trim().startsWith("|") && re.test(x)); return l ? splitRow(l).slice(1).join(" ") : undefined; };
+  const inCosts = isObj(input.costs) ? input.costs : {};
+  const costs = {
+    monthly_usd: pick("costs.monthly_usd", inCosts.monthly_usd, oldCostNum(old, "monthly_usd"), parseMoney(row(/total.*month/i))),
+    one_time_usd: pick("costs.one_time_usd", inCosts.one_time_usd, oldCostNum(old, "one_time_usd"), parseMoney(row(/total.*one[- ]?time/i))),
+    table_ref: "RESEARCH.md#cost-table",
+  };
+  const capabilities = b.capabilities();
+  const pointers = { agents: "AGENTS.md", overview: "OVERVIEW.md", verification: "VERIFICATION.md", state: ".lvr/state.json" };
+  return { bp: { schema_version: 1, project, stack, features, decisions_count, milestones, costs, capabilities, pointers }, missing, preserved };
+}
+const oldCostNum = (old, k) => (isObj(old.costs) && typeof old.costs[k] === "number" ? old.costs[k] : undefined);
+
+// ----- the checks
+const NEEDS_MODEL = [
+  ["B19", "B", "all bundle files", "Check that every bundle file is written in English GitHub-flavored Markdown with ASCII diagrams only (the script checks for Mermaid fences and unfilled placeholders, not language)."],
+  ["B21", "B", "all bundle files", "Check that stack and entity names are identical across all files (the script compares display name and feature names only)."],
+  ["C4", "C", "ASSUMPTIONS.md", "Check that every Why and confirm-instruction line is specific, not boilerplate (the script checks that they are filled)."],
+  ["D3", "D", "MILESTONES.md", "Check that every acceptance criterion is machine-checkable: a command with expected output, a scripted step, or an observable visual fact (the script flags only known vague phrases)."],
+  ["D4", "D", "VERIFICATION.md", "Check that every procedure step gives an exact command (or an observable visual check plus how to look) and its expected output (the script flags only steps that are shorter than 25 characters or use a vague phrase)."],
+  ["D5", "D", "VERIFICATION.md", "Check that each acceptance criterion's procedure really covers that criterion (the script compares counts per milestone)."],
+  ["D6", "D", "VERIFICATION.md", "Check that the Global smoke test is one real end-to-end pass over the product and that Definition of verified states when a milestone counts as verified (the script flags only missing numbering, thin steps and a near-empty definition)."],
+  ["E3", "E", "OVERVIEW.md", "Check that the OVERVIEW.md and RESEARCH.md cost tables agree: same items, same numbers, no contradiction."],
+  ["E4", "E", "all bundle files", "Check that every price in the OVERVIEW.md and RESEARCH.md cost tables names where it came from (a site, a record, or unverified); the script checks the date or unverified flag on every row, and a Source cell that is not empty, only a date or only a placeholder wherever the table has a Source column."],
+  ["G3", "G", "AGENTS.md", "Check that AGENTS.md \"## What this is\" says concretely what the product is, in 2-4 lines (the script checks that it is filled)."],
+  ["G5", "G", "AGENTS.md", "Check that AGENTS.md \"## Working rules\" says a milestone is done only when its VERIFICATION.md procedure passes (the script checks that CODE_STYLE.md, SECURITY.md and VERIFICATION.md are mentioned)."],
+  ["H4", "H", "all bundle files", "Check that no bundle document contradicts decisions[]: the stack named in OVERVIEW, SPEC, architecture and RESEARCH, and every shaping decision, trace to decision ids."],
+];
+
+function runChecks(b, wanted) {
+  const findings = [];
+  const missingFiles = new Set();
+  const want = (id) => wanted === null || wanted.has(id[0]);
+  const add = (id, file, message) => findings.push({ id, group: id[0], file, message, owner: ownerOf(id), kind: selfFixId(id) ? "self_fix" : "bundle_gap", needs_model: false });
+  const ok = (f) => !missingFiles.has(f) && b.present(f);
+  const st = b.st;
+  const name = b.name.normalize("NFC");
+
+  // A. presence
+  const allMissing = BUNDLE_FILES.every((f) => !b.present(f));
+  for (const f of BUNDLE_FILES) if (!b.present(f)) missingFiles.add(f);
+  if (want("A")) {
+    if (allMissing) add("A0", "(bundle)", "The Blueprint Bundle is missing entirely: Section S9 (Compile) has not run.");
+    else BUNDLE_FILES.forEach((f, i) => {
+      if (b.text(f) === null) add(`A${i + 1}`, f, `File ${f} is missing.`);
+      else if (b.text(f).trim() === "") add(`A${i + 1}`, f, `File ${f} is empty.`);
+    });
+  }
+
+  // B. structure
+  const reqHeads = (id, file, list, title) => {
+    if (!ok(file)) return;
+    const heads = b.heads(file);
+    let cursor = -1, prev = null;
+    if (title !== undefined) {
+      const h1 = heads.find((h) => h.level === 1);
+      if (!h1) add(id, file, `File ${file} is missing the heading "# ${title}".`);
+      else if (h1.text.normalize("NFC") !== title.normalize("NFC")) add("B21", file, `File ${file} has the title "# ${h1.text}" but the display name is "${name}"; expected "# ${title}".`);
+      else { cursor = heads.indexOf(h1); prev = `# ${title}`; }
+    }
+    for (const r of list) {
+      const label = `${"#".repeat(r.level)} ${r.text}`;
+      const i = heads.findIndex((h, k) => k > cursor && h.level === r.level && h.text === r.text);
+      if (i >= 0) { cursor = i; prev = label; continue; }
+      if (heads.some((h) => h.level === r.level && h.text === r.text)) add(id, file, `File ${file} has the heading "${label}" out of order; it must come after ${prev ? `"${prev}"` : "the start of the file"}.`);
+      else add(id, file, `File ${file} is missing the heading "${label}".`);
+    }
+  };
+  const H = (level, text) => ({ level, text });
+  const L2 = (...t) => t.map((x) => H(2, x));
+  const mIds = st.milestones.map((m) => m.id);
+  if (want("B")) {
+    reqHeads("B1", "AGENTS.md", L2("What this is", "How to load context", "Working rules", "File map"), name);
+    reqHeads("B2", "OVERVIEW.md", L2("What this is", "What was decided", "What it costs", "How you will use it", "What is parked", "Limitations"), `${name} — plain-language overview`);
+    reqHeads("B3", "DECISIONS.md", [H(1, "Decisions")]);
+    if (ok("DECISIONS.md") && !b.lines("DECISIONS.md").some((l) => normRow(l) === normRow(DECISIONS_HEADER))) add("B3", "DECISIONS.md", `File DECISIONS.md is missing the decision table header row "${DECISIONS_HEADER}".`);
+    reqHeads("B4", "SPEC/prd.md", L2("Problem", "Context", "Target users", "Value proposition", "Goals", "Non-goals", "Success metrics"), `PRD — ${name}`);
+    reqHeads("B5", "SPEC/requirements.md", [H(1, "Requirements")]);
+    reqHeads("B6", "SPEC/data-model.md", [H(1, "Data model"), ...L2("Entities", "Relations", "Indexes", "Validation rules", "Sample JSON")]);
+    reqHeads("B7", "SPEC/api.md", [H(1, "API"), ...L2("Conventions", "Endpoints", "Critical endpoints", "Status codes", "Error format")]);
+    reqHeads("B8", "SPEC/architecture.md", [H(1, "Architecture"), ...L2("Stack", "Components", "Data flow", "Folder structure", "Local run", "Failure points")]);
+    reqHeads("B9", "USER_FLOWS.md", [H(1, "User flows")]);
+    reqHeads("B10", "CODE_STYLE.md", [H(1, "Code style"), ...L2("Language and framework conventions", "Error handling", "Testing expectations", "Simplicity rules")]);
+    reqHeads("B11", "SECURITY.md", [H(1, "Security"), ...L2("Auth model", "PII inventory and protection", "Secrets handling", "Dependencies policy", "Compliance notes")]);
+    reqHeads("B12", "RESEARCH.md", [H(1, "Research"), ...L2("Competitor scan", "Comparable products", "Stack comparison and trade-offs", "Cost table", "Risks (from S6)")]);
+    reqHeads("B13", "SCOPE.md", [H(1, "Scope"), ...L2("In MVP", "Parking Lot (recorded, never deleted)")]);
+    reqHeads("B14", "MILESTONES.md", [H(1, "Milestones")]);
+    reqHeads("B15", "VERIFICATION.md", [H(1, "Verification"), ...L2("Global smoke test", "Definition of verified")]);
+    reqHeads("B16", "ASSUMPTIONS.md", [H(1, "Assumptions")]);
+    reqHeads("B17", "HANDOVER.md", [H(1, "Handover (owner guide)"), ...L2("How to run it", "How to deploy and update", "How to back up", "Where secrets and API keys live", "Who to ask what")]);
+    reqHeads("B18", "CAPABILITIES.md", [H(1, "Capabilities")]);
+    if (ok("CAPABILITIES.md") && !b.lines("CAPABILITIES.md").some((l) => normRow(l) === normRow(CAPABILITIES_HEADER))) add("B18", "CAPABILITIES.md", `File CAPABILITIES.md is missing the booster table header row "${CAPABILITIES_HEADER}".`);
+
+    // repeated blocks: one per feature / milestone
+    const feats = [...featureUniverse(b)].sort(idCmp);
+    if (ok("SPEC/requirements.md")) {
+      const have = new Set(b.reqBlocks().map((r) => r.id));
+      for (const f of feats) if (!have.has(f)) add("B5", "SPEC/requirements.md", `File SPEC/requirements.md has no "## ${f} — <name>" block.`);
+      for (const [id, ls] of dupIds(b.reqBlocks())) add("B5", "SPEC/requirements.md", `File SPEC/requirements.md has ${ls.length} "## ${id} — <name>" blocks (lines ${ls.join(", ")}); a feature has exactly one.`);
+    }
+    if (ok("USER_FLOWS.md")) {
+      const have = new Set(b.flowSections().map((r) => r.id));
+      for (const f of feats) if (!have.has(f)) add("B9", "USER_FLOWS.md", `File USER_FLOWS.md has no "## ${f} — <name>" section.`);
+      for (const [id, ls] of dupIds(b.flowSections())) add("B9", "USER_FLOWS.md", `File USER_FLOWS.md has ${ls.length} "## ${id} — <name>" sections (lines ${ls.join(", ")}); a feature has exactly one.`);
+    }
+    if (ok("MILESTONES.md")) {
+      const have = new Set(b.milestoneBlocks().map((r) => r.id));
+      for (const m of mIds) if (!have.has(m)) add("B14", "MILESTONES.md", `File MILESTONES.md has no "## ${m} — <name>" block.`);
+    }
+    if (ok("VERIFICATION.md")) {
+      const heads = b.heads("VERIFICATION.md");
+      for (const m of mIds) if (!heads.some((h) => h.level === 2 && h.text.startsWith(`${m} — `))) add("B15", "VERIFICATION.md", `File VERIFICATION.md has no "## ${m} — <name>" section.`);
+      const smoke = heads.findIndex((h) => h.level === 2 && h.text === "Global smoke test");
+      const last = Math.max(-1, ...heads.map((h, i) => (h.level === 2 && /^M\d+ — /.test(h.text) ? i : -1)));
+      if (smoke >= 0 && last > smoke) add("B15", "VERIFICATION.md", 'File VERIFICATION.md has a milestone section after "## Global smoke test"; milestone sections must come first.');
+    }
+    if (ok("ASSUMPTIONS.md")) for (const a of assumptionBlocks(b.text("ASSUMPTIONS.md"))) if (!a.wellFormed) add("B16", "ASSUMPTIONS.md", `File ASSUMPTIONS.md heading "## ${a.heading}" must look like "## D-NNN — <summary> (assumed | designer_filled)".`);
+
+    // B19 Mermaid, B20 placeholders
+    for (const f of BUNDLE_FILES) {
+      if (!ok(f)) continue;
+      const lines = b.lines(f);
+      lines.forEach((ln, i) => { if (/^ {0,3}(`{3,}|~{3,})\s*mermaid\b/i.test(ln)) add("B19", f, `File ${f} has a Mermaid fence at line ${i + 1}; use an ASCII diagram in a text block.`); });
+      const documented = codeTokens(b.text(f)); // a <token> that the file itself shows in code is a documented runtime parameter, not a leftover
+      blankFences(b.text(f)).split("\n").forEach((ln, i) => {
+        const free = ln.replace(/`[^`]*`/g, "");
+        for (const m of free.matchAll(/<([A-Za-z][^<>\n]{0,60})>/g)) if (!HTML_OK_RE.test(m[1]) && !documented.has(m[1])) add("B20", f, `File ${f} has the unfilled placeholder "<${m[1]}>" at line ${i + 1}.`);
+      });
+    }
+    // B21 names
+    const nameOf = (s) => normWs(s).normalize("NFC");
+    const req = new Map(b.reqBlocks().map((r) => [r.id, r.name]));
+    const flows = new Map(b.flowSections().map((r) => [r.id, r.name]));
+    const bpf = b.blueprint().kind === "ok" && Array.isArray(b.blueprint().value.features) ? new Map(b.blueprint().value.features.filter(isObj).map((f) => [f.id, f.name])) : new Map();
+    const scopeText = (id) => { const s = b.present("SCOPE.md") ? (b.scope().inMvp.get(id) ?? b.scope().parked.get(id)) : undefined; return s; };
+    for (const [id, n] of req) {
+      if (flows.has(id) && nameOf(flows.get(id)) !== nameOf(n)) add("B21", "USER_FLOWS.md", `Feature ${id} is named "${n}" in SPEC/requirements.md but "${flows.get(id)}" in USER_FLOWS.md.`);
+      const sc = scopeText(id);
+      if (sc !== undefined && !nameOf(sc).startsWith(nameOf(n))) add("B21", "SCOPE.md", `Feature ${id} is named "${n}" in SPEC/requirements.md but SCOPE.md does not start its row with that name.`);
+      if (bpf.has(id) && nameOf(bpf.get(id)) !== nameOf(n)) add("B21", "blueprint.json", `Feature ${id} is named "${n}" in SPEC/requirements.md but "${bpf.get(id)}" in blueprint.json.`);
+    }
+    if (b.blueprint().kind === "ok" && isObj(b.blueprint().value.project) && String(b.blueprint().value.project.name ?? "").normalize("NFC") !== name) add("B21", "blueprint.json", `Project name is "${name}" in state.json but "${b.blueprint().value.project.name}" in blueprint.json.`);
+  }
+
+  // C. decisions
+  if (want("C")) {
+    if (ok("DECISIONS.md")) {
+      const rows = decisionRows(b.text("DECISIONS.md"));
+      const byId = new Map();
+      for (const r of rows) { if (byId.has(r.id)) add("C2", "DECISIONS.md", `File DECISIONS.md lists ${r.id} more than once.`); else byId.set(r.id, r); }
+      for (const d of st.decisions) {
+        const r = byId.get(d.id);
+        if (!r) { add("C1", "DECISIONS.md", `Decision ${d.id} is in state.json but has no row in DECISIONS.md.`); continue; }
+        const status = (r.cells[5] ?? "").replace(/`/g, "").trim();
+        if (status !== d.status) add("C1", "DECISIONS.md", `Decision ${d.id} has status "${d.status}" in state.json but "${status}" in DECISIONS.md.`);
+      }
+      const stateIds = new Set(st.decisions.map((d) => d.id));
+      for (const r of byId.values()) {
+        if (!stateIds.has(r.id)) add("C2", "DECISIONS.md", `File DECISIONS.md has a row for ${r.id} that is not in state.json decisions[].`);
+        if (r.cells.length !== 6) { add("C3", "DECISIONS.md", `Row ${r.id} in DECISIONS.md has ${r.cells.length} columns; expected 6.`); continue; }
+        if (!r.cells[2]) add("C3", "DECISIONS.md", `Row ${r.id} in DECISIONS.md has an empty Rationale cell.`);
+        if (!r.cells[3]) add("C3", "DECISIONS.md", `Row ${r.id} in DECISIONS.md has an empty "Alternatives considered" cell (write "None recorded" when no alternative was rejected).`);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(r.cells[4])) add("C3", "DECISIONS.md", `Row ${r.id} in DECISIONS.md has no valid date (expected YYYY-MM-DD).`);
+      }
+    }
+    if (ok("ASSUMPTIONS.md")) {
+      const blocks = assumptionBlocks(b.text("ASSUMPTIONS.md"));
+      const byId = new Map(blocks.map((a) => [a.id, a]));
+      for (const d of st.decisions) {
+        const a = byId.get(d.id);
+        if (d.status === "user_confirmed") { if (a) add("C5", "ASSUMPTIONS.md", `File ASSUMPTIONS.md has a block for ${d.id}, which is user_confirmed; remove it.`); continue; }
+        if (!a) { add("C4", "ASSUMPTIONS.md", `Decision ${d.id} is ${d.status} but has no block in ASSUMPTIONS.md.`); continue; }
+        if (a.wellFormed && a.status !== d.status) add("C4", "ASSUMPTIONS.md", `ASSUMPTIONS.md block ${d.id} says "(${a.status})" but state.json says ${d.status}.`);
+        if (a.why.length < 10) add("C4", "ASSUMPTIONS.md", `ASSUMPTIONS.md block ${d.id} has no "**Why:**" line with content.`);
+        if (a.confirm.length < 10) add("C4", "ASSUMPTIONS.md", `ASSUMPTIONS.md block ${d.id} has no confirm-instruction line ("**How to replace or confirm:**", "**How to confirm:**" or "**How to replace:**") with content.`);
+      }
+      const stateIds = new Set(st.decisions.map((d) => d.id));
+      for (const a of blocks) if (!stateIds.has(a.id)) add("C5", "ASSUMPTIONS.md", `File ASSUMPTIONS.md has a block for ${a.id} that is not in state.json decisions[].`);
+    }
+  }
+
+  // D. milestones
+  if (want("D")) {
+    if (ok("MILESTONES.md")) {
+      const blocks = b.milestoneBlocks();
+      const ids = blocks.map((x) => x.id);
+      if (ids.length && ids[0] !== "M0") add("D1", "MILESTONES.md", `The first milestone in MILESTONES.md must be M0 (found ${ids[0]}).`);
+      for (const m of ids) if (!mIds.includes(m)) add("D1", "MILESTONES.md", `File MILESTONES.md has the block ${m} that is not in state.json milestones[].`);
+      const shared = mIds.filter((m) => ids.includes(m));
+      const sharedOrder = ids.filter((m) => mIds.includes(m));
+      if (shared.join() !== sharedOrder.join()) add("D1", "MILESTONES.md", `Milestones are out of order: MILESTONES.md has ${sharedOrder.join(", ")}; state.json has ${shared.join(", ")}.`);
+      if (mIds.length && mIds[0] !== "M0") add("D1", "state.json", `The first milestone in state.json must be M0 (found ${mIds[0]}).`);
+      if (ok("SCOPE.md")) {
+        for (const f of [...b.inMvp().keys()].sort(idCmp)) {
+          const hits = st.milestones.filter((m) => m.features.includes(f)).map((m) => m.id);
+          if (hits.length === 0) add("D1", "MILESTONES.md", `Feature ${f} is in the MVP but lands in no milestone.`);
+          else if (hits.length > 1) add("D1", "MILESTONES.md", `Feature ${f} lands in more than one milestone (${hits.join(", ")}); it must land in exactly one.`);
+        }
+      }
+      for (const m of blocks) {
+        if (!m.goal) add("D2", "MILESTONES.md", `Milestone ${m.id} in MILESTONES.md has no "**Goal:**" line with content.`);
+        if (!m.deliverables) add("D2", "MILESTONES.md", `Milestone ${m.id} in MILESTONES.md has no "**Deliverables:**" line with content.`);
+        if (!m.criteria || m.criteria.length === 0) add("D2", "MILESTONES.md", `Milestone ${m.id} in MILESTONES.md has no acceptance criteria (needs "**Acceptance criteria:**" with at least one item).`);
+        else m.criteria.forEach((c, i) => { const v = c.match(VAGUE_RE); if (v) add("D3", "MILESTONES.md", `Milestone ${m.id} acceptance criterion ${i + 1} is vague ("${v[1].toLowerCase()}"): state a command with expected output, a scripted step, or an observable fact.`); });
+      }
+      if (ok("VERIFICATION.md")) {
+        for (const m of blocks) {
+          const body = b.verifySection(m.id);
+          if (body === null) continue; // B15 reports the missing section
+          const nNum = countNumbered(body), nBul = body.filter((l) => /^[-*]\s+\S/.test(l)).length;
+          const have = Math.max(nNum, nBul);
+          if (have === 0) { add("D4", "VERIFICATION.md", `VERIFICATION.md section ${m.id} has no procedure (needs numbered steps with commands and expected outputs).`); continue; }
+          stepsOf(body).forEach((t, i) => { if (thinStep(t)) add("D4", "VERIFICATION.md", `VERIFICATION.md section ${m.id} step ${i + 1} is too thin ("${trunc(normWs(t), 40)}"): give the exact command or action and the expected result.`); });
+          const need = (m.criteria ?? []).length;
+          if (have < need) add("D5", "VERIFICATION.md", `VERIFICATION.md section ${m.id} has ${have} procedure${have === 1 ? "" : "s"} but MILESTONES.md lists ${need} acceptance criteria; every criterion needs its own procedure.`);
+        }
+      }
+    }
+    if (ok("VERIFICATION.md")) {
+      const smoke = b.section("VERIFICATION.md", "Global smoke test");
+      if (smoke && countNumbered(smoke) === 0) add("D6", "VERIFICATION.md", 'VERIFICATION.md "## Global smoke test" has no numbered steps.');
+      else if (smoke) stepsOf(smoke).forEach((t, i) => { if (thinStep(t)) add("D6", "VERIFICATION.md", `VERIFICATION.md "## Global smoke test" step ${i + 1} is too thin ("${trunc(normWs(t), 40)}"): give the exact action and the expected result.`); });
+      const def = b.section("VERIFICATION.md", "Definition of verified");
+      if (def && def.join(" ").trim().length < 20) add("D6", "VERIFICATION.md", 'VERIFICATION.md "## Definition of verified" is empty.');
+    }
+  }
+
+  // E. costs
+  if (want("E")) {
+    const tbl = (file, title, cols, id, label) => {
+      if (!ok(file)) return null;
+      const body = b.section(file, title);
+      if (body === null) return null;
+      const hdr = body.find((l) => l.trim().startsWith("|") && (() => { const c = splitRow(l).map((x) => x.toLowerCase()); return cols.every((k) => c.some((x) => x.startsWith(k))); })());
+      if (!hdr) { add(id, file, `${file} "## ${title}" has no cost table (columns ${label}).`); return null; }
+      const srcCol = splitRow(hdr).findIndex((x) => x.toLowerCase().startsWith("source"));
+      const rows = body.filter((l) => l.trim().startsWith("|") && !splitRow(l).every((c) => /^:?-+:?$/.test(c)) && l !== hdr);
+      rows.srcCol = srcCol;
+      return rows;
+    };
+    const ov = tbl("OVERVIEW.md", "What it costs", ["item", "price", "when"], "E1", "Item | Price | When");
+    if (ov !== null) {
+      const body = b.section("OVERVIEW.md", "What it costs").join("\n");
+      if (!/total[^\n]*month/i.test(body)) add("E1", "OVERVIEW.md", 'OVERVIEW.md "## What it costs" has no monthly total.');
+      if (!/total[^\n]*one[- ]?time/i.test(body)) add("E1", "OVERVIEW.md", 'OVERVIEW.md "## What it costs" has no one-time total.');
+    }
+    const rs = tbl("RESEARCH.md", "Cost table", ["item", "price", "type", "source"], "E2", "Item | Price | Type | Source");
+    for (const [file, rows] of [["OVERVIEW.md", ov], ["RESEARCH.md", rs]]) {
+      for (const r of rows ?? []) {
+        const cells = splitRow(r);
+        if (cells.length < 2 || cells.every((c) => c === "") || /^\**total/i.test(cells[0])) continue;
+        const label = trunc(cells[0].replace(/\*/g, ""), 60);
+        if (!/\d{4}-\d{2}-\d{2}/.test(r) && !/unverified/i.test(r)) add("E4", file, `${file} cost row "${label}" has no source date and no "unverified" flag.`);
+        else if (rows.srcCol >= 0 && !/unverified/i.test(r)) {
+          const src = (cells[rows.srcCol] ?? "").replace(/\*/g, "").trim();
+          if (/^[\s\-—–]*$/.test(src)) add("E4", file, `${file} cost row "${label}" has an empty Source cell.`);
+          else if (!hasRealSource(src)) add("E4", file, `${file} cost row "${label}" has no real source in its Source cell ("${trunc(src, 40)}"): name where the price came from, not only a date or a placeholder.`);
+        }
+      }
+    }
+  }
+
+  // F. scope
+  if (want("F") && ok("SCOPE.md")) {
+    const sc = b.scope();
+    const known = featureUniverse(b);
+    for (const f of [...known].sort(idCmp)) if (!sc.inMvp.has(f) && !sc.parked.has(f)) add("F1", "SCOPE.md", `Feature ${f} is captured but not classified in SCOPE.md (## In MVP or ## Parking Lot).`);
+    for (const f of [...sc.inMvp.keys(), ...sc.parked.keys()].sort(idCmp)) if (!known.has(f)) add("F1", "SCOPE.md", `SCOPE.md lists ${f}, which is not in the S4 record, requirements or milestones.`);
+    for (const f of sc.inMvp.keys()) if (sc.parked.has(f)) add("F1", "SCOPE.md", `Feature ${f} is listed both In MVP and in the Parking Lot in SCOPE.md.`);
+    for (const [f, t] of sc.parked) if (!/(?:—|:|-)\s*\S.{14,}/.test(t)) add("F2", "SCOPE.md", `Parked feature ${f} in SCOPE.md has no one-line reason.`);
+    for (const t of sc.unnamedParked) if (!/(?:—|:)\s*\S.{14,}/.test(t)) add("F2", "SCOPE.md", `Parking Lot row "${trunc(t.replace(/\*/g, ""), 50)}" in SCOPE.md has no one-line reason.`);
+    const cite = sc.title.join("\n").match(/D-\d{3,}/);
+    if (!cite) add("F3", "SCOPE.md", "SCOPE.md does not cite the scope-lock decision id (D-NNN) under the title.");
+    else if (!st.decisions.some((d) => d.id === cite[0])) add("F3", "SCOPE.md", `SCOPE.md cites ${cite[0]} as the scope-lock decision, but state.json decisions[] has no such decision.`);
+    if (ok("SPEC/requirements.md") || ok("USER_FLOWS.md")) {
+      const req = new Map(b.reqBlocks().map((r) => [r.id, r]));
+      const flows = new Map(b.flowSections().map((r) => [r.id, r]));
+      for (const f of [...sc.inMvp.keys()].sort(idCmp)) {
+        if (ok("SPEC/requirements.md")) { const r = req.get(f); if (r && r.status !== "in-MVP") add("F4", "SPEC/requirements.md", `Feature ${f} is in the MVP but its requirements block says Status "${r.status ?? "(none)"}" instead of in-MVP.`); }
+        if (ok("USER_FLOWS.md")) { const r = flows.get(f); if (r && r.marker === "parked — see SCOPE.md") add("F4", "USER_FLOWS.md", `Feature ${f} is in the MVP but its USER_FLOWS.md heading is marked parked.`); }
+      }
+      for (const f of [...sc.parked.keys()].sort(idCmp)) {
+        if (ok("SPEC/requirements.md")) {
+          const r = req.get(f);
+          if (!r) add("F4", "SPEC/requirements.md", `Parked feature ${f} has no requirements block; a parked feature keeps one, marked parked.`);
+          else if (r.status !== "parked") add("F4", "SPEC/requirements.md", `Parked feature ${f} has a requirements block that is not marked Status parked.`);
+        }
+        if (ok("USER_FLOWS.md")) {
+          const r = flows.get(f);
+          if (!r) add("F4", "USER_FLOWS.md", `Parked feature ${f} has no USER_FLOWS.md section; a parked feature keeps one, marked "(parked — see SCOPE.md)".`);
+          else if (r.marker !== "parked — see SCOPE.md") add("F4", "USER_FLOWS.md", `Parked feature ${f} has a USER_FLOWS.md heading that is not marked "(parked — see SCOPE.md)".`);
+        }
+      }
+    }
+  }
+
+  // G. adapters
+  if (want("G")) {
+    for (const [i, f] of ["CLAUDE.md", "GEMINI.md"].entries()) {
+      const t = b.text(f);
+      if (t === null) add(`G${i + 1}`, f, `File ${f} is missing; handoff stubs writes it.`);
+      else if (t.replace(/\n+$/, "") !== STUB_LINE) add(`G${i + 1}`, f, `File ${f} is not exactly the one-line stub; handoff stubs rewrites it.`);
+    }
+    if (ok("AGENTS.md")) {
+      const sec = (t) => b.section("AGENTS.md", t);
+      const what = sec("What this is");
+      if (what && what.join(" ").trim().length < 40) add("G3", "AGENTS.md", 'AGENTS.md "## What this is" is empty or too short; it must say concretely what the product is.');
+      const load = sec("How to load context");
+      if (load) {
+        const text = load.join("\n");
+        const marks = ["DECISIONS.md", "SPEC/", "MILESTONES.md", "VERIFICATION.md"];
+        const pos = marks.map((m) => text.indexOf(m));
+        marks.forEach((m, i) => { if (pos[i] < 0) add("G4", "AGENTS.md", `AGENTS.md "## How to load context" does not mention ${m}.`); });
+        for (const sf of ["prd", "requirements", "data-model", "api", "architecture"]) if (pos[1] >= 0 && !text.includes(sf)) add("G4", "AGENTS.md", `AGENTS.md "## How to load context" does not name the SPEC file "${sf}".`);
+        if (pos.every((p) => p >= 0) && !pos.every((p, i) => i === 0 || p > pos[i - 1])) add("G4", "AGENTS.md", 'AGENTS.md "## How to load context" must give the read order DECISIONS.md, SPEC/, MILESTONES.md, VERIFICATION.md.');
+      }
+      const rules = sec("Working rules");
+      if (rules) {
+        const text = rules.join("\n");
+        for (const [m, why] of [["CODE_STYLE.md", "stack and language rules"], ["SECURITY.md", "security rules"], ["VERIFICATION.md", "the milestone-done rule"]]) if (!text.includes(m)) add("G5", "AGENTS.md", `AGENTS.md "## Working rules" does not mention ${m} (${why}).`);
+      }
+      const map = sec("File map");
+      if (map) { const text = map.join("\n"); for (const f of FILE_MAP_TARGETS) if (!text.includes(f)) add("G6", "AGENTS.md", `AGENTS.md "## File map" does not point to ${f}.`); }
+    }
+  }
+
+  // H. blueprint
+  if (want("H")) {
+    const bp = b.blueprint();
+    if (bp.kind === "missing") add("H1", "blueprint.json", "blueprint.json is missing; blueprint emit writes it.");
+    else if (bp.kind === "invalid") add("H3", "blueprint.json", `blueprint.json is not valid JSON (${bp.error}); blueprint emit rewrites it.`);
+    else {
+      const errs = validateBlueprint(bp.value);
+      if (errs.length) add("H3", "blueprint.json", `blueprint.json does not follow schema v1: ${errs.slice(0, 5).join("; ")}${errs.length > 5 ? `; and ${errs.length - 5} more` : ""}.`);
+      else {
+        // with duplicate feature blocks the derivation is ambiguous: B5 reports it and emit refuses until the bundle is fixed
+        if (["SPEC/requirements.md", "MILESTONES.md", "SCOPE.md", "OVERVIEW.md", "CAPABILITIES.md"].every((f) => b.present(f)) && dupIds(b.reqBlocks()).length === 0) {
+          const d = deriveBlueprint(b, {});
+          const drift = jsonDiff({ ...d.bp, generated_at: 0 }, { ...bp.value, generated_at: 0 }).filter((p) => !d.missing.some((m) => p === m || p.startsWith(m + ".")));
+          if (drift.length) add("H2", "blueprint.json", `blueprint.json is out of date: ${drift.slice(0, 8).join(", ")}${drift.length > 8 ? `, and ${drift.length - 8} more` : ""} differ${drift.length === 1 ? "s" : ""} from state.json and the bundle; blueprint emit rewrites it.`);
+        }
+        const ref = bp.value.stack?.reasons_ref;
+        if (isStr(ref) && !st.decisions.some((d) => `DECISIONS.md#${d.id}` === ref)) add("H4", "blueprint.json", `blueprint.json stack.reasons_ref "${ref}" does not point to a decision in state.json.`);
+      }
+    }
+  }
+
+  // needs_model items: only for groups that ran and files that exist
+  const needs = NEEDS_MODEL.filter(([id, , file]) => want(id) && (file === "all bundle files" ? BUNDLE_FILES.some((f) => b.present(f)) : b.present(file)))
+    .map(([id, group, file, message]) => ({ id, group, file, message, owner: ownerOf(id), kind: "bundle_gap", needs_model: true }));
+  return { findings, needs_model: needs };
+}
+
+function precondition(b) {
+  const s7 = b.st.pipeline.sections.S7;
+  const open = ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"].filter((s) => b.st.pipeline.sections[s]?.status !== "done");
+  return { scope_locked: b.j.scope_locked_seq !== null && s7?.status === "done", scope_locked_seq: b.j.scope_locked_seq, s7_status: s7?.status ?? null, sections_not_done: open };
+}
+
+function lintGroups(flags) {
+  if (flags.group === undefined) return null;
+  const g = String(flags.group).split(",").map((x) => x.trim().toUpperCase()).filter(Boolean);
+  if (!g.length || !g.every((x) => LINT_GROUPS.includes(x))) throw fail("MISSING_FLAG", "--group must be one or more of A,B,C,D,E,F,G,H (comma separated).", { flag: "group" });
+  return new Set(g);
+}
+
+const XRULES = [
+  ["X1", "Every F-NN has a USER_FLOWS.md section, a SPEC/requirements.md block and a SCOPE.md classification, once (parked features keep all three, marked parked)", ["B5", "B9", "F1", "F4"]],
+  ["X2", "DECISIONS.md mirrors decisions[]: same ids and statuses, nothing extra", ["C1", "C2", "C3"]],
+  ["X3", "ASSUMPTIONS.md lists every assumed and designer_filled decision with why and how to confirm", ["C4", "C5"]],
+  ["X4", "Display name and feature names are identical across all files", ["B21"]],
+  ["X5", "Every milestone has a VERIFICATION.md section and every acceptance criterion has a procedure", ["B15", "D4", "D5"]],
+  ["X6", "Every price cites its source and access date, or is flagged unverified", ["E4"]],
+  ["X7", "All 18 content files exist and are non-empty", ["A0", ...Array.from({ length: 18 }, (_, i) => `A${i + 1}`)]],
+];
+
+function cmdLint({ dir, flags }) {
+  const b = makeBundle(dir);
+  const groups = lintGroups(flags);
+  const { findings, needs_model } = runChecks(b, groups);
+  const out = {
+    groups: LINT_GROUPS.filter((g) => !groups || groups.has(g)), clean: !findings.some((f) => f.kind === "bundle_gap"),
+    bundle_gaps: findings.filter((f) => f.kind === "bundle_gap").length, self_fixes: findings.filter((f) => f.kind === "self_fix").length,
+    needs_model_count: needs_model.length, precondition: precondition(b), findings, needs_model,
+  };
+  if (flags.journal && findings.length) {
+    out.journal = withLock(dir, "lint run", () => findings.map((f) => {
+      const r = appendLocked(dir, "gap_found", { check: f.id, finding: f.message, owner: f.owner });
+      return { id: f.id, seq: r.seq, state: r.state };
+    }));
+  }
+  return out;
+}
+
+function cmdCrosscheck({ dir }) {
+  const b = makeBundle(dir);
+  const { findings, needs_model } = runChecks(b, null);
+  const rules = XRULES.map(([rule, title, ids]) => {
+    const fs_ = findings.filter((f) => ids.includes(f.id)).map((f) => ({ rule, ...f }));
+    const nm = needs_model.filter((f) => ids.includes(f.id)).map((f) => ({ rule, ...f }));
+    return { rule, title, ok: fs_.length === 0, findings: fs_, needs_model: nm };
+  });
+  const all = rules.flatMap((r) => r.findings);
+  return {
+    clean: all.length === 0, rules: rules.map(({ rule, title, ok, findings: f, needs_model: n }) => ({ rule, title, ok, findings: f.length, needs_model: n.length })),
+    findings: all, needs_model: rules.flatMap((r) => r.needs_model),
+  };
+}
+
+// ----- blueprint emit
+async function cmdBlueprintEmit({ dir, flags }) {
+  const b = makeBundle(dir);
+  const input = (await readPayloadInput({ in: flags.in })) ?? {};
+  for (const k of Object.keys(input)) if (!["stack", "idea_summary_en", "costs"].includes(k)) throw invalid(k, "stack, idea_summary_en or costs");
+  const lack = ["SPEC/requirements.md", "MILESTONES.md", "SCOPE.md", "OVERVIEW.md", "CAPABILITIES.md"].filter((f) => !b.present(f));
+  if (lack.length) throw fail("BUNDLE_INCOMPLETE", `Cannot derive blueprint.json: ${lack.join(", ")} ${lack.length === 1 ? "is" : "are"} missing or empty.`, { missing: lack, hint: "Run the gap lint; the owning Section fixes the bundle first." });
+  const dupReq = dupIds(b.reqBlocks()).map(([id, ls]) => `${id} (SPEC/requirements.md lines ${ls.join(", ")})`);
+  const noReq = [...featureUniverse(b)].filter((f) => !b.reqBlocks().some((r) => r.id === f)).sort(idCmp);
+  if (dupReq.length || noReq.length) throw fail("BUNDLE_FEATURES_INCONSISTENT", `Cannot derive blueprint.json: ${[dupReq.length ? `duplicate feature blocks: ${dupReq.join("; ")}` : "", noReq.length ? `no requirements block for: ${noReq.join(", ")}` : ""].filter(Boolean).join("; ")}.`, { duplicate: dupReq, without_requirements: noReq, hint: "Run the gap lint (B5, B9, F1); the owning Section fixes the bundle first." });
+  const d = deriveBlueprint(b, input);
+  if (d.missing.length) throw fail("BLUEPRINT_NEEDS_INPUT", `blueprint.json cannot be derived from the bundle alone: ${d.missing.join(", ")} must come from the model.`, {
+    missing: d.missing, hint: 'Read the bundle, then pass them as JSON with --in, for example {"stack":{"primary":"next-supabase","components":["Next.js","Supabase"],"reasons_ref":"DECISIONS.md#D-019"},"idea_summary_en":"...","costs":{"monthly_usd":0,"one_time_usd":0}}.',
+  });
+  const bad = validateBlueprint({ ...d.bp, generated_at: "2000-01-01T00:00:00Z" });
+  if (bad.length) throw fail("BLUEPRINT_INVALID", `The derived blueprint.json does not follow schema v1: ${bad.slice(0, 5).join("; ")}.`, { errors: bad });
+  const refId = d.bp.stack.reasons_ref.split("#")[1];
+  if (!b.st.decisions.some((x) => x.id === refId)) throw fail("BLUEPRINT_INVALID", `stack.reasons_ref points to ${refId}, which is not in state.json decisions[].`, { reasons_ref: d.bp.stack.reasons_ref });
+  const cur = b.blueprint();
+  let drift = [], reason = "in_sync";
+  if (cur.kind === "missing") reason = "missing";
+  else if (cur.kind === "invalid") reason = "invalid_json";
+  else {
+    drift = jsonDiff({ ...d.bp, generated_at: 0 }, { ...cur.value, generated_at: 0 });
+    if (drift.length) reason = "drift";
+  }
+  const changed = reason !== "in_sync";
+  const target = confine(dir, path.join(dir, "blueprint.json"));
+  let written = false, generatedAt = cur.kind === "ok" ? cur.value.generated_at ?? null : null;
+  if (changed && !flags.check) {
+    generatedAt = now();
+    writeFileAtomic(target, serializeBp({ ...d.bp, generated_at: generatedAt }), "BLUEPRINT_WRITE_FAILED");
+    written = true;
+  }
+  return { check: !!flags.check, changed, written, reason, drift, path: "blueprint.json", generated_at: generatedAt, preserved: d.preserved };
+}
+
+// ----- handoff: stubs, prompt, install lines
+function writeIfChanged(dir, file, content) {
+  const target = confine(dir, path.join(dir, file));
+  const cur = tryReadLF(target);
+  if (cur === content) return false;
+  writeFileAtomic(target, content, "HANDOFF_WRITE_FAILED");
+  return true;
+}
+/** Copy a customised stub to `<file>.bak-<YYYY-MM-DD>` (then -2, -3, ...) inside the project; returns the backup name. */
+function backupFile(dir, f) {
+  const day = now().slice(0, 10);
+  let name = `${f}.bak-${day}`;
+  for (let n = 2; fs.existsSync(path.join(dir, name)); n++) name = `${f}.bak-${day}-${n}`;
+  writeFileAtomic(confine(dir, path.join(dir, name)), fs.readFileSync(path.join(dir, f), "utf8"), "HANDOFF_WRITE_FAILED");
+  return name;
+}
+function cmdHandoffStubs({ dir }) {
+  const b = makeBundle(dir);
+  const written = [], unchanged = [], backed_up = [];
+  for (const f of ["CLAUDE.md", "GEMINI.md"]) {
+    const t = b.text(f);
+    if (t !== null && t.replace(/\n+$/, "") === STUB_LINE) { unchanged.push(f); continue; }
+    if (t !== null && t.trim() !== "") backed_up.push({ file: f, backup: backupFile(dir, f) }); // the user's own notes are kept, never silently lost
+    writeIfChanged(dir, f, STUB_LINE + "\n");
+    written.push(f);
+  }
+  const { findings } = runChecks(makeBundle(dir), new Set(["A", "B", "G"]));
+  const agents = findings.filter((f) => f.file === "AGENTS.md" && (f.group === "G" || f.id === "B1" || f.id === "A1"));
+  return { changed: written.length > 0, written, unchanged, backed_up, agents_md: { ok: agents.length === 0, findings: agents } };
+}
+
+const KICKOFF = { "claude-code": 'claude "$(cat HANDOFF-PROMPT.md)"', "gemini-cli": 'gemini -p "$(cat HANDOFF-PROMPT.md)"', codex: 'codex "$(cat HANDOFF-PROMPT.md)"', zcode: 'zcode "$(cat HANDOFF-PROMPT.md)"', other: "Open a fresh session in this folder and paste the contents of HANDOFF-PROMPT.md." };
+function handoffPromptText(name) {
+  return [
+    `# Builder entry prompt — ${name}`, "",
+    "You are building the product described in this folder's Blueprint Bundle. Follow these rules in order:", "",
+    "1. Read `AGENTS.md` first — it is the entry point and names the context load order.",
+    "2. Execute the milestones from `MILESTONES.md` in order.",
+    "3. Verify each milestone with its `VERIFICATION.md` procedure BEFORE claiming it done (verification-before-completion).",
+    "4. Record every verification result — pass or fail, with the actual outputs — in `VERIFICATION.md`.",
+    "5. Consult `DECISIONS.md` before asking anyone anything — the answer is usually already recorded.",
+    "6. Open questions go to the journal (`.lvr/journal.ndjson`), never guessed, never silently resolved.",
+    "7. Follow `CODE_STYLE.md` for every line written.",
+    "8. If the plan has a gap, show it immediately with a concrete fix option attached — never smooth it over.",
+    "9. `.lvr/` is read-only planning state — do not modify it, except appending open questions to `.lvr/journal.ndjson`; the optional `/lvr-build` skill may also set the build status, milestone verification and deployment fields.", "",
+  ].join("\n");
+}
+function cmdHandoffPrompt({ dir }) {
+  const b = makeBundle(dir);
+  const changed = writeIfChanged(dir, "HANDOFF-PROMPT.md", handoffPromptText(b.name));
+  return { changed, path: "HANDOFF-PROMPT.md", kickoff: KICKOFF };
+}
+function cmdInstallLines({ dir }) {
+  const b = makeBundle(dir);
+  if (!b.present("CAPABILITIES.md")) throw fail("BUNDLE_INCOMPLETE", "CAPABILITIES.md is missing or empty.", { missing: ["CAPABILITIES.md"] });
+  const items = b.capabilities().map((c) => ({ ...c, line: `${c.name} (${c.license}): ${c.install}${c.nc ? " [NC: runtime dependency only, never vendored]" : ""}` }));
+  return { count: items.length, lines: items.map((i) => i.line), items };
+}
+
 // ---------------------------------------------------------------- 12. commands
 const need = (flags, k) => {
   if (flags[k] === undefined || flags[k] === true) throw fail("MISSING_FLAG", `Flag --${k} is required.`, { flag: k });
@@ -2054,6 +2925,18 @@ const COMMANDS = {
       return { step, ...gradeProbe(step, reply) };
     },
   },
+  "lint run": {
+    help: "Gap lint A-H over the bundle (read-only). [--group A,C] [--journal: journal one gap_found per finding]", flags: ["group", "journal"],
+    run: async (c) => cmdLint(c),
+  },
+  crosscheck: { help: "The S9 cross-check list over the bundle (read-only): rules X1-X7, findings carry their lint id.", flags: [], run: async (c) => cmdCrosscheck(c) },
+  "blueprint emit": {
+    help: "Derive blueprint.json from state + bundle; writes only on drift (generated_at ignored). [--check: write nothing] [--in FILE|-: JSON with stack, idea_summary_en, costs the bundle cannot supply]",
+    flags: ["check", "in"], run: cmdBlueprintEmit,
+  },
+  "handoff stubs": { help: "Write CLAUDE.md / GEMINI.md (exact one-line stub) when missing or wrong (a customised file is first copied to <file>.bak-<date>); verify AGENTS.md.", flags: [], run: async (c) => cmdHandoffStubs(c) },
+  "handoff prompt": { help: "Write HANDOFF-PROMPT.md from the fixed template (only when the bytes change); returns the kickoff commands.", flags: [], run: async (c) => cmdHandoffPrompt(c) },
+  "handoff install-lines": { help: "Print the booster install lines from CAPABILITIES.md (read-only).", flags: [], run: async (c) => cmdInstallLines(c) },
   "booster check": {
     help: "Check core boosters against the registry. [--name id] [--registry PATH] [--journal]", flags: ["name", "registry", "journal"],
     run: async ({ dir, flags }) => {

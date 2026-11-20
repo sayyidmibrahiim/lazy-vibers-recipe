@@ -37,11 +37,11 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 **Precondition**: S1–S8 `done` + scope locked.
 
 **Flow**:
-1. **Gap lint** — checklist: every bundle file exists and non-empty · every milestone has measurable acceptance criteria + verification procedure · every `assumed` decision appears in ASSUMPTIONS.md · every decision has rationale · cost table present · OVERVIEW.md present · `blueprint.json` matches state · no contradictions with `decisions[]`.
+1. **Gap lint** (`lvr.mjs lint run`; judgment checks come back as `needs_model`) — checklist: every bundle file exists and non-empty · every milestone has measurable acceptance criteria + verification procedure · every `assumed` decision appears in ASSUMPTIONS.md · every decision has rationale · cost table present · OVERVIEW.md present · `blueprint.json` matches state · no contradictions with `decisions[]`.
 2. Gaps → report in plain language + offer to jump back to the owning Section. Journal: `gap_found`.
-3. Emit `blueprint.json` (schema in `04-bundle.md`).
-4. Write harness adapters: `CLAUDE.md`, `GEMINI.md` (one-line pointers to AGENTS.md), verify AGENTS.md against the agents.md spec.
-5. Compose the **entry prompt** (English): read AGENTS.md first · execute milestones in order · verify each milestone before claiming done · record results in VERIFICATION.md · consult DECISIONS.md before asking · open questions go to journal, never silently guessed · follow CODE_STYLE.md.
+3. Emit `blueprint.json` (schema in `04-bundle.md`; `lvr.mjs blueprint emit`).
+4. Write harness adapters: `CLAUDE.md`, `GEMINI.md` (one-line pointers to AGENTS.md), verify AGENTS.md against the agents.md spec (`lvr.mjs handoff stubs`).
+5. Compose the **entry prompt** (English; `lvr.mjs handoff prompt` writes the fixed template): read AGENTS.md first · execute milestones in order · verify each milestone before claiming done · record results in VERIFICATION.md · consult DECISIONS.md before asking · open questions go to journal, never silently guessed · follow CODE_STYLE.md.
 6. Print the recommended install lines for `CAPABILITIES.md` boosters and the builder kickoff commands for the harness the user is currently in. Journal: `handoff_done`.
 
 ## v1 skills

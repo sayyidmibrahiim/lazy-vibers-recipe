@@ -137,7 +137,7 @@ Two classes, never mixed:
 
 - **Mechanical** — apply now, one file per turn, journal `recheck_fix_applied` (payload: finding id, file, change) + state write. Examples: missing mirror row, missing access date where the source exists, renamed entity drift, stale `blueprint.json`, broken pointer, count mismatch, missing stub.
 - **User decision** — ask one plain question per finding, with the concrete options and the consequence of each. On an explicit answer: record `D-NNN` in `decisions[]` with `status: "user_confirmed"` and the rationale, apply the change, journal `recheck_fix_applied`. A skip or "later" keeps the finding **open**; never convert an open blocking finding into `assumed` silence.
-- **`blueprint.json`** — derived; regenerate it from `state.json` + bundle in the existing file's schema v1 shape (the full schema is in the `lvr-handoff` skill's lint checklist, group H) whenever R3.9/R2.6 finds drift. Never hand-edit.
+- **`blueprint.json`** — derived; regenerate it from `state.json` + bundle in the existing file's schema v1 shape (the full schema is in the `lvr-handoff` skill's lint checklist, group H) whenever R3.9/R2.6 finds drift. Never hand-edit. Script: `LVR blueprint emit --check` shows the drift (`drift[]`) without writing; `LVR blueprint emit` regenerates it.
 - **Bundle scope rows** — never delete a Parking Lot row. A scope change is always a user-decision finding recorded as a decision.
 
 If the user declines every fix, stop fixing, keep the findings open, and still close the run with an honest report.

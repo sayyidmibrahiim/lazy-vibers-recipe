@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "A10",
+   "File CODE_STYLE.md is empty."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X7",
+   "A10",
+   "File CODE_STYLE.md is empty."
+  ]
+ ]
+}

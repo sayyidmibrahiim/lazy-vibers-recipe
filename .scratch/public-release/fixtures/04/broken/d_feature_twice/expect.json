@@ -1,0 +1,9 @@
+{
+ "lint": [
+  [
+   "D1",
+   "Feature F-01 lands in more than one milestone (M0, M2); it must land in exactly one."
+  ]
+ ],
+ "crosscheck": []
+}

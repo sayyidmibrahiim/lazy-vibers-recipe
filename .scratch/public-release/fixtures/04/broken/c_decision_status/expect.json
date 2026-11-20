@@ -1,0 +1,15 @@
+{
+ "lint": [
+  [
+   "C1",
+   "Decision D-004 has status \"designer_filled\" in state.json but \"assumed\" in DECISIONS.md."
+  ]
+ ],
+ "crosscheck": [
+  [
+   "X2",
+   "C1",
+   "Decision D-004 has status \"designer_filled\" in state.json but \"assumed\" in DECISIONS.md."
+  ]
+ ]
+}
