@@ -30,7 +30,9 @@ const EVENT_TYPES = [
   "brand_file_generated", "brand_done", "error", "resume",
 ];
 const SECTIONS = ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10"];
-const NEXT_AFTER = Object.fromEntries(SECTIONS.map((s, i) => [s, SECTIONS[Math.min(i + 1, SECTIONS.length - 1)]]));
+// S9 is the last section pointer: after S9 is done current_section stays "S9". S10 (build) is tracked by project.status
+// (building/complete), never by current_section.
+const NEXT_AFTER = Object.fromEntries(SECTIONS.map((s, i) => [s, i < 9 ? SECTIONS[i + 1] : s]));
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
 const SEC_RE = /^S(10|[0-9])$/;
 const ANSWER_ID_RE = /^S(10|[0-9])\.q[0-9]+$/;
@@ -354,8 +356,8 @@ function validateState(s) {
           }
         }
       }
-      const first = SECTIONS.find((id) => pl.sections[id]?.status !== "done");
-      if (SEC_RE.test(pl.current_section ?? "") && first && pl.current_section !== first) {
+      const first = SECTIONS.slice(0, 10).find((id) => pl.sections[id]?.status !== "done") ?? "S9";
+      if (SEC_RE.test(pl.current_section ?? "") && pl.current_section !== first) {
         W("W_CURRENT_SECTION", "/pipeline/current_section", `current_section is ${pl.current_section} but the first section not done is ${first}.`);
       }
     }
@@ -840,6 +842,7 @@ function applyEvent(st, e, ctx) {
       restoreFromError(st, ctx);
       sec().status = "blocked";
       st.pipeline.current_section = S;
+      ctx.blocked?.push({ seq: e.seq, section: S, unmet: Array.isArray(p.unmet) ? p.unmet : [] });
       break;
     case "loop_back_opened": {
       if (!isStr(p.id)) { untr(); break; }
@@ -859,6 +862,8 @@ function applyEvent(st, e, ctx) {
     case "scope_locked": break;
     case "milestone_verified": {
       const m = st.milestones.find((x) => x.id === p.id);
+      // Replay of a journal that is not CLI-pure: the milestone may come from disk after the fold (MILESTONES.md / S8 record).
+      if (!m && ctx.pendingVerified) { ctx.pendingVerified.push({ seq: e.seq, type: e.type, id: p.id, verified_at: isStr(p.verified_at) ? p.verified_at : ts }); break; }
       if (!m) { untr(); break; }
       m.verified = true; m.verified_at = isStr(p.verified_at) ? p.verified_at : ts;
       break;
@@ -872,7 +877,8 @@ function applyEvent(st, e, ctx) {
     case "error":
       if (st.project.status !== "error") { ctx.preErrorStatus = st.project.status; st.project.status = "error"; }
       break;
-    case "resume": restoreFromError(st, ctx); break;
+    case "resume": case "session_start": case "handoff_started": case "recheck_started": case "feature_started": case "brand_started":
+      restoreFromError(st, ctx); break;
     case "doc_generated": if (isStr(p.file)) ctx.docsGenerated?.push(p.file); break;
     default:
       if (!EVENT_TYPES.includes(e.type)) untr();
@@ -1109,6 +1115,7 @@ function makeDisk(dir) {
     },
     overview: () => memo("overview", () => tryReadLF(path.join(dir, "OVERVIEW.md"))),
     decisionsMd: () => memo("decisions", () => tryReadLF(path.join(dir, "DECISIONS.md"))),
+    milestonesMd: () => memo("milestones", () => tryReadLF(path.join(dir, "MILESTONES.md"))),
     capabilities: () => memo("capabilities", () => {
       const t = tryReadLF(path.join(dir, "CAPABILITIES.md"));
       const map = new Map();
@@ -1165,6 +1172,28 @@ function recordAnswerIndex(texts) {
   return idx;
 }
 
+/** `## M<n> — <name>` blocks (MILESTONES.md and the S8 record share the shape): goal line, features from the heading, else the deliverables. */
+function parseMilestoneBlocks(text) {
+  const out = [];
+  for (const blk of text.split(/\n(?=## M\d+ — )/)) {
+    const hm = blk.match(/^## (M\d+) — (.*)$/m);
+    if (!hm || out.some((m) => m.id === hm[1])) continue;
+    const goal = blk.match(/^- \*\*Goal:\*\* (.*)$/m);
+    let features = [...new Set(hm[2].match(/F-\d+/g) || [])];
+    if (!features.length) { const d = blk.match(/^- \*\*Deliverables:\*\* (.*)$/m); features = [...new Set((d ? d[1] : "").match(/F-\d+/g) || [])]; }
+    out.push({ id: hm[1], goal: goal ? goal[1].trim() : "", features, verified: false, verified_at: null });
+  }
+  return out;
+}
+
+/** Post-lock decision lines in S4-additions.md (written by /lvr-add-feature): `- **D-NNN** summary — rationale · status: x`, anywhere in the file. */
+const DECISION_LINE_RE = /^- \*\*(D-\d{3,})\*\* (.*) · status: (\w+)$/;
+function decisionLineRow(m, section, ambiguous) {
+  const parts = m[2].split(" — ");
+  if (parts.length > 2) ambiguous.push(m[1]);
+  return { id: m[1], summary: parts.length > 1 ? parts.slice(0, -1).join(" — ") : m[2], rationale: parts.length > 1 ? parts[parts.length - 1] : "", status: m[3], section };
+}
+
 function decisionBlock(text) {
   const lines = text.split("\n");
   const out = [];
@@ -1187,7 +1216,7 @@ function replayEvents(dir, events, opts = {}) {
   const ctx = {
     mode: "replay", disk: null, projectFromEvents: {}, decisionFromEvents: new Set(), milestonesFromEvents: new Set(),
     untranslatable: [], docsGenerated: [], legacy: new Set(), payloadAnswers: new Set(), boosterChecks: [],
-    licenseSources: new Set(), probeSeen: false, preErrorStatus: undefined,
+    licenseSources: new Set(), probeSeen: false, preErrorStatus: undefined, blocked: [], pendingVerified: cli ? null : [],
   };
   const st = freshState();
   for (const e of events) { ctx.disk = isStamped(e) ? null : disk; applyEvent(st, e, ctx); }
@@ -1226,30 +1255,41 @@ function replayEvents(dir, events, opts = {}) {
   const q1 = st.pipeline.sections.S0?.answers?.["S0.q1"];
   if (!cli && q1 && q1.a === null && st.project.idea_raw) { q1.a = st.project.idea_raw; derived.s0_q1_answer = "idea_raw"; }
 
-  // milestones from the S8 record
+  // milestones: events first; disk fills the rest below
   const msource = ctx.milestonesFromEvents.size ? "events" : "none";
   const report = {
     events: events.length, max_seq: events.length ? events[events.length - 1].seq : 0,
     seq_gaps: j?.seq_gaps ?? [], duplicate_seqs: j?.duplicate_seqs ?? [], corrupt_lines: j?.corrupt_lines ?? [],
     truncated_tail: j?.truncated_tail ?? false, untranslatable: ctx.untranslatable, scope_locked_seq: j?.scope_locked_seq ?? null,
+    sections_blocked: ctx.blocked,
     s7_done: st.pipeline.sections.S7?.status === "done", docs_generated: ctx.docsGenerated,
     answers: { total: 0, skipped: 0, from_payload: ctx.payloadAnswers.size, from_record: fromRecord, text_missing: [] },
     decisions: { count: 0, from_events: ctx.decisionFromEvents.size, from_disk: 0, source: ctx.decisionFromEvents.size ? "events" : "none", split_ambiguous: [], section_guessed: [] },
     milestones: { count: 0, source: msource },
     derived, unrecoverable: { decisions: [], milestones: false }, validation: { errors: [], warnings: [] },
   };
-  if (!cli && st.milestones.length === 0 && st.pipeline.sections.S8?.status === "done") {
-    const text = disk.recordsFor("S8", recName("S8")).map((r) => r.text).join("\n");
-    for (const blk of text.split(/\n(?=## M\d+ — )/)) {
-      const hm = blk.match(/^## (M\d+) — (.*)$/m);
-      if (!hm) continue;
-      const goal = blk.match(/^- \*\*Goal:\*\* (.*)$/m);
-      let features = [...new Set(hm[2].match(/F-\d+/g) || [])];
-      if (!features.length) { const d = blk.match(/^- \*\*Deliverables:\*\* (.*)$/m); features = [...new Set((d ? d[1] : "").match(/F-\d+/g) || [])]; }
-      st.milestones.push({ id: hm[1], goal: goal ? goal[1].trim() : "", features, verified: false, verified_at: null });
+  // Not CLI-pure: milestones the events did not carry come from MILESTONES.md when the bundle has it (post-lock milestones that
+  // /lvr-add-feature appended live only there), then from the S8 record (S8 done). Unknown-id milestone_verified events are applied after.
+  if (!cli) {
+    const sources = [];
+    const add = (list, src) => {
+      let n = 0;
+      for (const m of list) if (!st.milestones.some((x) => x.id === m.id)) { st.milestones.push(m); n++; }
+      if (n) sources.push(src);
+    };
+    const mmd = disk.milestonesMd();
+    if (mmd) add(parseMilestoneBlocks(mmd), "MILESTONES.md");
+    if (st.pipeline.sections.S8?.status === "done") add(parseMilestoneBlocks(disk.recordsFor("S8", recName("S8")).map((r) => r.text).join("\n")), "S8-record");
+    if (sources.length) {
+      st.milestones.sort((a, b) => secNum(a.id) - secNum(b.id));
+      report.milestones.source = [...(msource === "events" ? ["events"] : []), ...sources].join("+");
     }
-    if (st.milestones.length) report.milestones.source = "S8-record";
-    else report.unrecoverable.milestones = true;
+    if (!st.milestones.length && st.pipeline.sections.S8?.status === "done") report.unrecoverable.milestones = true;
+    for (const pv of ctx.pendingVerified) {
+      const m = st.milestones.find((x) => x.id === pv.id);
+      if (m) { m.verified = true; m.verified_at = pv.verified_at; } else ctx.untranslatable.push({ seq: pv.seq, type: pv.type });
+    }
+    ctx.untranslatable.sort((a, b) => a.seq - b.seq);
   }
   report.milestones.count = st.milestones.length;
 
@@ -1264,6 +1304,16 @@ function replayEvents(dir, events, opts = {}) {
       }
     }
   }
+  // post-lock decisions recorded by /lvr-add-feature in S4-additions.md (section S4)
+  const additions = [];
+  const addAmbiguous = [];
+  for (const r of cli ? [] : disk.recordsFor("S4", recName("S4")).filter((x) => x.name === "S4-additions.md")) {
+    for (const ln of r.text.split("\n")) {
+      const m = ln.match(DECISION_LINE_RE);
+      if (m && !additions.some((x) => x.id === m[1])) additions.push(decisionLineRow(m, "S4", addAmbiguous));
+    }
+  }
+  for (const a of additions) if (!secOf.has(a.id)) secOf.set(a.id, "S4");
   const have = new Set(st.decisions.map((d) => d.id));
   let rows = [];
   const md = cli ? null : disk.decisionsMd();
@@ -1276,15 +1326,18 @@ function replayEvents(dir, events, opts = {}) {
     for (const S of recKeys) {
       for (const r of disk.recordsFor(S, recName(S))) {
         for (const ln of decisionBlock(r.text)) {
-          const m = ln.match(/^- \*\*(D-\d{3,})\*\* (.*) · status: (\w+)$/);
-          if (!m) continue;
-          const parts = m[2].split(" — ");
-          if (parts.length > 2) report.decisions.split_ambiguous.push(m[1]);
-          rows.push({ id: m[1], summary: parts.length > 1 ? parts.slice(0, -1).join(" — ") : m[2], rationale: parts.length > 1 ? parts[parts.length - 1] : "", status: m[3], section: S });
+          const m = ln.match(DECISION_LINE_RE);
+          if (m) rows.push(decisionLineRow(m, S, report.decisions.split_ambiguous));
         }
       }
     }
     if (rows.length) report.decisions.source = "records";
+  }
+  const extra = additions.filter((a) => !have.has(a.id) && !rows.some((r) => r.id === a.id));
+  if (extra.length) {
+    rows.push(...extra);
+    report.decisions.split_ambiguous.push(...addAmbiguous.filter((id) => extra.some((a) => a.id === id)));
+    report.decisions.source = report.decisions.source === "none" || report.decisions.source === "events" ? "S4-additions.md" : `${report.decisions.source}+S4-additions.md`;
   }
   for (const r of rows) {
     if (have.has(r.id)) continue;

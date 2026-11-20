@@ -108,7 +108,7 @@ Script: `LVR probe prompts` prints the three prompts; `LVR probe grade --step js
 
 Goal: every core Booster installed, or its absence explicitly chosen by the user. Never silent — quality is never silently degraded.
 
-### Core boosters (v0)
+### Core boosters
 
 | Booster | Repo | License | Used at | Install (preferred) |
 |---|---|---|---|---|
@@ -147,12 +147,12 @@ Purpose: capture the raw idea fully; detect User Language; propose slug + displa
 
 1. **Open the Section**: journal `section_start` (payload: section "S0"). Write the first `PROJECT_DIR/.lvr/state.json`, shape per conventions §2, with:
    - `schema_version`: 1
-   - `project`: slug = the confirmed or provisional slug ("" if none yet), name "", idea_raw "" (filled in step 3), user_language "" (filled in step 4), created_at = now (ISO-8601 UTC), status "interview"
+   - `project`: slug = the confirmed or provisional slug ("" if none yet), name "", idea_raw "" (filled in step 3), user_language "" (filled in step 4), created_at = the `section_start` S0 timestamp (ISO-8601 UTC), status "interview"
    - `pipeline`: current_section "S0", sections `{ "S0": { "status": "in_progress", "started_at": <now> } }`, loop_backs `[]`
    - `decisions`: `[]`
    - `boosters`: core = the nine entries above with their Step-3 statuses (`installed | missing | failed | degraded`), enhancer `[]`
-   - `model_profile`: `{ "tier": <T1|T2|T3>, "probe": "passed"|"skipped", "declared_at": <now> }`
-   - `milestones`: `[]`, `handoff`: null
+   - `model_profile`: `{ "tier": <T1|T2|T3>, "probe": "passed"|"skipped", "declared_at": <the tier_declared journal timestamp> }`
+   - `milestones`: `[]`, `deployment`: null, `handoff`: null
 
    This state write plus the `section_start` journal line form one checkpoint.
    - Script: `LVR journal append --type section_start --payload '{"section":"S0"}'` — this creates `state.json` from the journal (tier, probe and booster statuses folded in); the field list above is what it produces.
@@ -161,7 +161,7 @@ Purpose: capture the raw idea fully; detect User Language; propose slug + displa
    - Script: `LVR answer record --section S0 --in -` with `{"q":"<capture prompt>","a":"<verbatim idea>","project":{"idea_raw":"<verbatim idea>"}}`.
 4. **User Language**: detect the idea's language. Say: "I detected \<language\> — I'll run our whole conversation in it. Correct me if that's wrong." Record the confirmation as `S0.q2`; journal `answer_recorded`; set `project.user_language` (user-correctable — a correction replaces the detection). Checkpoint.
    - Script: `LVR answer record --section S0 --in -` with `{"q":"<question>","a":"<reply>","project":{"user_language":"<code>"}}`.
-5. **Slug + display name**: propose a kebab-case slug and a Title Case display name. Slug rules: lowercase letters, digits, hyphens; 2–4 words from the idea's core noun phrase; transliterate non-Latin scripts into English words (e.g. "aplikasi kasir warung" → `warung-cashier` / "Warung Cashier"). Say: "Working name: \*\*\<Name\>\*\* (slug: `\<slug\>`). Keep it, or rename?" If the gate already created a subfolder and the user changes the slug, rename that subfolder (it contains only `.lvr/` at this point). Record as `S0.q3`; journal `answer_recorded`; set `project.slug` and `project.name`. Checkpoint.
+5. **Slug + display name**: propose a kebab-case slug and a Title Case display name. Slug rules: lowercase letters, digits, hyphens; 2–4 words from the idea's core noun phrase (the base slug — a `-2` suffix the Folder Gate adds for a taken folder name does not count); transliterate non-Latin scripts into English words (e.g. "aplikasi kasir warung" → `warung-cashier` / "Warung Cashier"). Say: "Working name: \*\*\<Name\>\*\* (slug: `\<slug\>`). Keep it, or rename?" If the gate already created a subfolder and the user changes the slug, rename that subfolder (it contains only `.lvr/` at this point). Record as `S0.q3`; journal `answer_recorded`; set `project.slug` and `project.name`. Checkpoint.
    - Script: `LVR slug make --text "<english words>"` / `LVR slug validate --slug <slug>` before proposing; on confirmation `LVR answer record --section S0 --in -` with `{"q":"<question>","a":"<reply>","project":{"slug":"<slug>","name":"<Name>"}}`.
 6. **Write the Section Record** `PROJECT_DIR/.lvr/docs/sections/S0-intake.md` (create the folders):
 
@@ -201,9 +201,9 @@ Generic procedure for every Section. Per-Section procedures for S0–S9 live in 
    - Script: put `"decisions":[{"section":"<S>","summary":"…","rationale":"…","status":"user_confirmed"}]` in the same `answer record` input (ids `D-NNN` are assigned), or use `LVR decision record --event <carrier-event> --payload '{…}' --decision '{…}'` at the checkpoint where it is made.
 5. **Exit-criteria check** — when the questions are done or the user says enough, verify every exit criterion this Section's procedure lists. Unmet → say specifically what is missing (plain language) and run one more targeted batch. If the user still wants to move on with criteria unmet, mark the Section `blocked`, record the unmet criteria in its record, and stop before the next Section — never silently advance past unmet exit criteria. Journal `section_blocked` (payload: the Section id + the unmet criteria) as part of that checkpoint. Unblock path: when the user later supplies what was missing, re-run the exit-criteria check; on pass the Section closes normally (`section_done`, its record updated with the resolved criteria). Blocked sections resume like in-progress ones via /lvr-continue.
    - Script: `LVR journal append --type section_blocked --payload '{"section":"<S>","unmet":["…"]}'`
-6. **Done** — write the Section Record `PROJECT_DIR/.lvr/docs/sections/<S>-<name>.md`: the questions, the user's verbatim answers (User Language), an English summary per answer, the Section's decision summary, and the exit-criteria results. Update state (`status` "done", `record`, `completed_at`, `current_section` = next Section). Journal `section_done`. One checkpoint.
+6. **Done** — write the Section Record `PROJECT_DIR/.lvr/docs/sections/<S>-<name>.md`: the questions, the user's verbatim answers (User Language), an English summary per answer, the Section's decision summary, and the exit-criteria results. Update state (`status` "done", `record`, `completed_at`, `current_section` = next Section (after S9 it stays S9)). Journal `section_done`. One checkpoint.
    - Script: `LVR journal append --type section_done --payload '{"section":"<S>","record":"<S>-<name>.md"}'`
-7. **Next** — continue with the next Section's procedure block. After S9 closes, suggest `/lvr-handoff` (S10 Build is out of v0 scope; the bundle must suffice for any builder without this skill).
+7. **Next** — continue with the next Section's procedure block. After S9 closes, suggest `/lvr-handoff`. S10 Build is not an interview Section: the bundle must suffice for any builder without this skill, and the optional `/lvr-build` tracks its progress in `project.status`.
 
 ### Section procedures index
 
@@ -276,7 +276,7 @@ Purpose: problem, target users, platform shape, what "working" means for the use
 
 Purpose: what the user already has and can pay — devices, accounts, hosting, budget ceiling. Record: `S2-kondisi.md` (historical filename, conventions §5). English is the source; questions are spoken in User Language at runtime.
 
-**Booster** — none; the internal bank plus its cost fact-sheet is the S2 booster (spec 02). Bank: `references/sections/S2-conditions.md`.
+**Booster** — none; the internal bank plus its cost fact-sheet is the S2 booster. Bank: `references/sections/S2-conditions.md`.
 
 **Price verification (principle 1)** — the bank's fact-sheet is a snapshot dated 2026-11-08. Before quoting ANY price to the user: re-verify it live (web search or fetch the source) and name source + access date with the number; cannot verify → say the number is `unverified` and move on. Never quote from memory.
 
@@ -305,7 +305,7 @@ Purpose: what the user already has and can pay — devices, accounts, hosting, b
 
 Purpose: login, personal data, payments, third-party services, where data may legally live. Record: `S3-data.md`. English is the source; questions are spoken in User Language at runtime.
 
-**Booster** — none (spec 02). Bank: `references/sections/S3-data-privacy.md`.
+**Booster** — none. Bank: `references/sections/S3-data-privacy.md`.
 
 **Question strategy** — establish in this order: login yes/no (the biggest fork); if login, reuse-existing-account vs new username+password; the personal-data inventory; which of it is sensitive; money inside the app; then third-party connections, where data may legally live, offline behavior, erasure, who sees whose data, and what must survive a loss.
 
@@ -422,7 +422,7 @@ Purpose: competitor scan, stack candidates with reasons, cost table, regional av
 
 Purpose: confront the S5 findings with the recorded answers; surface conflicts, risks, cost surprises. Output: risks appended to `S5-research.md` — S6 keeps no record of its own (conventions §5). Mostly AI work: the Conductor walks the findings itself; the user is asked only when a risk needs their call. The English text here is the source; questions are spoken in User Language at runtime.
 
-**Booster** — none (spec 02). The working material is the S5 record plus the S1–S4 records.
+**Booster** — none. The working material is the S5 record plus the S1–S4 records.
 
 **Work strategy** — walk every S5 finding (competitor lessons, stack trade-offs, cost rows, regional constraints, `unverified` claims) and classify each:
 
@@ -439,7 +439,7 @@ Every finding carries one line of evidence: the record row or answer id it comes
 
 1. Open a `pipeline.loop_backs[]` entry — `{ "id": "L-NN", "from": "S6", "to": "<owning S1–S4 section>", "reason": "<one line>", "opened_at": <now>, "resolved_at": null }`; journal `loop_back_opened`. One checkpoint.
    - Script: `LVR journal append --type loop_back_opened --payload '{"id":"L-01","from":"S6","to":"S4","reason":"…"}'`
-2. Jump to the owning section's procedure block and run targeted micro-batches on the loop-back's reason only — the section is not re-run (its exit criteria still hold); new answers get fresh `S<NN>.qNN` ids, never re-asking recorded ones; note the loop-back in that section's record.
+2. Jump to the owning section's procedure block and run targeted micro-batches on the loop-back's reason only — the section is not re-run (its exit criteria still hold); new answers get fresh `S<n>.q<n>` ids, never re-asking recorded ones; note the loop-back in that section's record.
 3. Close: set `resolved_at`; journal `loop_back_closed`. When closing, search the Section Records for claims the resolution overrides and update each one's affected content as part of closing the entry (e.g. a feature's F-NN script promising push notifications) — records must never keep a claim the decisions have overridden; the state answers keep their capture-time text (journal + state preserve the original answer; the corrected wording lives in the record); journal nothing extra (the `loop_back_closed` payload lists the touched records). One checkpoint. Return to S6.
    - Script: `LVR journal append --type loop_back_closed --payload '{"id":"L-01"}'`
 4. Re-run the affected findings against the new answers. A new blocking risk opens a fresh entry (L numbering continues). Repeat until none remains.
@@ -470,9 +470,9 @@ Every finding carries one line of evidence: the record row or answer id it comes
 
 ### S7 — Scope lock
 
-Purpose: freeze the MVP — every feature F-NN → `in-MVP` or Parking Lot (recorded, never deleted). Record: `S7-scope.md`; journal `scope_locked`. Mostly AI work: the Conductor prepares the split; the user makes the cuts and gives one explicit confirmation. English is the source; questions are spoken in User Language at runtime (conventions §4).
+Purpose: freeze the MVP — every feature F-NN → `in-MVP` or Parking Lot (recorded, never deleted). Record: `S7-scope.md`; journal `scope_locked`. At Section start also set `project.status` = "review" (conventions §2; the `section_start` S7 checkpoint carries it). Mostly AI work: the Conductor prepares the split; the user makes the cuts and gives one explicit confirmation. English is the source; questions are spoken in User Language at runtime (conventions §4).
 
-**Booster** — none (spec 02). Guide: `references/sections/S7-scope.md`.
+**Booster** — none. Guide: `references/sections/S7-scope.md`.
 
 **Work strategy** (walk protocol in the bank):
 
@@ -483,7 +483,7 @@ Purpose: freeze the MVP — every feature F-NN → `in-MVP` or Parking Lot (reco
 
 **First batch** — the F-NN walk producing the proposed split; the first user turn is the size warning (when it fires) and the confirmation.
 
-**The lock moment** — `scope_locked` fires only after the user explicitly confirms the final list (a plain yes to "is this the first version?"; a skip is not a lock — the skip attempt is journaled like any answer, `answer_recorded` with `skipped: true`, before the re-ask). On confirmation, one checkpoint: journal `scope_locked` (payload: the in-MVP feature ids) + state write (`project.status` = "review", `sections.S7` per engine). Then write the record (second checkpoint). From the lock on, the feature list is frozen: changes go through /lvr-add-feature post-v1, never quiet edits. Refused confirmation → exit criterion unmet → engine step 5: the Section is marked `blocked` with the contested items named.
+**The lock moment** — `scope_locked` fires only after the user explicitly confirms the final list (a plain yes to "is this the first version?"; a skip is not a lock — the skip attempt is journaled like any answer, `answer_recorded` with `skipped: true`, before the re-ask). On confirmation, one checkpoint: journal `scope_locked` (payload: the in-MVP feature ids) + state write (no field change; `project.status` is already "review" since Section start). Then write the record and close S7 (`section_done`, second checkpoint): scope counts as locked only once both exist (conventions §5). From the lock on, the feature list is frozen: changes go through /lvr-add-feature, never quiet edits. Refused confirmation → exit criterion unmet → engine step 5: the Section is marked `blocked` with the contested items named.
 
 Script: `LVR journal append --type scope_locked --payload '{"in_mvp":["F-01"],"parking_lot":[],"decision":"D-NNN"}'`
 
@@ -516,8 +516,8 @@ Script: `LVR journal append --type scope_locked --payload '{"in_mvp":["F-01"],"p
 <in-MVP count; when > ~8: the warning given + the user's call>
 
 ## Lock
-- Confirmed: <S7.qNN> · decision <D-NNN> · journaled `scope_locked` <ts> · status → review
-- Frozen from here: changes go through /lvr-add-feature post-v1.
+- Confirmed: <S7.qNN> · decision <D-NNN> · journaled `scope_locked` <ts>
+- Frozen from here: changes go through /lvr-add-feature.
 
 ## Answers
 - **<S7.qNN> <question, User Language>** — <answer verbatim> · _EN: <summary>_
@@ -533,7 +533,7 @@ Purpose: break the in-MVP list into milestones `M0…Mn`, each independently ver
 
 Script: close S8 with `LVR journal append --type section_done --payload '{"section":"S8","record":"S8-milestones.md","milestones":[{"id":"M0","goal":"…","features":["F-01"]}]}'` — the `milestones` array fills `state.milestones[]`.
 
-**Booster** — none core (spec 02: planning-and-task-breakdown principles, addyosmani). Not a Step-3 core install, so no `boosters.core` entry: if the harness carries them, load at Section start (T3: drop after use); if not, the decomposition rules in the bank are the booster (spec 02 fallback). Guide: `references/sections/S8-milestones.md`.
+**Booster** — none core (planning-and-task-breakdown principles, addyosmani, when the harness carries them). Not a Step-3 core install, so no `boosters.core` entry: if the harness carries them, load at Section start (T3: drop after use); if not, the decomposition rules in the bank are the booster (the routed fallback). Guide: `references/sections/S8-milestones.md`.
 
 **M0 — the walking skeleton (generic)** — the thinnest slice that runs end to end on the real stack: deployed to the S2 deploy target (the future HANDOVER target), real at every layer (real stack, real data store, nothing stubbed end to end), carrying exactly one real user task (the S1 day-one answer; F-01's happy path when that was skipped) from first tap to visible result, provable by one command or scripted check.
 
@@ -585,13 +585,13 @@ Script: close S8 with `LVR journal append --type section_done --payload '{"secti
 
 ### S9 — Compile
 
-Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the 20-file Blueprint Bundle (conventions §8; spec 04 is the canonical per-file source, packaged in `references/bundle/templates.md`). The bundle lives in the project folder next to `.lvr/` and must be self-sufficient: any harness, with no LVR skills installed, can build the product from it. Mostly AI work: the Conductor compiles; the user is brought in only when a gap needs their call. English is the source — the bundle is written in English; the web UI renders it in User Language (principle 5, conventions §4). The bundle files are S9's output: no `S9-*.md` Section Record is written (conventions §5).
+Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the 20-file Blueprint Bundle (conventions §8; the per-file specs are packaged in `references/bundle/templates.md`). The bundle lives in the project folder next to `.lvr/` and must be self-sufficient: any harness, with no LVR skills installed, can build the product from it. Mostly AI work: the Conductor compiles; the user is brought in only when a gap needs their call. English is the source — the bundle is written in English; the web UI renders it in User Language (principle 5, conventions §4). The bundle files are S9's output: no `S9-*.md` Section Record is written (conventions §5).
 
 **Booster** — OpenSpec pattern (structure reference), SimpleEnglish (document rules), humanizer (de-slop pass), karpathy-guidelines + ponytail (`CODE_STYLE.md`), agents.md spec (`AGENTS.md`); statuses in `boosters.core`. `installed` → apply each at the step that uses it (T3: one at a time, drop after use — conventions §7). Any other status → the rules in this block plus the templates are the fallback, and the degraded booster is surfaced in OVERVIEW.md's Limitations — never silent.
 
 **Work material (engine step 2)** — at Section start load: every Section Record in `.lvr/docs/sections/` (S0–S8), `state.json` (for `decisions[]`, `milestones[]`, `boosters.core`), and `references/bundle/templates.md`. T3: never the transcript — each turn reloads only the templates plus the records that feed the one file being compiled.
 
-**Work strategy** — the 6-step compilation order (spec 04), run in sequence:
+**Work strategy** — the 6-step compilation order, run in sequence:
 
 1. **Draft** — compile each of the 20 files from the Section Records + `decisions[]` + `milestones[]`, following its skeleton in `references/bundle/templates.md`, in bundle order (conventions §8): `AGENTS.md` → `OVERVIEW.md` → … → `CLAUDE.md`/`GEMINI.md`. Templates carry the structure; content comes only from the records — never invented. A gap the records cannot fill becomes an `assumed` decision (listed in ASSUMPTIONS.md) or a Limitations note, not a fabrication.
 2. **Cross-check pass** — over the drafted bundle; fix every failure with a targeted edit to the offending file(s), then re-check. The full list:
@@ -604,8 +604,8 @@ Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the 2
    - all 20 files exist and are non-empty.
 3. **SimpleEnglish document-rules pass** — short sentences, active voice, jargon defined on first use (principle 7); applies to all bundle files, strictest for OVERVIEW.md; never fights GFM structure.
 4. **Humanizer de-slop pass** — concrete and specific, no filler (principle 6); rewrite slop lines, never drop content.
-5. **Emit blueprint.json** — the exact schema from spec 04 (reproduced in `references/bundle/templates.md`), derived from `state.json`: regenerate it, never hand-edit it. Write the one-line CLAUDE.md + GEMINI.md stubs (exact line in the templates).
-6. **Close** — journal `doc_generated` per file (payload: the file path) with a state write each — one checkpoint per file (conventions §9). Then: `project.status` = "bundled"; `sections.S9` closes per engine step 6 with `record` = the bundle files; `current_section` stays "S9" (S10 is out of v0 scope); suggest `/lvr-handoff` (engine step 7). S9 is resumable per file: a file already on disk that passes the cross-check is kept — only missing or failing files are drafted again, never a silent blanket rewrite.
+5. **Emit blueprint.json** — the exact schema v1 in `references/bundle/templates.md` §19, derived from `state.json`: regenerate it, never hand-edit it. Write the one-line CLAUDE.md + GEMINI.md stubs (exact line in the templates).
+6. **Close** — journal `doc_generated` per file (payload: the file path) with a state write each — one checkpoint per file (conventions §9). Then: `project.status` = "bundled"; `sections.S9` closes per engine step 6 with `record` = the bundle files; `current_section` stays "S9" (S10 Build has no section pointer; `/lvr-build` tracks it in `project.status`); suggest `/lvr-handoff` (engine step 7). S9 is resumable per file: a file already on disk that passes the cross-check is kept — only missing or failing files are drafted again, never a silent blanket rewrite.
    - Script: `LVR journal append --type doc_generated --payload '{"file":"<path>"}'` per file.
 
 **Tier behavior (conventions §7)**:
@@ -635,7 +635,7 @@ Script: a confirmed display-name change is `LVR decision record --event doc_gene
 
 - [ ] All 20 bundle files exist and are non-empty: GFM, English, ASCII diagrams only, no Mermaid.
 - [ ] The cross-check list above passes on every item.
-- [ ] blueprint.json matches `state.json` and follows the spec 04 schema.
+- [ ] blueprint.json matches `state.json` and follows the schema in `references/bundle/templates.md` §19.
 - [ ] CLAUDE.md + GEMINI.md stubs written; AGENTS.md follows the agents.md spec.
 - [ ] Every degraded booster and blocked-then-resolved Section appears in OVERVIEW.md → Limitations.
 - [ ] `project.status` = "bundled"; `doc_generated` journaled for every file.

@@ -43,4 +43,4 @@ Small max-output is the more common failure (long bundle files on T2/T3).
 
 ## Cross-model resume
 
-`model_profile.tier` lives in `state.json`. On `/lvr-continue`, a tier change (bigger model resumed a small-model session or vice versa) → journal `tier_changed`, re-apply this spec's rules for the new tier, warn the user if downgrading (probe re-runs). Any model finishes what any model started — that is the contract.
+`model_profile.tier` lives in `state.json`. On `/lvr-continue`, a tier change (bigger model resumed a small-model session or vice versa) → journal `tier_changed`, re-apply this spec's rules for the new tier, warn the user if downgrading (probe re-runs). An upgrade keeps an earlier `passed` probe; any change that lands on T2/T3 while `model_profile.probe` is not `passed` (a T1 project never probed, or an earlier probe failed) runs the probe too. Any model finishes what any model started — that is the contract.

@@ -35,7 +35,7 @@ Before any check or file write:
 `TARGET` = cwd (or the folder the user named). First failure stops with plain guidance; nothing is written on a refusal.
 
 1. **Project exists** — `TARGET/.lvr/state.json` exists and parses. Missing/unreadable → `/lvr-init-new-idea` or `/lvr-continue`.
-2. **Scope locked** — `scope_locked` journal event or S7 done. Not locked → `/lvr-continue` to S7.
+2. **Scope locked** — per the conventions §5 definition: a `scope_locked` journal event **and** S7 done. Not locked → `/lvr-continue` to S7.
 3. **S8–S9 done** — both Sections `status` "done". Not → `/lvr-continue` to finish the plan and compile the bundle.
 4. **Bundle present** — `AGENTS.md`, `MILESTONES.md`, `VERIFICATION.md`, `CODE_STYLE.md`, `SECURITY.md`, `DECISIONS.md`, `HANDOVER.md` all exist and are non-empty. Missing → finish S9 or run `/lvr-recheck-plan`.
 5. **Milestones exist** — `state.milestones[]` and `MILESTONES.md` are non-empty and share the same ids. Not → `/lvr-continue` to S8.
@@ -43,7 +43,7 @@ Before any check or file write:
 
 ## Step 2 — Preflight
 
-Run `references/build-loop.md` §1. Every item must pass. Failures:
+Run `references/build-loop.md` §1. Every item must pass. Preflight runs before `build_started`: a failure journals `build_blocked` only — no state field changes, `project.status` stays as it is (replay treats `build_blocked` as informational). Failures:
 
 - a plan/bundle defect (missing procedure, id mismatch, open blocking recheck finding) → journal `build_blocked` with the item, name the owning skill (`/lvr-recheck-plan`, `/lvr-add-feature`, or the user), and stop;
 - a missing tool or credential the bundle knew about (S2 account, API key) → surface it now with the exact missing item; never start coding around it.
@@ -52,7 +52,7 @@ Run `references/build-loop.md` §1. Every item must pass. Failures:
 
 Script: `LVR journal append --type build_started --payload '{"milestone":"M0"}'`
 
-1. Journal `build_started` (payload: first milestone id, bundle version/date) + a state write (no field change). One checkpoint.
+1. Journal `build_started` (payload: first milestone id, bundle version/date) + a state write setting `project.status` = "building" (the script's reducer does this). One checkpoint.
 2. Load builder context in the order `AGENTS.md` defines: `DECISIONS.md` → `SPEC/` → `MILESTONES.md` → `VERIFICATION.md`, plus `CODE_STYLE.md`, `SECURITY.md`, and `HANDOVER.md` for their concerns.
 3. Per tier: T1/T2 load the context once per milestone; T3 reloads `state.json`, the current milestone row, its verification row, and the stack rules every turn — never the transcript.
 
@@ -108,7 +108,7 @@ When the milestone deploys the product, run `references/build-loop.md` §6:
 
 Script: `LVR journal append --type build_done --payload '{…}'`
 
-1. All milestones verified → journal `build_done` (payload: milestones, deployment status) + state write. One checkpoint.
+1. All milestones verified → journal `build_done` (payload: milestones, deployment status) + a state write setting `project.status` = "complete" (the script's reducer does this). One checkpoint.
 2. Report plainly: what now works, how to run it, which checks were captured, what remains (deployment pending, known limitations).
 3. Next actions, in order:
    - `/lvr-handoff` again — it refreshes `blueprint.json` and the entry prompt from the new state;
@@ -118,8 +118,9 @@ Script: `LVR journal append --type build_done --payload '{…}'`
 
 ## State fields added by this skill
 
-Backward-compatible additions, documented in conventions §2 and spec 01 when this skill ships:
+Backward-compatible additions, documented in conventions §2:
 
+- `state.project.status`: `building` at `build_started`, `complete` at `build_done`.
 - `state.milestones[i].verified: boolean` + `verified_at: string`.
 - `state.deployment: { status: "live|pending", url?: string, verified_at?: string }`.
 

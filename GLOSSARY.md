@@ -45,7 +45,7 @@ Mekanisme S6: hasil deep research yang menemukan konflik/risiko membuka kembali 
 _Avoid_: backtracking, retry
 
 **Parking Lot**:
-Daftar fitur yang sengaja TIDAK masuk MVP dan ditunda setelah rilis, tercatat eksplisit di State dan bundle.
+Daftar fitur yang sengaja TIDAK masuk MVP dan ditunda setelah rilis, tercatat eksplisit di Section Record S7 dan bundle (`SCOPE.md`, plus baris requirements dan bagian `USER_FLOWS.md` bertanda parked). State tidak punya field parking lot.
 _Avoid_: backlog, wishlist, later
 
 **Milestone**:

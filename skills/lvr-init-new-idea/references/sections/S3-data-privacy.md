@@ -2,7 +2,7 @@
 
 Candidate questions for Section S3. The English text is the source: translate each question into User Language when asking (conventions §4). Bank order is not ask order — `S3.qNN` ids are assigned in the order actually asked. Compose batches adaptively; never ask what `answers` already holds. Controls (skip, "enough for this Section") follow the engine's micro-batch loop.
 
-Booster note: no booster — spec 02 assigns none. This bank is the question source.
+Booster note: no booster — the S3 routing assigns none. This bank is the question source.
 
 ## Opening questions (establish first, in this order)
 

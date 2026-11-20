@@ -21,7 +21,9 @@ skills/
 └── lvr-conventions.md        Canonical source copy of operational manual (NOT installed directly)
 ```
 
-The loose `lvr-*.md` files at the top of `skills/` are the repo's canonical copies, mirrored verbatim into each skill's `references/`. Each `lvr-*/` directory is a self-contained skill with its own `SKILL.md` and `references/` folder.
+The loose `lvr-*.md` files at the top of `skills/` are the repo's canonical copies, mirrored verbatim into each skill's `references/`; `scripts/lvr.mjs` at the repo root is mirrored the same way into each skill's `scripts/`. Each `lvr-*/` directory is a self-contained skill with its own `SKILL.md`, `references/` and `scripts/` folder.
+
+Keeping the copies in sync (maintainers): edit only the sources (`skills/lvr-conventions.md`, `skills/lvr-principles.md`, `scripts/lvr.mjs`), then run `npm run sync:skills` to copy them into every skill and `npm run check:skills` to confirm (exit 0 = every copy is byte-identical; exit 1 names the drifted file). The sources themselves are hand-written snapshots of `docs/spec/` (the source of truth); that drift is a review item, not a byte check.
 
 ## Skills catalog
 
@@ -78,7 +80,7 @@ lvr-init-new-idea/
     ├── principles.md
     ├── conventions.md
     ├── bundle/ (bundle file templates for S9)
-    └── sections/ (S1–S8 question banks)
+    └── sections/ (question banks and guides for S1–S5, S7, S8; S6 and S9 run from SKILL.md)
 
 lvr-recheck-plan/
 ├── SKILL.md
@@ -109,7 +111,9 @@ lvr-personal-brand/
     └── brand-templates.md
 ```
 
-Every skill references only paths inside its own folder (`references/…`) and, at runtime, the `.lvr/` directory and Blueprint Bundle of the target project. Smoke test: open the harness in an empty folder, run `/lvr-init-new-idea`, and confirm the skill runs the Folder Gate and starts S0 intake.
+Every skill also ships `scripts/lvr.mjs` (omitted above). Every skill references only paths inside its own folder (`references/…`, `scripts/…`) and, at runtime, the `.lvr/` directory and Blueprint Bundle of the target project. A few steps point at a sibling LVR skill (for example `/lvr-continue` hands interview Sections to `lvr-init-new-idea`); when that skill is not installed, the step says so and falls back loudly.
+
+Install all seven skills into the same skills directory your harness actually scans. Some harnesses read only their own directory (Claude Code: `~/.claude/skills/` or `.claude/skills/`), others also read `~/.agents/skills/`; a skill copied or linked into a directory the harness does not scan is invisible to it. If you keep one copy in `~/.agents/skills/`, link each of the seven folders (not only some) into the harness directory, then check the harness's skill list. Smoke test: open the harness in an empty folder, run `/lvr-init-new-idea`, and confirm the skill runs the Folder Gate and starts S0 intake.
 
 ## Uninstall
 

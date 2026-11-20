@@ -107,7 +107,7 @@ Headings, in order: `# Milestones` · one block per milestone, M0 first:
 Fill: verbatim from the S8 record; every F-NN lands in exactly one milestone.
 
 ## 15. VERIFICATION.md
-Headings, in order: `# Verification` · one `## M<n> — <name>` section per milestone · `## Global smoke test` · `## Definition of verified`
+Headings, in order: `# Verification` · one `## M<n> — <name>` section per milestone · `## Global smoke test` · `## Definition of verified`. `/lvr-build` later appends `## Build log — <ts>` sections after these; they are allowed.
 
 Fill: per milestone — the S8 verification procedure verbatim: exact commands + expected outputs, visual checks as observable facts plus how to look. Global smoke test — one scripted pass over the whole product, end to end. Definition of verified — a milestone is verified when every acceptance criterion's procedure was run on the deploy target and produced the expected result. No criterion without a procedure.
 
@@ -139,7 +139,7 @@ Headings, in order: `# Capabilities` · one table row per recommended booster:
 Fill: boosters recommended for this stack, from the Capability Registry, license-tagged; NC items marked `runtime-dependency-only` — credited, never vendored (principle 11).
 
 ## 19. blueprint.json — machine snapshot (derived)
-Schema v1, stable — consumers: web UI, external harnesses (verbatim from spec 04):
+Schema v1, stable — consumers: web UI, external harnesses (the canonical schema; the `lvr-handoff` lint checklist, group H, embeds the same block):
 
 ```jsonc
 {
@@ -161,7 +161,7 @@ Schema v1, stable — consumers: web UI, external harnesses (verbatim from spec 
 }
 ```
 
-Fill: derived from `.lvr/state.json` plus the bundle (refs, counts) — regenerate it, never hand-edit it; `.lvr/state.json` stays the pipeline's source of truth.
+Fill: derived from `.lvr/state.json` plus the bundle (refs, counts) — regenerate it, never hand-edit it; `.lvr/state.json` stays the pipeline's source of truth. The `ref` / `*_ref` values are logical pointers `<file>#<id>`, not Markdown anchors: the id is the feature (`F-01`), decision (`D-003`) or milestone (`M0`) id that starts the target heading or table row, and `costs` names the `## Cost table` section.
 
 ## 20. CLAUDE.md and GEMINI.md — harness stubs
 Both files carry exactly this one line and nothing else:

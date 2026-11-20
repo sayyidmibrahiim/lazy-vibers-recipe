@@ -2,7 +2,7 @@
 
 Candidate questions for Section S2. The English text is the source: translate each question into User Language when asking (conventions §4). Bank order is not ask order — `S2.qNN` ids are assigned in the order actually asked. Compose batches adaptively; never ask what `answers` already holds. Controls (skip, "enough for this Section") follow the engine's micro-batch loop.
 
-Booster note: no external booster — this bank plus the cost fact-sheet below is the booster (spec 02: "internal cost fact-sheets + web verification").
+Booster note: no external booster — this bank plus the cost fact-sheet below is the booster (the S2 routing: "internal cost fact-sheets + web verification").
 
 ## Opening questions (establish first, in this order)
 

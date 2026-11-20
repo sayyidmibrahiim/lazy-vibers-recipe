@@ -51,9 +51,9 @@ Script: `LVR state validate`: `"valid":true` means healthy — list its `warning
 
 `state.json` parses and matches the conventions §2 shape → load it, then run the consistency repairs:
 
-- Section statuses win over `pipeline.current_section`. If they disagree, fix `current_section` (the first Section not `done`, in conventions §5 order — S10 when S0–S9 are all done) and say so in the summary.
+- Section statuses win over `pipeline.current_section`. If they disagree, fix `current_section` (the first Section not `done`, in conventions §5 order — it stays S9 when S0–S9 are all done; S10 Build is tracked by `project.status`, never as a pointer) and say so in the summary.
 - An answer present in a Section Record file but missing from state is folded back in from the record (records are raw material — never re-ask what a record holds). Say so in the summary.
-- Scope lock has no v1 state field — derive it from the journal: scope is locked iff a `scope_locked` event exists and S7 is `done`. Do this here and in Step 5; do not invent a schema field.
+- Scope lock has no v1 state field — derive it per the conventions §5 definition (a `scope_locked` event exists **and** S7 is `done`). Do this here and in Step 5; do not invent a schema field.
 
 The repair state-write rides the run's `resume` append (one checkpoint at resume) — conventions §3's "every state mutation emits at least one event" holds under this named interpretation.
 
@@ -66,37 +66,40 @@ Replay the whole journal in `seq` order onto a fresh state object (shape per con
 | Journal event | Effect on the rebuilt state |
 |---|---|
 | `session_start`, `folder_gate_passed`, `folder_gate_subfolder_created` | project confirmed here; keep payload details for the report |
+| `folder_gate_rejected` | informational — the gate refused a folder before this project existed |
 | `tier_declared`, `tier_changed` | `model_profile.tier` (+ `declared_at`); `probe` comes from the probe events (`capability_probe_passed`/`capability_probe_failed`) when present; a declared T1 with no probe events rebuilds as `skipped` (conventions §7: the probe is mandatory for T2/T3 and skipped for a declared T1) |
 | `capability_probe_passed`, `capability_probe_failed` | `model_profile.probe` |
-| `booster_check`, `booster_install_ok`, `booster_install_failed`, `booster_choice` | `boosters` statuses — the last journaled event per booster wins; a journaled `present` maps to `installed` (the only enum-legal mapping); bundle documents (`OVERVIEW.md` Limitations, `CAPABILITIES.md`) may add a loud context note to the reconstruction report but never override a journaled status; the `booster_check` sweep names the core list (bootstrap checks every core booster); `license`/`tier` are static per-booster facts — from `CAPABILITIES.md` when the bundle exists, else the core-booster table in `05-boosters.md`; a core booster never mentioned → `missing`, flagged in the report |
+| `booster_check`, `booster_install_ok`, `booster_install_failed`, `booster_choice` | `boosters` statuses — the last journaled event per booster wins; a journaled `present` maps to `installed` (the only enum-legal mapping); bundle documents (`OVERVIEW.md` Limitations, `CAPABILITIES.md`) may add a loud context note to the reconstruction report but never override a journaled status; the `booster_check` sweep names the core list (bootstrap checks every core booster); `license`/`tier` are static per-booster facts — from `CAPABILITIES.md` when the bundle exists, else the core-booster table in the `lvr-init-new-idea` skill (Step 3; `scripts/lvr.mjs` embeds the same table); when neither is available keep `license` null and flag it in the report; a core booster never mentioned → `missing`, flagged in the report |
 | `section_start` | `sections[S] = { "status": "in_progress", "started_at": ... }`; `current_section` = S |
 | `answer_recorded` | `sections[S].answers[<id>] = { q, a, skipped }` — q/a verbatim from the payload when it carries the text; a legacy payload without q/a text folds q/a from the answer's own Section Record line; `project` metadata: `slug`, `idea_raw`, `user_language` come from the S0 section record (verbatim idea, confirmed language, confirmed slug); the display `name` is the bundle's `OVERVIEW.md` H1 when the bundle exists (compiled at S9, post-branding), stripped of the ` — plain-language overview` suffix of the templates heading (`# <Display name> — plain-language overview`, `lvr-init-new-idea/references/bundle/templates.md` §2); a bundle present without `OVERVIEW.md` falls back to the S0 record's display name, reported loudly (same as the no-bundle case); `created_at` = the ts of the `section_start` S0 event |
-| `section_done` | `sections[S] = { "status": "done", "record": ..., "completed_at": ... }`; `current_section` = the next Section in conventions §5 order |
+| `section_done` | `sections[S] = { "status": "done", "record": ..., "completed_at": ... }`; `current_section` = the next Section in conventions §5 order; `section_done` S9 leaves it at S9 (no S10 pointer) |
+| `section_blocked` | `sections[S].status` = "blocked"; `current_section` = S; the payload's `unmet` criteria go into the reconstruction report (the Section Record holds them too) |
 | `section_start` S5, `section_start` S7, `section_done` S9, `build_started`, `build_done` | `project.status` transitions (conventions §2 enum): the fresh state starts at `interview`; S5 start → `researching`, S7 start → `review`, S9 done → `bundled`, `build_started` → `building` (builder active), `build_done` → `complete` |
 | `loop_back_opened` | append the entry to `pipeline.loop_backs` (`resolved_at: null`) |
 | `loop_back_closed` | set `resolved_at` on the matching entry |
 | `scope_locked` | scope-lock evidence (no v1 schema field — see below) |
 | `milestone_verified` | set `milestones[<id>].verified = true` + `verified_at` from the payload |
 | `deployment_verified` | `deployment = { "status": "live", "url", "verified_at" }` from the payload |
-| `build_started`, `milestone_started`, `milestone_failed`, `build_blocked`, `build_done` | informational (status transitions per the row above) — verification results are rebuilt from `VERIFICATION.md`, not from these events |
-| `recheck_*`, `feature_*`, `brand_*` | informational — the report and bundle files on disk own the detail |
+| `build_started`, `milestone_started`, `milestone_failed`, `build_blocked`, `build_done` | informational apart from the status transitions in the row above — verified milestones come from `milestone_verified` |
+| `recheck_*`, `feature_*` (including `impact_analysis`), `brand_*` | informational — the report and bundle files on disk own the detail; a payload's `decisions[]` / `milestones[]` are still folded in (conventions §3) |
 | `doc_generated` | bundle-file progress (compare against the conventions §8 list); a 0-byte file counts as missing required structure and is reported wherever it is found (rebuild report, progress summary, Step 5c offer), never as existing-and-skipped |
 | `handoff_started`, `gap_found`, `handoff_done` | handoff progress; `handoff_done` fills `handoff` = { "status": "done", "completed_at" } |
-| `error` | `project.status` = "error"; keep the payload for the summary |
-| `context_guard_triggered`, `truncation_recovered`, `resume` | informational — no state effect |
+| `error` | `project.status` = "error" (remember the status before it); keep the payload for the summary |
+| `resume`, and the opening events `session_start`, `handoff_started`, `recheck_started`, `feature_started`, `brand_started` | restore the status remembered at the last `error` (conventions §2); otherwise no state effect (`section_start`, `section_done`, `section_blocked`, `answer_recorded` restore it too, before their own effect) |
+| `context_guard_triggered`, `truncation_recovered` | informational — no state effect |
 
 Three things the journal cannot supply directly:
 
-- **Scope lock** — the v1 schema has no scope field. Scope is locked iff a `scope_locked` event exists in the journal (and S7 is done). Derive it; do not invent a schema field.
-- **Milestones** — no journal event type covers them. When S8 is done, rebuild `milestones[]` from the Section Record `.lvr/docs/sections/S8-milestones.md`. If that record is missing too, milestones are reported as unrecoverable.
-- **Decisions** — no journal event type covers them either. Rebuild `decisions[]` from `DECISIONS.md` when the bundle exists — the mirror is compiled at S9 from the post-loop-back records, so its wording is the freshest; rows are never rewritten after S9 (spec 04) — else from the decision lines in the Section Records — ids and statuses are the same in both sources. A decision missing from both surfaces is reported as unrecoverable (loudly).
+- **Scope lock** — the v1 schema has no scope field. Scope is locked per the conventions §5 definition: a `scope_locked` event exists in the journal **and** S7 is done. Derive it; do not invent a schema field.
+- **Milestones** — no event type is dedicated to them; payload `milestones[]` (S8 `section_done`, `feature_applied`) are folded in when present. Milestones the events did not carry: from `MILESTONES.md` when the bundle exists (it also holds the milestones `/lvr-add-feature` appended after the lock, which no record holds), else — S8 done — from the Section Record `.lvr/docs/sections/S8-milestones.md`. Apply `milestone_verified` after this rebuild. If S8 is done and neither source holds a milestone, milestones are reported as unrecoverable.
+- **Decisions** — no event type is dedicated to them either; payload `decisions[]` are folded in when present. The rest: from `DECISIONS.md` when the bundle exists — the mirror is compiled at S9 from the post-loop-back records, so its wording is the freshest; rows are never rewritten after S9 (conventions §8) — else from the decision lines in the Section Records; ids and statuses are the same in both sources. Then add the decision lines in `.lvr/docs/sections/S4-additions.md` (post-lock decisions from `/lvr-add-feature`, section `S4`) that neither source holds yet. A decision missing from every source is reported as unrecoverable (loudly).
 
 An `answer_recorded` whose payload text is absent or unreadable, and whose Section Record does not hold it either, is reported as unrecoverable — ask the user to re-state only that one, saying plainly why (loud degradation, not a silent re-ask).
 
 Then:
 
 1. Write the rebuilt `state.json` (one checkpoint). Before writing it, the corrupt file MAY be preserved once as `.lvr/state.corrupt-<date>.json`; when present, name it in the reconstruction report. The backup is not part of the canonical write set. Never touch existing journal lines.
-2. Report plainly (User Language): what was reconstructed (Sections and statuses, answer counts, decisions, loop-backs, milestones, tier), everything derived indirectly (scope from the journal event, milestones from the S8 record, decisions from DECISIONS.md or the Section Records), and every event that could not be translated, by `seq`.
+2. Report plainly (User Language): what was reconstructed (Sections and statuses, answer counts, decisions, loop-backs, milestones, tier), everything derived indirectly (scope from the journal event, milestones from MILESTONES.md or the S8 record; decisions from DECISIONS.md or the Section Records, plus S4-additions.md), and every event that could not be translated, by `seq`.
 3. Journal `resume` (payload: `state_rebuilt: true` + the untranslatable count).
 
 ## Step 3 — Tier check (cross-model resume)
@@ -114,7 +117,7 @@ Compare `model_profile.tier` in state with the model actually running now:
   3. **Sentence continuation** — Prompt: `Continue this sentence so it makes sense, and write only the continuation: "The cashier scanned the item twice because"`. Pass: a coherent, grammatical completion (no restart, no topic change, no gibberish).
   - All pass → journal `capability_probe_passed` (payload: `{"steps": [...]}` — the ids of the checks that passed: "json", "order", "sentence"), update `model_profile.probe`, continue.
   - Any fail → journal `capability_probe_failed` (payload: which step). Say (English source): "This model failed the capability probe (\<step\>), so it cannot finish what the previous model started. Switch this harness to a larger model, then run `/lvr-continue` again. Nothing is lost — the project state is safe on disk." Stop. Never push through.
-- Upgrade → no probe; `tier_changed` only.
+- Upgrade → no probe when `model_profile.probe` is `passed` (the upgrade keeps that pass); `tier_changed` only. If the probe is not `passed` (an earlier probe failed, or none ran) and the new tier is T2/T3, run the probe as for a downgrade (conventions §7).
 
 ## Step 4 — Progress summary
 
@@ -139,7 +142,7 @@ Pick ONE primary offer from the state; act on the user's confirmation.
 
 ### a. `project.status` = "error"
 
-Report the last `error` event in plain words and offer to retry the failed step. Retry is idempotent: done Sections and recorded answers are never redone.
+Decide this from the status loaded in Step 2, before this run's `resume`: the `resume` restores the status that was current before the error (conventions §2), so `state.json` no longer says "error" by Step 5. Report the last `error` event in plain words and offer to retry the failed step. Retry is idempotent: done Sections and recorded answers are never redone. On the rebuild path (2b) the rebuild and the `resume` happen in one call, so `error` is never visible in state: take this branch when the journal's last `error` event is followed by no restoring event (the opening events, `section_*`, `answer_recorded`) before this run's `resume` (`LVR journal tail --n 5`).
 
 ### b. Interviewing (status `interview`, `researching`, or `review`; the current Section S0–S8 is not done)
 
@@ -169,7 +172,7 @@ Offer `/lvr-handoff` — its precondition (S1–S8 done + scope locked) is met. 
 
 ### e. Bundled (`handoff` done), building, or complete
 
-Offer the v1 pointers: `/lvr-build` (execute the next unverified milestone), `/lvr-add-feature` (a new feature through a mini-pipeline), or `/lvr-recheck-plan` (an adversarial audit of decisions + bundle). These are v1 skills — mention them as pointers only; do not improvise them here. When every milestone is verified and `state.deployment.status` = "live", also point at `/lvr-personal-brand`.
+Offer the next skill: `/lvr-build` (execute the next unverified milestone), `/lvr-add-feature` (a new feature through a mini-pipeline), or `/lvr-recheck-plan` (an adversarial audit of decisions + bundle). They are separate skills — point at them; do not improvise them here. When every milestone is verified and `state.deployment.status` = "live", also point at `/lvr-personal-brand`.
 
 ## Idempotency
 

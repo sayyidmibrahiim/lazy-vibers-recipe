@@ -36,7 +36,7 @@ Before any check or file write:
 2. **Milestones verified** — `state.milestones[]` is non-empty and every entry has `verified: true`. Any unverified → name the first one and say: "The product is not finished yet. Run `/lvr-build` to execute and verify milestone `<M>` first."
 3. **Deployment live** — `state.deployment.status` = "live" with a URL. Missing or `pending` → "There is no verified live product yet. Run `/lvr-build` through the deployment milestone first."
 4. **Live check now** — fetch the deployment URL with the harness's HTTP tool. Require a 2xx status and one expected product fact (the product name or a user-visible string from `OVERVIEW.md`). Check fails, tool unavailable, or the page needs credentials → refuse: "The live check did not pass (`<reason>`), so the brand gate is not met. Fix the deployment, then re-run." Never accept the state field alone as proof; it records a past check, not the current one.
-5. **Bundle present** — `AGENTS.md`, `OVERVIEW.md`, `DECISIONS.md`, `VERIFICATION.md` exist. Missing → `/lvr-handoff` or S9 is incomplete.
+5. **Bundle present** — `AGENTS.md`, `OVERVIEW.md`, `DECISIONS.md`, `VERIFICATION.md` exist. Missing → "The bundle is incomplete (`<file>` is missing). Run `/lvr-continue` to finish S9, then re-run." (`/lvr-handoff` only lints; it does not write these files.)
 
 No handoff requirement: the brand kit needs the product evidence, not the builder prompt.
 
@@ -45,7 +45,7 @@ No handoff requirement: the brand kit needs the product evidence, not the builde
 Script: `LVR journal append --type brand_started --payload '{"url":"<url>","live_check":"…"}'`
 
 1. Journal `brand_started` (payload: deployment URL, live-check result) + a state write (no field change). One checkpoint.
-2. Load, in this order: `OVERVIEW.md` (owner-visible truth), `DECISIONS.md` (why it is shaped this way), `SCOPE.md` (what is in and parked), `VERIFICATION.md` (what is proven), `RESEARCH.md` (market context with sources), `HANDOVER.md` (how it runs), `state.json` (milestones, deployment, user language).
+2. Load, in this order: `OVERVIEW.md` (owner-visible truth), `DECISIONS.md` (why it is shaped this way), `SCOPE.md` (what is in and parked), `VERIFICATION.md` (what is proven), `RESEARCH.md` (market context with sources), `HANDOVER.md` (how it runs), `state.json` (milestones, deployment, user language). `SCOPE.md`, `RESEARCH.md`, and `HANDOVER.md` are not gated: a missing one is skipped, and the kit names it under `Open questions for the owner` (the claims it would have backed stay `unverified`).
 3. Extract a one-screen product brief: name, one line, audience, problem, in-MVP features, verified milestones, live URL, parked items, stack. No transcript, no invented context (principle 13).
 
 ## Step 3 — Owner facts

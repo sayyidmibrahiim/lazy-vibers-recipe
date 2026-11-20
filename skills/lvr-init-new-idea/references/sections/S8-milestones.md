@@ -2,7 +2,7 @@
 
 Work guide for Section S8. The English text is the source; questions are spoken in User Language at runtime (conventions §4). Record: `PROJECT_DIR/.lvr/docs/sections/S8-milestones.md`; top-level `milestones[]` in state gets one entry per milestone (id, goal, features covered). Mostly Conductor work: draft the whole plan, then one review with the user.
 
-Booster note: planning-and-task-breakdown principles (addyosmani) when the harness carries them — load at Section start, drop after use (T3: only this one). Not a core install, so no `boosters.core` entry. Absent → the decomposition rules below are the booster (spec 02 fallback).
+Booster note: planning-and-task-breakdown principles (addyosmani) when the harness carries them — load at Section start, drop after use (T3: only this one). Not a core install, so no `boosters.core` entry. Absent → the decomposition rules below are the booster (the routed fallback).
 
 ## M0 — the walking skeleton (generic definition)
 

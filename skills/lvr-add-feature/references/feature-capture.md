@@ -16,7 +16,7 @@ Ask in the user's language, one micro-batch at a time (tier limits apply). Recor
 | Priority | `must` / `should` / `could`, confirmed aloud, never inferred. |
 | Scope proposal | Extend current milestone / new milestone / Parking Lot, with one-line reasoning. |
 
-Id rules: `F-NN` continues from the highest id found in `SPEC/requirements.md` + `SCOPE.md`; never reuse or renumber. Milestones continue from the highest `M<n>`.
+Id rules: `F-NN` continues from the highest id found in `SPEC/requirements.md` + `SCOPE.md` + `.lvr/docs/sections/S4-additions.md` (a captured feature whose scope decision is still open lives only there); never reuse or renumber. Milestones continue from the highest `M<n>`.
 
 ## 2. Targeted research
 
@@ -35,7 +35,7 @@ Walk every row; mark `edit`, `append`, `none`, with the exact section/row. A row
 | Bundle file | Ask |
 |---|---|
 | `SPEC/requirements.md` | New F-NN row; acceptance criteria. |
-| `USER_FLOWS.md` | Flow diagram + click script, when in MVP. |
+| `USER_FLOWS.md` | Flow diagram + click script, when in MVP; for a parked feature the section heading marked `(parked — see SCOPE.md)` plus the captured script. |
 | `SCOPE.md` | In-MVP row or Parking Lot row with one-line reason. |
 | `MILESTONES.md` | Extend an existing milestone's deliverables, or append one new milestone. |
 | `VERIFICATION.md` | Procedure matching every new acceptance criterion. |
@@ -59,7 +59,7 @@ Walk every row; mark `edit`, `append`, `none`, with the exact section/row. A row
 - Append-only by default. Existing decisions, milestones, scope rows, and records are never rewritten.
 - A new decision gets the next `D-NNN`, `section: "S4"` (the owning section), a rationale, and `user_confirmed` (scope choice) or `assumed` / `designer_filled` per principle 12.
 - A new milestone: append `M<n+1>` with goal, deliverables, measurable acceptance criteria, verification procedure, rough cost/effort, and `verified: false` in state.
-- Parking Lot: record the requirement row marked parked + the scope row with the reason. No milestone, no verification procedure, and no flow required.
+- Parking Lot: record the requirement row marked parked + the scope row with the reason + a `USER_FLOWS.md` section whose heading is marked `(parked — see SCOPE.md)`, holding the captured script. No milestone and no verification procedure.
 - Costs change → update `RESEARCH.md`, `OVERVIEW.md`, and `blueprint.json` in the same run, all from the same verified number.
 - One file per turn; `feature_applied` journal event per file. Never leave half a cross-file edit without a checkpoint.
 
@@ -77,7 +77,10 @@ Write `.lvr/docs/sections/S4-additions.md`, append-only:
 - Happy path: <numbered script>
 - Failure cases: <list>
 - Research: <claims with source + date, or unverified>
-- Decision: <D-NNN> · Files touched: <list>
+- **<D-NNN>** <summary> — <rationale> · status: <user_confirmed | assumed | designer_filled>
+- Files touched: <list>
 ```
+
+One decision line per decision made for this feature (the scope decision at Step 6, plus any design decision made during capture), appended when the decision is made, in the same shape as a Section Record's decision lines: a state rebuild reads these lines for decisions `DECISIONS.md` does not hold yet. `Files touched` is appended at close.
 
 This file is evidence for future rechecks; S9 does not compile it, and the skill applies the bundle edits itself.

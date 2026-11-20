@@ -1,0 +1,18 @@
+[
+ [
+  "/report/milestones/source",
+  "S8-record"
+ ],
+ [
+  "/report/milestones/count",
+  2
+ ],
+ [
+  "/state/milestones/1/id",
+  "M1"
+ ],
+ [
+  "/report/unrecoverable/milestones",
+  false
+ ]
+]

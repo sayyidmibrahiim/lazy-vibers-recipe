@@ -1,0 +1,9 @@
+{"ts":"2026-11-20T10:00:00Z","seq":1,"type":"session_start","payload":{"skill":"lvr-init-new-idea","cli":"lvr"}}
+{"ts":"2026-11-20T10:00:00Z","seq":2,"type":"folder_gate_passed","payload":{"check":3,"cli":"lvr"}}
+{"ts":"2026-11-20T10:00:00Z","seq":3,"type":"tier_declared","payload":{"tier":"T1","cli":"lvr"}}
+{"ts":"2026-11-20T10:00:00Z","seq":4,"type":"capability_probe_passed","payload":{"cli":"lvr"}}
+{"ts":"2026-11-20T10:00:00Z","seq":5,"type":"section_start","payload":{"section":"S0","cli":"lvr"}}
+{"ts":"2026-11-20T10:00:00Z","seq":6,"type":"answer_recorded","payload":{"section":"S0","answer_id":"S0.q1","q":"Idea?","a":"futsal booking","skipped":false,"project":{"idea_raw":"futsal booking","user_language":"id","slug":"fx-booking","name":"Fx Booking"},"cli":"lvr"}}
+{"ts":"2026-11-20T10:00:00Z","seq":7,"type":"section_done","payload":{"section":"S0","record":"S0-intake.md","cli":"lvr"}}
+{"ts":"2026-11-20T10:00:00Z","seq":8,"type":"section_start","payload":{"section":"S1","cli":"lvr"}}
+{"ts":"2026-11-20T10:00:00Z","seq":9,"type":"section_blocked","payload":{"section":"S1","unmet":["who pays is unknown"],"cli":"lvr"}}

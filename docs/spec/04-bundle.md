@@ -47,10 +47,10 @@ The 20-file list above is fixed. The v1 skills change the bundle by editing thos
 | `/lvr-handoff` | regenerates `blueprint.json`, refreshes the entry prompt | `HANDOFF-PROMPT.md` |
 | `/lvr-recheck-plan` | fixes confirmed findings in place; regenerates `blueprint.json` when stale | `.lvr/recheck/RECHECK-<date>.md` |
 | `/lvr-add-feature` | appends the requirement, flow, scope, milestone, verification, decision, assumption, research, and cost rows | `.lvr/docs/sections/S4-additions.md` |
-| `/lvr-build` | appends the build log to `VERIFICATION.md`; never edits a requirement or an acceptance criterion | `brand/` (next row), `state.milestones[].verified` |
+| `/lvr-build` | appends `## Build log — <ts>` sections to the end of `VERIFICATION.md`; never edits a requirement or an acceptance criterion | `state.project.status`, `state.milestones[].verified`, `state.deployment` |
 | `/lvr-personal-brand` | none — the bundle is read-only here | `brand/BRAND.md`, `brand/LINKEDIN-PROFILE.md`, `brand/CONTENT-PLAN.md` |
 
-Rules: existing ids are never renumbered; earlier `VERIFICATION.md` entries and `DECISIONS.md` rows are never rewritten; `blueprint.json` stays derived; parked features keep a requirements row and a scope row, and require no milestone.
+Rules: existing ids are never renumbered; earlier `VERIFICATION.md` entries and `DECISIONS.md` rows are never rewritten; `blueprint.json` stays derived; parked features keep a requirements row marked parked, a scope row with the reason, and a `USER_FLOWS.md` section whose heading is marked `(parked — see SCOPE.md)` (the captured script, no diagram required), and require no milestone or verification procedure. Structure checks allow the trailing `## Build log — <ts>` sections `/lvr-build` appends to `VERIFICATION.md`.
 
 ## `blueprint.json` schema (v1, stable — consumers: web UI, external harnesses)
 ```jsonc
@@ -73,4 +73,4 @@ Rules: existing ids are never renumbered; earlier `VERIFICATION.md` entries and 
 }
 ```
 
-Rules: `blueprint.json` is a **derived** file — regenerate, never hand-edit; `.lvr/state.json` remains the pipeline's own source of truth.
+Rules: `blueprint.json` is a **derived** file — regenerate, never hand-edit; `.lvr/state.json` remains the pipeline's own source of truth. The `ref` / `*_ref` values are logical pointers `<file>#<id>`, not Markdown anchors: the id is the feature (`F-01`), decision (`D-003`) or milestone (`M0`) id that starts the target heading or table row, and `costs` names the `## Cost table` section.

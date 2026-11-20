@@ -2,7 +2,7 @@
 
 Work guide for Section S7. The English text is the source; questions are spoken in User Language at runtime (conventions §4). Record: `PROJECT_DIR/.lvr/docs/sections/S7-scope.md`; journal `scope_locked` at the lock. Mostly Conductor work: one walk, one warning when it fires, one explicit confirmation.
 
-Booster note: none (spec 02) — this guide is the procedure.
+Booster note: none — this guide is the procedure.
 
 ## The walk
 
@@ -27,8 +27,8 @@ Count the in-MVP list. Above ~8 features, say plainly (User Language): "This is 
 1. Present the final list — in-MVP with a one-line description each, then the Parking Lot with its reasons.
 2. Ask for explicit confirmation of the whole list (User Language): "Is this the first version? Once you say yes, this list is frozen."
 3. A skip or silence is not a lock — re-ask once, plainly. A change request → apply it, re-present, ask again.
-4. On an explicit yes: one checkpoint — journal `scope_locked` (payload: the in-MVP feature ids) + state write (`project.status` = "review", `sections.S7` per the engine).
-5. Write the record (second checkpoint). From here the feature list is frozen: changes go through /lvr-add-feature post-v1, never through quiet edits.
+4. On an explicit yes: one checkpoint — journal `scope_locked` (payload: the in-MVP feature ids) + state write (no field change; `project.status` became "review" at Section start).
+5. Write the record and close S7 (`section_done`, second checkpoint); scope counts as locked only once both the event and S7 done exist (conventions §5). From here the feature list is frozen: changes go through /lvr-add-feature, never through quiet edits.
 6. Refused at the exit check → engine step 5: mark the Section `blocked`, journal `section_blocked` with the contested items named. Unblock path per the engine.
 
 ## Record template
@@ -47,8 +47,8 @@ Count the in-MVP list. Above ~8 features, say plainly (User Language): "This is 
 <in-MVP count; when > ~8: the warning given + the user's call>
 
 ## Lock
-- Confirmed: <S7.qNN> · decision <D-NNN> · journaled `scope_locked` <ts> · status → review
-- Frozen from here: changes go through /lvr-add-feature post-v1.
+- Confirmed: <S7.qNN> · decision <D-NNN> · journaled `scope_locked` <ts>
+- Frozen from here: changes go through /lvr-add-feature.
 
 ## Answers
 - **<S7.qNN> <question, User Language>** — <answer verbatim> · _EN: <summary>_

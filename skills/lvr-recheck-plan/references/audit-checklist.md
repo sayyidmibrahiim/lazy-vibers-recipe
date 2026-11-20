@@ -33,7 +33,7 @@ Refresh rule: use real web search/fetch when the harness provides it. When it do
 | ID | Check | Default severity | Owner |
 |---|---|---|---|
 | R3.1 | All 20 bundle entries exist and are non-empty (conventions §8). | blocking | S9 |
-| R3.2 | Every in-MVP `F-NN` has a `SPEC/requirements.md` row, a `USER_FLOWS.md` entry, a `SCOPE.md` row, and exactly one milestone in `MILESTONES.md`. Every parked `F-NN` has a requirements row marked parked and a scope row with a reason; no milestone is required. | blocking | S9 |
+| R3.2 | Every in-MVP `F-NN` has a `SPEC/requirements.md` row, a `USER_FLOWS.md` entry, a `SCOPE.md` row, and exactly one milestone in `MILESTONES.md`. Every parked `F-NN` has a requirements row marked parked, a `USER_FLOWS.md` section whose heading is marked `(parked — see SCOPE.md)`, and a scope row with a reason; no milestone is required. | blocking | S9 |
 | R3.3 | Every milestone acceptance criterion has a matching verification procedure with exact commands and expected outputs. | blocking | S8 |
 | R3.4 | Stack, entity, and feature names are identical across `AGENTS.md`, `DECISIONS.md`, `SPEC/*`, `USER_FLOWS.md`, `SCOPE.md`, `MILESTONES.md`, and `blueprint.json`. | major | S9 |
 | R3.5 | Every bundle file is English GFM, uses ASCII diagrams only, and contains no Mermaid. | minor | S9 |
@@ -73,9 +73,9 @@ Refresh rule: use real web search/fetch when the harness provides it. When it do
 | ID | Check | Default severity | Owner |
 |---|---|---|---|
 | R6.1 | `state.json` matches the conventions §2 shape; every Section status matches its record on disk. | blocking | lvr-continue |
-| R6.2 | Scope is locked (`scope_locked` journal event and S7 done); every S4 feature is accounted for in the S7 scope record. | blocking | S7 |
+| R6.2 | Scope is locked (conventions §5: `scope_locked` journal event and S7 done); every S4 feature is accounted for in the S7 scope record. | blocking | S7 |
 | R6.3 | `state.milestones[]` ids, goals, and order match `MILESTONES.md`. | major | S8 |
-| R6.4 | `project.status` is consistent with progress (`bundled` after S9; `handoff.status` matches the journal). | major | lvr-handoff |
+| R6.4 | `project.status` is consistent with progress (`review` from S7 start, `bundled` after S9, `building` after `build_started`, `complete` after `build_done`; `handoff.status` matches the journal). | major | lvr-handoff |
 | R6.5 | Journal integrity holds: `seq` is contiguous from 1, timestamps are non-decreasing, no line was rewritten or deleted. | blocking | all skills |
 | R6.6 | Every blocking finding from the previous recheck report is either resolved with evidence or still listed as open here. | major | lvr-recheck-plan |
 

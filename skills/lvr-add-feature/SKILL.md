@@ -35,7 +35,7 @@ Before any check, question, or file write:
 `TARGET` = cwd (or the folder the user named). First failure stops with plain guidance; nothing is written on a refusal.
 
 1. **Project exists** — `TARGET/.lvr/state.json` exists and parses. Missing/unreadable → route to `/lvr-init-new-idea` or `/lvr-continue` as in `lvr-recheck-plan` Step 1.
-2. **Scope locked** — `scope_locked` journal event or S7 done. Not locked → "The MVP is not frozen yet. Run `/lvr-continue` to finish S7, then add the feature."
+2. **Scope locked** — per the conventions §5 definition: a `scope_locked` journal event **and** S7 done. Not locked → "The MVP is not frozen yet. Run `/lvr-continue` to finish S7, then add the feature."
 3. **Pipeline through S9 done** — every S1–S9 Section done. Not → name the Section and route to `/lvr-continue`. The feature needs a bundle to extend.
 4. **Bundle present** — `AGENTS.md` and `blueprint.json` exist. Missing → finish S9 first.
 5. **Request present** — a feature description from the user. Missing → ask one line: "What should the product do that it does not do today?" Do not start with a solution-shaped guess.
@@ -95,9 +95,9 @@ Present the scope proposal in plain language with three options and consequences
 
 1. **Extend current milestone** — only when the feature fits the milestone's one-session size and shares its flow.
 2. **New milestone** — default for a substantial feature; appended as `M<n+1>` after the last milestone.
-3. **Parking Lot** — recorded, not built; the bundle gets a parked requirement row and a scope row with the reason, no milestone or verification procedure.
+3. **Parking Lot** — recorded, not built; the bundle gets a parked requirement row, a scope row with the reason, and a `USER_FLOWS.md` section marked `(parked — see SCOPE.md)`; no milestone or verification procedure.
 
-The user's explicit choice is recorded as the next `D-NNN` (`section: "S4"`, `user_confirmed`, rationale = the choice and why). A skip or "later" is not a scope decision: keep the capture and stop before applying bundle edits, reporting the open feature. Journal `feature_scope_decision` (payload: F-NN, choice, D-NNN). One checkpoint.
+The user's explicit choice is recorded as the next `D-NNN` (`section: "S4"`, `user_confirmed`, rationale = the choice and why), and its decision line is appended to the feature's block in `S4-additions.md` (template in the reference) — that line is what a state rebuild reads before `DECISIONS.md` has the row. A skip or "later" is not a scope decision: keep the capture and stop before applying bundle edits, reporting the open feature. Journal `feature_scope_decision` (payload: F-NN, choice, D-NNN). One checkpoint.
 
 ## Step 7 — Apply
 
@@ -105,8 +105,8 @@ Script: `LVR journal append --type feature_applied --payload '{"feature":"F-NN",
 
 Apply the impact table, one file per turn, append-only unless the row is a required edit:
 
-- **Requirements** — append the F-NN row; for Parking Lot mark it `parked` and omit flow/milestone.
-- **USER_FLOWS.md** — append the flow + numbered script for an in-MVP feature.
+- **Requirements** — append the F-NN row; for Parking Lot mark it `parked` and omit the milestone.
+- **USER_FLOWS.md** — append the flow + numbered script for an in-MVP feature; for Parking Lot append the section with its heading marked `(parked — see SCOPE.md)` and the captured script (no diagram required).
 - **SCOPE.md** — append the in-MVP row or the Parking Lot row with its reason.
 - **MILESTONES.md** — extend the chosen milestone's deliverables, or append `M<n+1>`.
 - **VERIFICATION.md** — append the matching procedure with exact commands and expected outputs.
@@ -115,7 +115,7 @@ Apply the impact table, one file per turn, append-only unless the row is a requi
 - **ASSUMPTIONS.md** — append every new `assumed` / `designer_filled` decision.
 - **RESEARCH.md, OVERVIEW.md** — new evidence rows and owner-visible feature/cost lines.
 - **CAPABILITIES.md, HANDOVER.md, CODE_STYLE.md** — only when the matrix says so.
-- **`blueprint.json`** — regenerate from state + bundle per spec 04, never hand-edit.
+- **`blueprint.json`** — regenerate from state + bundle in the existing file's schema v1 shape (the full schema is in the `lvr-handoff` skill's lint checklist, group H), never hand-edit.
 - **State** — append the decision; append the milestone entry (`verified: false`) when a milestone was added. Never touch done Sections or existing milestone entries.
 
 After each file: journal `feature_applied` (payload: F-NN, file, action) + state write. One checkpoint per file.

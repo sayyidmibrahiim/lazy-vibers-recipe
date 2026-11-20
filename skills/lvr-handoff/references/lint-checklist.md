@@ -48,7 +48,7 @@ Reporting rule: a file that already failed a presence check (group A) is not re-
 - B12 `RESEARCH.md` — `# Research` · `## Competitor scan` · `## Comparable products` · `## Stack comparison and trade-offs` · `## Cost table` · `## Risks (from S6)`
 - B13 `SCOPE.md` — `# Scope` · `## In MVP` · `## Parking Lot (recorded, never deleted)`
 - B14 `MILESTONES.md` — `# Milestones` · one `## M<n> — <name>` block per milestone, M0 first
-- B15 `VERIFICATION.md` — `# Verification` · one `## M<n> — <name>` section per milestone · `## Global smoke test` · `## Definition of verified`
+- B15 `VERIFICATION.md` — `# Verification` · one `## M<n> — <name>` section per milestone · `## Global smoke test` · `## Definition of verified` · then any number of trailing `## Build log — <ts>` sections appended by `/lvr-build` (allowed, never a finding)
 - B16 `ASSUMPTIONS.md` — `# Assumptions` · one `## D-<NNN> — <summary> (assumed | designer_filled)` block per non-confirmed decision
 - B17 `HANDOVER.md` — `# Handover (owner guide)` · `## How to run it` · `## How to deploy and update` · `## How to back up` · `## Where secrets and API keys live` · `## Who to ask what`
 - B18 `CAPABILITIES.md` — `# Capabilities` · booster table with the exact header row `| Name | Kind | License | Install | Notes |`
@@ -125,6 +125,8 @@ G3–G6 are the "thin AGENTS.md" checks: failing any one is a gap finding, never
                 "verification": "VERIFICATION.md", "state": ".lvr/state.json" }
 }
 ```
+
+The `ref` / `*_ref` values are logical pointers `<file>#<id>`, not Markdown anchors: the id is the feature (`F-01`), decision (`D-003`) or milestone (`M0`) id that starts the target heading or table row, and `costs` names the `## Cost table` section.
 
 ## Owners
 

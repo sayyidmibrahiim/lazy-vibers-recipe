@@ -1,0 +1,22 @@
+[
+ [
+  "/diff",
+  []
+ ],
+ [
+  "/state/pipeline/current_section",
+  "S9"
+ ],
+ [
+  "/state/pipeline/sections/S9/status",
+  "done"
+ ],
+ [
+  "/state/project/status",
+  "bundled"
+ ],
+ [
+  "/report/validation/warnings",
+  []
+ ]
+]

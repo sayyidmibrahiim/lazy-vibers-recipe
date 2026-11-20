@@ -31,7 +31,7 @@ Script: `LVR state validate`; scope evidence from `LVR journal check` (`scope_lo
 `TARGET` = cwd (or the folder the user named). Run the checks in order; the first failure stops the skill with plain guidance. Nothing is written to disk on a refusal.
 
 1. **Project exists** — `TARGET/.lvr/state.json` exists and parses. Missing → say (English source): "There is no LVR project here. Run `/lvr-init-new-idea` in an empty folder to start one, or `/lvr-continue` in the folder that holds it." Present but unreadable → say: "This project's state file is damaged. Run `/lvr-continue` first — it rebuilds the state from the journal — then run `/lvr-handoff` again."
-2. **Scope locked** — scope is locked iff the journal holds a `scope_locked` event or `pipeline.sections.S7.status` = "done". Not locked → say: "The scope is not locked yet — Section S7 (Scope lock) freezes the MVP before milestones and the bundle exist. Run `/lvr-continue` to finish the pipeline up to S7, then come back." Refusing here is the rule: nothing correct can be linted before the lock (conventions §5 hard rules).
+2. **Scope locked** — per the conventions §5 definition: the journal holds a `scope_locked` event **and** `pipeline.sections.S7.status` = "done". Not locked → say: "The scope is not locked yet — Section S7 (Scope lock) freezes the MVP before milestones and the bundle exist. Run `/lvr-continue` to finish the pipeline up to S7, then come back." Refusing here is the rule: nothing correct can be linted before the lock (conventions §5 hard rules).
 3. **S1–S8 done** — every Section S1–S8 has `status` "done" in `pipeline.sections`. Any other status → name each unfinished Section with its purpose (conventions §5) and say: "Run `/lvr-continue` — it resumes the pipeline at Section \<S\>." Stop.
 
 S9 is deliberately not a precondition: an uncompiled or half-compiled bundle is exactly what the gap lint reports — loudly, owned by S9 (Step 2). Never lint silently, never refuse what a lint should surface.
@@ -64,7 +64,7 @@ After fix-now: **re-lint** — run the full checklist again (Step 2; not just th
 
 Only when the lint is clean. These are the only bundle writes this skill ever makes:
 
-1. **`blueprint.json`** — derive it from `state.json` + the bundle, exact schema v1 (spec 04, reproduced in the checklist): project fields, stack, features with `in_mvp`, `decisions_count`, milestones with `acceptance_count`, costs, capabilities, pointers. Compare against the existing file ignoring `generated_at`: identical → leave untouched; missing or any drift → write it with `generated_at` = now. It is a derived file — regenerate, never hand-edit, never keep a stale copy.
+1. **`blueprint.json`** — derive it from `state.json` + the bundle, exact schema v1 (reproduced in `references/lint-checklist.md`, group H): project fields, stack, features with `in_mvp`, `decisions_count`, milestones with `acceptance_count`, costs, capabilities, pointers. Compare against the existing file ignoring `generated_at`: identical → leave untouched; missing or any drift → write it with `generated_at` = now. It is a derived file — regenerate, never hand-edit, never keep a stale copy.
 2. **`CLAUDE.md` + `GEMINI.md`** — write each when missing or not exactly this one line, with nothing else:
 
    ```markdown
@@ -84,7 +84,7 @@ Only when the lint is clean. These are the only bundle writes this skill ever ma
    - open questions go to the journal (`.lvr/journal.ndjson`), never guessed, never silently resolved;
    - follow `CODE_STYLE.md` for every line written;
    - if the plan has a gap, show it immediately with a concrete fix option attached — never smooth it over (anti-yes-man, principle 2);
-   - `.lvr/` is read-only planning state — the builder must not modify it, except appending open questions to `.lvr/journal.ndjson`; the optional `/lvr-build` skill may also set milestone verification and deployment fields.
+   - `.lvr/` is read-only planning state — the builder must not modify it, except appending open questions to `.lvr/journal.ndjson`; the optional `/lvr-build` skill may also set the build status, milestone verification and deployment fields.
 2. **Close** — print, in the user's language: the recommended install lines from `CAPABILITIES.md` (every row's install command with name and license; NC items marked runtime-dependency-only), then the kickoff command for the current harness with the entry prompt as the first input. Kickoff forms: Claude Code `claude "$(cat HANDOFF-PROMPT.md)"` · Gemini CLI `gemini -p "$(cat HANDOFF-PROMPT.md)"` · Codex `codex "$(cat HANDOFF-PROMPT.md)"` · ZCode `zcode "$(cat HANDOFF-PROMPT.md)"` · harness unknown → "open a fresh session in this folder and paste the contents of `HANDOFF-PROMPT.md`".
 3. **Done** — journal `handoff_done` (payload: gaps found, self-fixes applied, entry prompt path) and fill `state.handoff` = `{ "status": "done", "completed_at": <now> }` — one checkpoint. This is the only state-field change the skill ever makes.
    - Script: `LVR journal append --type handoff_done --payload '{…}'` — the script fills `state.handoff` for you.

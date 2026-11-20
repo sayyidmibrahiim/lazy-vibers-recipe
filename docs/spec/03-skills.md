@@ -2,6 +2,8 @@
 
 Skills are plain markdown instruction files (Agent Skills format) living in `skills/lvr-<name>/SKILL.md` in this repo, installed into harnesses via standard installers (see `05-boosters.md`). Per-harness thin adapters are generated from the same source. Each skill also ships `scripts/lvr.mjs` (D8): deterministic steps run there, prose stays as the fallback.
 
+"Scope locked" means the same thing in every contract below: a `scope_locked` journal event **and** S7 `done` (`02-sections.md`, S7).
+
 ## `/lvr-init-new-idea` (v0)
 
 **Precondition**: none — the Folder Gate decides (`01-state.md`).
@@ -25,7 +27,7 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 **Flow**:
 1. Read `.lvr/state.json`. Missing → explain and suggest `/lvr-init-new-idea` (with Folder Gate guidance). Corrupt → rebuild by journal replay, report what was reconstructed.
 2. Print a plain-language progress summary: project name, current Section, answered/total, pending loop-backs, booster status, last activity time.
-3. Offer the right next action: resume interview / answer pending loop-back / finish S9 generation (if scope locked, bundle incomplete) / run handoff (if bundled, handoff open) / suggest `add-feature` or `recheck-plan` (if bundled, handoff done).
+3. Offer the right next action: retry the failed step (if the loaded status is `error`) / resume interview / answer pending loop-back / finish S9 generation (if scope locked, bundle incomplete) / run handoff (if bundled, handoff open) / suggest `build`, `add-feature` or `recheck-plan` (if bundled, handoff done).
 4. Resume the current Section exactly where it stopped (micro-batch boundary).
 
 **Never**: skip ahead of scope lock · re-ask answered questions.
@@ -46,7 +48,7 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 
 ### `/lvr-recheck-plan` (v1, implemented)
 
-**Precondition**: `.lvr/state.json` readable, scope locked (`scope_locked` journal event or S7 done), S1–S9 done, bundle present. Otherwise refuse with guidance to `/lvr-continue`.
+**Precondition**: `.lvr/state.json` readable, scope locked, S1–S9 done, bundle present. Otherwise refuse with guidance to `/lvr-continue`.
 
 **Flow**:
 1. Open: journal `recheck_started`; inventory state, journal, Section Records, all 20 bundle files.
@@ -68,10 +70,10 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 3. Targeted research: only new services, data classes, platform facts, legal constraints; source + date or `unverified`.
 4. Impact analysis: every affected bundle file with exact edit; no new bundle files.
 5. Scope decision: extend milestone, append milestone, or Parking Lot; explicit answer recorded as `D-NNN user_confirmed`.
-6. Apply append-only, one file per turn, `feature_applied` per file; state decision + milestone appended; `blueprint.json` regenerated.
+6. Apply append-only, one file per turn, `feature_applied` per file; state decision + milestone appended; `blueprint.json` regenerated. A parked feature gets a requirements row marked parked, a Parking Lot scope row, and a `USER_FLOWS.md` section marked `(parked — see SCOPE.md)`; no milestone.
 7. Close with `/lvr-recheck-plan` then `/lvr-handoff`.
 
-Post-lock captures live in `.lvr/docs/sections/S4-additions.md`; done Section Records are never mutated.
+Post-lock captures and their decision lines live in `.lvr/docs/sections/S4-additions.md`; done Section Records are never mutated.
 
 **Never**: renumber ids · rewrite history · add bundle files · expand MVP without an explicit answer.
 
@@ -80,15 +82,15 @@ Post-lock captures live in `.lvr/docs/sections/S4-additions.md`; done Section Re
 **Precondition**: state readable, scope locked, S8–S9 done, bundle files (`AGENTS.md`, `MILESTONES.md`, `VERIFICATION.md`, `CODE_STYLE.md`, `SECURITY.md`, `DECISIONS.md`, `HANDOVER.md`) present, milestones non-empty. Handoff not done → warn, continue only on explicit answer.
 
 **Flow**:
-1. Preflight (build-loop §1): ids match, every milestone has a verification procedure, no open blocking recheck finding.
-2. Journal `build_started`; load context in `AGENTS.md` order.
+1. Preflight (build-loop §1): ids match, every milestone has a verification procedure, no open blocking recheck finding. A failed item journals `build_blocked` only (no state field changes) and stops before `build_started`.
+2. Journal `build_started` (`project.status` = `building`); load context in `AGENTS.md` order.
 3. Select the first `state.milestones[]` entry not `verified`; never re-run a verified milestone.
 4. Implement deliverables, run the recorded procedure exactly, capture command/exit code/output.
 5. Pass → append to `VERIFICATION.md`, set `verified` + `verified_at`, journal `milestone_verified`. Fail → one fix attempt, then a fresh-assumption check, then `build_blocked`; two failures maximum.
 6. Deployment milestone → live check, then `state.deployment = { status: "live", url, verified_at }`.
-7. All verified → `build_done`; recommend `/lvr-handoff`, then `/lvr-personal-brand`.
+7. All verified → `build_done` (`project.status` = `complete`); recommend `/lvr-handoff`, then `/lvr-personal-brand`.
 
-`.lvr/` writes are limited to `milestones[].verified`, `verified_at`, `deployment`, and journal appends. Never skip or weaken a verification.
+`.lvr/` writes are limited to `project.status` (`building`/`complete`), `milestones[].verified`, `verified_at`, `deployment`, and journal appends. Never skip or weaken a verification.
 
 ### `/lvr-personal-brand` (v1, implemented)
 
@@ -98,7 +100,7 @@ Post-lock captures live in `.lvr/docs/sections/S4-additions.md`; done Section Re
 
 **Flow**:
 1. Gate: the five checks above, live URL included; a stored `deployment` field alone is never accepted.
-2. Open: journal `brand_started`; load `OVERVIEW.md` → `DECISIONS.md` → `SCOPE.md` → `VERIFICATION.md` → `RESEARCH.md` → `HANDOVER.md` → `state.json`.
+2. Open: journal `brand_started`; load `OVERVIEW.md` → `DECISIONS.md` → `SCOPE.md` → `VERIFICATION.md` → `RESEARCH.md` → `HANDOVER.md` → `state.json`. `SCOPE.md`, `RESEARCH.md` and `HANDOVER.md` are not gated: a missing one is skipped and named in the kit's open questions.
 3. Owner facts: ask only what the bundle cannot answer (display name, role, brand goal, audience priority, tone, links, exclusions). Skipped fact → visible open question, never a guess.
 4. Evidence table: every claim `verified` / owner-approved `(claimed)` / `forbidden`.
 5. Draft one file per turn under `brand/`: `BRAND.md`, `LINKEDIN-PROFILE.md`, `CONTENT-PLAN.md`; journal `brand_file_generated` per file.
@@ -108,7 +110,7 @@ Post-lock captures live in `.lvr/docs/sections/S4-additions.md`; done Section Re
 
 ## Constitution — `lvr-principles.md`
 
-Loaded by every LVR skill before any work. Content (English; skill files keep it verbatim):
+Loaded by every LVR skill before any work. The list below is a summary; the full English text is `skills/lvr-principles.md`, which every skill ships byte-for-byte as `references/principles.md`.
 
 1. **Evidence-first** — claims carry sources and dates; if unverifiable, say so explicitly.
 2. **Anti-yes-man** — if the user's idea has a gap, show it immediately with a concrete fix option. Disagreement is a duty, not a risk.

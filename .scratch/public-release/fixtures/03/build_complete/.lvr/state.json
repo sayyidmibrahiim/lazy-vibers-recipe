@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "project": {
+    "slug": "fx-booking",
+    "name": "Fx Booking",
+    "idea_raw": "futsal booking",
+    "user_language": "id",
+    "created_at": "2026-11-20T10:00:00Z",
+    "status": "complete"
+  },
+  "pipeline": {
+    "current_section": "S9",
+    "sections": {
+      "S0": {
+        "status": "done",
+        "record": "S0-intake.md",
+        "started_at": "2026-11-20T10:00:00Z",
+        "completed_at": "2026-11-20T10:00:00Z",
+        "answers": {
+          "S0.q1": {
+            "q": "Idea?",
+            "a": "futsal booking",
+            "skipped": false
+          }
+        }
+      },
+      "S1": {
+        "status": "done",
+        "record": "S1-rec.md",
+        "started_at": "2026-11-20T10:00:00Z",
+        "completed_at": "2026-11-20T10:00:00Z",
+        "answers": {}
+      },
+      "S2": {
+        "status": "done",
+        "record": "S2-rec.md",
+        "started_at": "2026-11-20T10:00:00Z",
+        "completed_at": "2026-11-20T10:00:00Z",
+        "answers": {}
+      },
+      "S3": {
+        "status": "done",
+        "record": "S3-rec.md",
+        "started_at": "2026-11-20T10:00:00Z",
+        "completed_at": "2026-11-20T10:00:00Z",
+        "answers": {}
+      },
+      "S4": {
+        "status": "done",
+        "record": "S4-rec.md",
+        "started_at": "2026-11-20T10:00:00Z",
+        "completed_at": "2026-11-20T10:00:00Z",
+        "answers": {}
+      },
+      "S5": {
+        "status": "done",
+        "record": "S5-rec.md",
+        "started_at": "2026-11-20T10:00:00Z",
+        "completed_at": "2026-11-20T10:00:00Z",
+        "answers": {}
+      },
+      "S6": {
+        "status": "done",
+        "record": "S6-rec.md",
+        "started_at": "2026-11-20T10:00:00Z",
+        "completed_at": "2026-11-20T10:00:00Z",
+        "answers": {}
+      },
+      "S7": {
+        "status": "done",
+        "record": "S7-rec.md",
+        "started_at": "2026-11-20T10:00:00Z",
+        "completed_at": "2026-11-20T10:00:00Z",
+        "answers": {}
+      },
+      "S8": {
+        "status": "done",
+        "record": "S8-rec.md",
+        "started_at": "2026-11-20T10:00:00Z",
+        "completed_at": "2026-11-20T10:00:00Z",
+        "answers": {}
+      },
+      "S9": {
+        "status": "done",
+        "record": "S9-rec.md",
+        "started_at": "2026-11-20T10:00:00Z",
+        "completed_at": "2026-11-20T10:00:00Z"
+      }
+    },
+    "loop_backs": []
+  },
+  "decisions": [],
+  "boosters": {
+    "core": [],
+    "enhancer": []
+  },
+  "model_profile": {
+    "tier": "T1",
+    "probe": "passed",
+    "declared_at": "2026-11-20T10:00:00Z"
+  },
+  "milestones": [
+    {
+      "id": "M0",
+      "goal": "skeleton",
+      "features": [
+        "F-01"
+      ],
+      "verified": true,
+      "verified_at": "2026-11-20T10:00:00Z"
+    }
+  ],
+  "deployment": {
+    "status": "live",
+    "url": "https://fx.example",
+    "verified_at": "2026-11-20T10:00:00Z"
+  },
+  "handoff": null
+}

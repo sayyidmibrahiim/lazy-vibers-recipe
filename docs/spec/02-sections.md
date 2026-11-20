@@ -65,8 +65,10 @@ Each Section has: **purpose**, **question strategy**, **booster routing**, **out
 ## S7 — Scope lock
 
 - Purpose: freeze MVP. Every feature F-01… → `in-MVP` or `parking-lot`. Parking lot is recorded, never deleted.
-- Output: `S7-scope.md`; becomes `SCOPE.md`. Journal: `scope_locked`.
-- Exit: user explicitly confirms the MVP list; status → `review`.
+- Status: `project.status` → `review` at Section start (`section_start` S7).
+- Output: `S7-scope.md`; becomes `SCOPE.md`. Journal: `scope_locked` at the explicit confirmation.
+- Exit: user explicitly confirms the MVP list.
+- **Scope locked** (one definition, used by every skill): a `scope_locked` event exists in the journal **and** `pipeline.sections.S7.status` = `done`. Either fact alone is not a lock: the event precedes the record checkpoint, and an S7 closed without the event never had its explicit confirmation.
 
 ## S8 — Milestone plan
 
@@ -83,6 +85,6 @@ Each Section has: **purpose**, **question strategy**, **booster routing**, **out
 - Mechanics: see compilation order in `04-bundle.md`. Every generated file → `doc_generated` + checkpoint.
 - Exit: all bundle files exist and pass the internal consistency check (same stack names, same entity names, no contradictions with `decisions[]`).
 
-## S10 — Build (out of v0)
+## S10 — Build (optional)
 
-Not executed by v0. The bundle must be sufficient for any builder: `/lvr-handoff` produces the entry prompt; MILESTONES.md + VERIFICATION.md drive the loop. An optional `/lvr-build` skill (v1) may execute it; the pipeline never *requires* it.
+Not an interview Section. The bundle must be sufficient for any builder: `/lvr-handoff` produces the entry prompt; MILESTONES.md + VERIFICATION.md drive the loop. The optional `/lvr-build` skill executes it; the pipeline never *requires* it. S10 has no section entry and no `current_section` pointer (that stays `S9`); its progress is `project.status` (`building`, `complete`) plus `milestones[].verified`.

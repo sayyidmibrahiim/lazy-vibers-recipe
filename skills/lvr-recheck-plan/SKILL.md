@@ -34,7 +34,7 @@ Before any check or file write:
 `TARGET` = cwd (or the folder the user named). Run in order; the first failure stops with plain guidance. Nothing is written on a refusal.
 
 1. **Project exists** — `TARGET/.lvr/state.json` exists and parses. Missing → "There is no LVR project here. Run `/lvr-init-new-idea` in an empty folder, or `/lvr-continue` in the folder that holds it." Unreadable → "This project's state file is damaged. Run `/lvr-continue` first — it rebuilds the state from the journal — then run `/lvr-recheck-plan` again."
-2. **Scope locked** — scope is locked iff the journal holds `scope_locked` or `pipeline.sections.S7.status` = "done". Not locked → "The scope is not locked yet. Run `/lvr-continue` to finish the pipeline up to S7."
+2. **Scope locked** — per the conventions §5 definition: the journal holds `scope_locked` **and** `pipeline.sections.S7.status` = "done". Not locked → "The scope is not locked yet. Run `/lvr-continue` to finish the pipeline up to S7."
 3. **Pipeline complete through S9** — every Section S1–S9 has `status` "done". Any other status → name each unfinished Section with its purpose (conventions §5) and say: "The bundle does not exist yet. Run `/lvr-continue` — it resumes at Section `<S>` — then recheck."
 4. **Bundle present** — at least `AGENTS.md` and `blueprint.json` exist in `TARGET`. Missing → "S9 is marked done but the bundle is missing. Run `/lvr-continue` to finish S9 (it skips files already on disk), then recheck."
 
@@ -137,7 +137,7 @@ Two classes, never mixed:
 
 - **Mechanical** — apply now, one file per turn, journal `recheck_fix_applied` (payload: finding id, file, change) + state write. Examples: missing mirror row, missing access date where the source exists, renamed entity drift, stale `blueprint.json`, broken pointer, count mismatch, missing stub.
 - **User decision** — ask one plain question per finding, with the concrete options and the consequence of each. On an explicit answer: record `D-NNN` in `decisions[]` with `status: "user_confirmed"` and the rationale, apply the change, journal `recheck_fix_applied`. A skip or "later" keeps the finding **open**; never convert an open blocking finding into `assumed` silence.
-- **`blueprint.json`** — derived; regenerate it from `state.json` + bundle per spec 04 whenever R3.9/R2.6 finds drift. Never hand-edit.
+- **`blueprint.json`** — derived; regenerate it from `state.json` + bundle in the existing file's schema v1 shape (the full schema is in the `lvr-handoff` skill's lint checklist, group H) whenever R3.9/R2.6 finds drift. Never hand-edit.
 - **Bundle scope rows** — never delete a Parking Lot row. A scope change is always a user-decision finding recorded as a decision.
 
 If the user declines every fix, stop fixing, keep the findings open, and still close the run with an honest report.
@@ -155,7 +155,7 @@ Script: `LVR journal append --type recheck_done --payload '{…}'`
 
 ## Journal events added by this skill
 
-Append to conventions §3 when this skill ships: `recheck_started`, `recheck_finding`, `recheck_research_refresh`, `recheck_fix_applied`, `recheck_done`. Payloads are named above. All other events keep their v0 meaning.
+Listed in conventions §3: `recheck_started`, `recheck_finding`, `recheck_research_refresh`, `recheck_fix_applied`, `recheck_done`. Payloads are named above. All other events keep their conventions §3 meaning.
 
 ## Idempotency
 

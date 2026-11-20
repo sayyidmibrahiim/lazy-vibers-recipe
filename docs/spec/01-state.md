@@ -12,7 +12,8 @@ All paths are relative to the **project folder** (created by `/lvr-init-new-idea
 │   ├── docs/
 │   │   └── sections/       section records: S0-intake.md, S1-context.md, ...
 │   └── recheck/            recheck reports: RECHECK-<date>.md (audit artifacts)
-├── (after handoff: bundle files + builder code live here)
+├── (after S9: bundle files + builder code live here)
+├── HANDOFF-PROMPT.md       builder entry prompt from /lvr-handoff (side artifact, never part of the bundle)
 └── brand/                  personal-brand kit from /lvr-personal-brand (never part of the bundle)
 ```
 
@@ -36,7 +37,7 @@ All paths are relative to the **project folder** (created by `/lvr-init-new-idea
     "sections": {
       "S0": { "status": "done", "record": "S0-intake.md",
               "started_at": "...", "completed_at": "...",
-              "answers": { "q1": { "q": "...", "a": "...", "skipped": false } } },
+              "answers": { "S0.q1": { "q": "...", "a": "...", "skipped": false } } },
       "S1": { "status": "in_progress" }  // pending | in_progress | done | blocked
     },
     "loop_backs": [
@@ -74,17 +75,26 @@ All paths are relative to the **project folder** (created by `/lvr-init-new-idea
 
 ### Project status enum
 
-`interview` → `researching` (S5–S6) → `review` (S7–S8) → `bundled` (S9 done) → `building` (builder active) → `complete` · `error` (with `error` entry in journal; recoverable via `/lvr-continue`).
+`interview` → `researching` (S5–S6) → `review` (S7 start until S9 done) → `bundled` (S9 done) → `building` (builder active) → `complete` · `error` (with `error` entry in journal; recoverable via `/lvr-continue`).
+
+Who sets it: S0 start → `interview`; `section_start` S5 → `researching`; `section_start` S7 → `review`; `section_done` S9 → `bundled`; `/lvr-build` writes `building` at `build_started` and `complete` at `build_done` (a later `build_started`, e.g. after `/lvr-add-feature` appended a milestone, sets `building` again).
+
+**`error`.** Any skill journals `error` (payload: `skill`, `step`, plain `message`) when an unrecoverable failure stops its run with work half-done — a file it cannot write, a tool that crashes mid-step. Not for refusals (nothing was written), probe failures (`capability_probe_failed`), build failures (`milestone_failed`, `build_blocked`), or context pressure (`context_guard_triggered`). The `error` checkpoint sets `project.status` = `error` and remembers the status before it. The next opening event of any skill run (`resume`, which every `/lvr-continue` run appends, or `session_start`, `handoff_started`, `recheck_started`, `feature_started`, `brand_started`), or the next `section_start`, `section_done`, `section_blocked` or `answer_recorded`, restores that status before applying its own effect. `/lvr-continue` decides its "retry the failed step" offer from the status it loaded, before its own `resume`.
+
+### Section pointer and status
+
+- `current_section` = the first Section in S0…S9 order that is not `done`; once S9 is `done` it stays `"S9"`. S10 (build) is tracked by `project.status` (`building`/`complete`), never by `current_section`. A disagreement is repaired by `/lvr-continue` (section statuses win).
+- Section status `blocked`: the user moved on with exit criteria unmet. Journal `section_blocked` (payload: `section`, `unmet` — the list of unmet criteria); the unmet criteria are also written into the Section Record. `current_section` stays on the blocked Section, and it resumes like an `in_progress` one; on a later pass it closes with `section_done`.
 
 ### ID conventions
 
-Questions `S<NN>.q<NN>` · Decisions `D-001…` · Milestones `M0, M1, …` · Loop-backs `L-01…`
+Questions `S<n>.q<n>`, unpadded (`S1.q9`, `S1.q10`) · Features `F-01…` · Decisions `D-001…` · Milestones `M0, M1, …` · Loop-backs `L-01…`
 
 ## `journal.ndjson` event types
 
 Each line: `{"ts": "...", "seq": 1, "type": "...", "payload": { ... }}`
 
-`session_start` · `folder_gate_passed|folder_gate_rejected|folder_gate_subfolder_created` · `tier_declared` · `capability_probe_passed|failed` · `context_guard_triggered` · `truncation_recovered` · `tier_changed` · `booster_check` · `booster_install_ok|failed` · `booster_choice` (user decision on failure) · `section_start|section_done` · `answer_recorded` · `loop_back_opened|closed` · `scope_locked` · `doc_generated` · `handoff_started|gap_found|handoff_done` · `recheck_started|recheck_finding|recheck_research_refresh|recheck_fix_applied|recheck_done` · `feature_started|feature_captured|feature_research|impact_analysis|feature_scope_decision|feature_applied|feature_done` · `build_started|milestone_started|milestone_verified|milestone_failed|build_blocked|deployment_verified|build_done` · `error` · `resume`
+`session_start` · `folder_gate_passed|folder_gate_rejected|folder_gate_subfolder_created` · `tier_declared` · `capability_probe_passed|failed` · `context_guard_triggered` · `truncation_recovered` · `tier_changed` · `booster_check` · `booster_install_ok|failed` · `booster_choice` (user decision on failure) · `section_start|section_done|section_blocked` · `answer_recorded` · `loop_back_opened|closed` · `scope_locked` · `doc_generated` · `handoff_started|gap_found|handoff_done` · `recheck_started|recheck_finding|recheck_research_refresh|recheck_fix_applied|recheck_done` · `feature_started|feature_captured|feature_research|impact_analysis|feature_scope_decision|feature_applied|feature_done` · `build_started|milestone_started|milestone_verified|milestone_failed|build_blocked|deployment_verified|build_done` · `brand_started|brand_file_generated|brand_done` · `error` · `resume`
 
 Rules: append-only; never rewrite; every state mutation emits at least one event; `answer_recorded` fires **per answer** (checkpoint granularity). Its payload is `{ "section", "answer_id", "q", "a", "skipped" }` — `q` is the question text exactly as asked, `a` the user's verbatim answer, both in User Language; `a` is null when the answer was skipped. Legacy payloads carrying only `{ "section", "answer_id", "skipped" }` remain replayable — rebuilds fold q/a from the Section Record when the payload has no text.
 
@@ -103,7 +113,9 @@ Payloads stay free-form objects. `scripts/lvr.mjs` additionally understands thes
 - Exit code 3: the event was journaled (`journaled_seq`) or blocked but `state.json` was not checkpointed; the envelope is `ok:false` with `error.code` and `error.details.hint`.
 - `booster_check` from the registry maps registry tier `conditional`/`reference` to state tier `enhancer`.
 
-A rebuild prefers payload data over disk derivation; the Section Records, `OVERVIEW.md`, `DECISIONS.md` and `CAPABILITIES.md` fill only what the events did not carry, and only for unstamped events.
+A rebuild prefers payload data over disk derivation; the Section Records, `OVERVIEW.md`, `DECISIONS.md` and `CAPABILITIES.md` fill only what the events did not carry, and only for unstamped events. For a journal that is not script-only, milestones the events did not carry come from `MILESTONES.md` when the bundle has it (it also holds the milestones `/lvr-add-feature` appended after the lock), then from the S8 record; a `milestone_verified` whose milestone comes from disk is applied after that. Decisions come from `DECISIONS.md` when it exists, else from the Section Records' decision lines, plus the post-lock decision lines in `S4-additions.md` (section `S4`) that neither holds yet.
+
+Every event type above is replayable: an event with no state effect (for example `folder_gate_rejected`, `impact_analysis`, `brand_*`) is informational, never "untranslatable".
 
 ## Section records
 

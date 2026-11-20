@@ -6,13 +6,13 @@ Companion to `/lvr-build`. The bundle is the contract; the build loop is the pro
 
 Before the first milestone:
 
-- [ ] `state.json` parses; `pipeline.sections.S8` and `S9` are done; scope is locked.
+- [ ] `state.json` parses; `pipeline.sections.S8` and `S9` are done; scope is locked (conventions §5: `scope_locked` event and S7 done).
 - [ ] Every entry of `state.milestones[]` has an id that also exists in `MILESTONES.md`.
 - [ ] Every milestone in `MILESTONES.md` has a matching procedure in `VERIFICATION.md`.
 - [ ] `AGENTS.md`, `DECISIONS.md`, `CODE_STYLE.md`, `SECURITY.md`, and `HANDOVER.md` exist and are non-empty.
 - [ ] No open blocking finding from the latest `.lvr/recheck/RECHECK-*.md`.
 
-A failed preflight item is a `build_blocked` with the owning skill named. Do not start coding around a broken plan.
+A failed preflight item is a `build_blocked` with the owning skill named, journaled before any `build_started` (no state field changes). Do not start coding around a broken plan.
 
 ## 2. Milestone selection
 
@@ -35,7 +35,7 @@ For the selected milestone:
    - timestamp.
 5. Compare with the expected output. A partial match, a skipped assertion, or "it probably works" is a failure.
 
-If the recorded procedure is wrong or impossible (for example the command does not exist on this stack), do not invent a replacement. Mark the milestone `blocked`, report the procedure defect, and recommend `/lvr-recheck-plan` (R3.3) — a wrong verification is a bundle finding, not a build decision.
+If the recorded procedure is wrong or impossible (for example the command does not exist on this stack), do not invent a replacement. Report the milestone as blocked (journal `build_blocked`; it keeps `verified: false` — milestones have no blocked field), report the procedure defect, and recommend `/lvr-recheck-plan` (R3.3) — a wrong verification is a bundle finding, not a build decision.
 
 ## 4. Failure ladder
 
@@ -81,4 +81,4 @@ The milestone that deploys the product ends with a live check:
 - The verification command is part of the contract; changing it to pass is a failure.
 - Test fixtures may be added; assertions and expected outputs may not be weakened.
 - A green build with a modified verification procedure is worse than a red build with the original procedure.
-- `.lvr/` writes are limited to `milestones[].verified`, `verified_at`, `deployment`, and journal appends. Everything else is read-only.
+- `.lvr/` writes are limited to `project.status` (`building` at `build_started`, `complete` at `build_done`), `milestones[].verified`, `verified_at`, `deployment`, and journal appends. Everything else is read-only.

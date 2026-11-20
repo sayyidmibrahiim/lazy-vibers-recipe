@@ -1,8 +1,8 @@
 # LVR Conventions
 
-Canonical source: `docs/spec/*` in the LVR repository. This file is the packaged snapshot for installed skills; drift is checked at dogfood.
+Canonical source: `docs/spec/*` in the LVR repository. This file is the packaged snapshot for installed skills: every skill ships it byte-for-byte as `references/conventions.md` (`npm run check:skills` guards the copies; drift against `docs/spec` is a review item).
 
-schema_version: 1 · date: 2026-11-08
+schema_version: 1 · date: 2026-11-20
 
 Companion file: `lvr-principles.md` — the Constitution, loaded before any LVR work. The Conductor (the model running the pipeline) applies the rules below.
 
@@ -18,7 +18,8 @@ One folder = one idea = one product. Never mix two ideas or two products in one 
 │   ├── docs/
 │   │   └── sections/     Section Records: S0-intake.md, S1-context.md, ...
 │   └── recheck/          Recheck reports: RECHECK-<date>.md (audit artifacts)
-├── (after Handoff: Blueprint Bundle files + builder code live here)
+├── (after S9: Blueprint Bundle files + builder code live here)
+├── HANDOFF-PROMPT.md     Builder entry prompt from /lvr-handoff (side artifact, never part of the bundle)
 └── brand/                Personal-brand kit from /lvr-personal-brand (never part of the bundle)
 ```
 
@@ -45,7 +46,7 @@ One folder = one idea = one product. Never mix two ideas or two products in one 
       "S1": { "status": "in_progress" }
     },
     "loop_backs": [
-      { "id": "L-01", "from": "S6", "to": "S2", "reason": "research found cost conflict",
+      { "id": "L-01", "from": "S6", "to": "S3", "reason": "research found cost conflict",
         "opened_at": "...", "resolved_at": null }
     ]
   },
@@ -59,7 +60,7 @@ One folder = one idea = one product. Never mix two ideas or two products in one 
                 "license": "MIT", "tier": "core", "status": "installed" } ],
     "enhancer": []
   },
-  "model_profile": { "tier": "T1", "probe": "passed", "declared_at": "..." },
+  "model_profile": { "tier": "T1", "probe": "skipped", "declared_at": "..." },
   "milestones": [
     { "id": "M0", "goal": "...", "features": ["F-01"],
       "verified": false, "verified_at": null }
@@ -72,7 +73,8 @@ One folder = one idea = one product. Never mix two ideas or two products in one 
 Field notes:
 
 - `project.slug`: kebab-case, used as the folder name. `project.name`: display name, locked at S1 (may still change at the S9 branding step). `idea_raw`: verbatim user input in User Language. `user_language`: detected at S0, user-correctable.
-- `pipeline.sections`: one entry per Section with `status`, `record`, timestamps, and recorded answers. Section status enum: `pending | in_progress | done | blocked`.
+- `pipeline.current_section`: the first Section in S0…S9 order that is not `done`; it stays "S9" once S9 is done. S10 (build) is tracked by `project.status` (`building`/`complete`), never by `current_section`. Section statuses win when they disagree (/lvr-continue repairs the pointer).
+- `pipeline.sections`: one entry per Section with `status`, `record`, timestamps, and recorded answers. Section status enum: `pending | in_progress | done | blocked`. `blocked` = the user moved on with exit criteria unmet: journal `section_blocked` (payload: `section`, `unmet` list), the unmet criteria also go into the Section Record, `current_section` stays on it, and it resumes like `in_progress`.
 - `answers[].q` is stored exactly as asked, in User Language; the English summary lives in the Section Record.
 - `pipeline.loop_backs`: open Feasibility Loop entries (S6); `resolved_at` is set when the entry closes.
 - `decisions[].status`: `user_confirmed | assumed | designer_filled`. `assumed` = asked, user skipped or deferred. `designer_filled` = never surfaced — the user couldn't have known to ask. Both `assumed` and `designer_filled` decisions are also listed in ASSUMPTIONS.md.
@@ -80,9 +82,11 @@ Field notes:
 - `model_profile.tier`: `T1 | T2 | T3` — behavior rules in section 7.
 - `milestones`: top-level only — filled at S8, one entry per milestone; never mirrored under `pipeline`. `/lvr-build` sets `verified` + `verified_at`. `deployment`: written by `/lvr-build` when the live check passes. `handoff`: filled by /lvr-handoff.
 
-Project status enum: `interview` → `researching` (S5–S6) → `review` (S7–S8) → `bundled` (S9 done) → `building` → `complete`; `error` can occur at any point (recoverable via /lvr-continue, with an `error` event in the Journal).
+Project status enum: `interview` → `researching` (S5–S6) → `review` (S7 start until S9 done) → `bundled` (S9 done) → `building` → `complete`; `error` can occur at any point (recoverable via /lvr-continue, with an `error` event in the Journal). Who sets it: S5 `section_start` → `researching`; S7 `section_start` → `review`; S9 `section_done` → `bundled`; /lvr-build `build_started` → `building`, `build_done` → `complete`.
 
-ID conventions: questions `S<NN>.q<NN>` · features `F-01…` · decisions `D-001…` · milestones `M0, M1, …` · loop-backs `L-01…`.
+`error`: any skill journals `error` (payload: `skill`, `step`, plain `message`) when an unrecoverable failure stops its run with work half-done (a file it cannot write, a tool that crashes mid-step) — never for a refusal, a failed probe, a failed milestone, or context pressure (those have their own events). It sets `project.status` = "error" and remembers the previous status; the next skill run's opening event (`resume` — every /lvr-continue run appends one — or `session_start`, `handoff_started`, `recheck_started`, `feature_started`, `brand_started`), or the next `section_start`, `section_done`, `section_blocked` or `answer_recorded`, restores it. /lvr-continue offers the retry from the status it loaded, before its own `resume`.
+
+ID conventions: questions `S<n>.q<n>`, unpadded (`S1.q9`) · features `F-01…` · decisions `D-001…` · milestones `M0, M1, …` · loop-backs `L-01…`.
 
 ## 3. Journal (`journal.ndjson`)
 
@@ -94,7 +98,9 @@ Append-only; never rewritten. Every state mutation emits at least one event; `an
 
 Event types: `session_start`, `folder_gate_passed`, `folder_gate_rejected`, `folder_gate_subfolder_created`, `tier_declared`, `capability_probe_passed`, `capability_probe_failed`, `context_guard_triggered`, `truncation_recovered`, `tier_changed`, `booster_check`, `booster_install_ok`, `booster_install_failed`, `booster_choice`, `section_start`, `section_done`, `section_blocked`, `answer_recorded`, `loop_back_opened`, `loop_back_closed`, `scope_locked`, `doc_generated`, `handoff_started`, `gap_found`, `handoff_done`, `recheck_started`, `recheck_finding`, `recheck_research_refresh`, `recheck_fix_applied`, `recheck_done`, `feature_started`, `feature_captured`, `feature_research`, `impact_analysis`, `feature_scope_decision`, `feature_applied`, `feature_done`, `build_started`, `milestone_started`, `milestone_verified`, `milestone_failed`, `build_blocked`, `deployment_verified`, `build_done`, `brand_started`, `brand_file_generated`, `brand_done`, `error`, `resume`.
 
-Payload extensions: any event may also carry `project` as an object (`slug`, `name`, `idea_raw`, `user_language`; a string `project` is just the project slug and is ignored), `decisions[]` and `milestones[]`, which the state transition folds into `state.json`; `section_done` carries `record`, `booster_check` may carry `license` and `tier`, `milestone_verified` carries `verified_at`, `deployment_verified` carries `url`. A rebuild prefers payload data over disk derivation (spec 01, "Payload extensions").
+Every event type is replayable; types with no state effect (`folder_gate_rejected`, `impact_analysis`, `brand_*`, …) are informational.
+
+Payload extensions: any event may also carry `project` as an object (`slug`, `name`, `idea_raw`, `user_language`; a string `project` is just the project slug and is ignored), `decisions[]` and `milestones[]`, which the state transition folds into `state.json`; `section_done` carries `record`, `booster_check` may carry `license` and `tier`, `milestone_verified` carries `verified_at`, `deployment_verified` carries `url`. A rebuild prefers payload data over disk derivation. What events did not carry comes from disk: milestones from `MILESTONES.md` when the bundle exists (it also holds post-lock milestones), else the S8 record; decisions from `DECISIONS.md` (else the Section Records) plus the decision lines in `S4-additions.md`.
 
 ## 4. Language rules
 
@@ -118,14 +124,16 @@ Sections run strictly in order, except loop-backs opened by the Feasibility Loop
 | S4 Features | Feature expectations in detail, iteratively until the user says "enough" | `S4-fitur.md` | `SPEC/requirements.md`, `USER_FLOWS.md` |
 | S5 Deep research | Competitor scan, stack candidates with reasons, cost table, regional availability | `S5-research.md` | `RESEARCH.md` |
 | S6 Feasibility Loop | Confront research findings with answers; open conflicts, risks, cost surprises | risks appended to `S5-research.md` | risk list in `RESEARCH.md`; accepted risks become decisions |
-| S7 Scope lock | Freeze the MVP: every feature → `in-MVP` or Parking Lot (recorded, never deleted) | `S7-scope.md` | `SCOPE.md` |
+| S7 Scope lock | Freeze the MVP: every feature → `in-MVP` or Parking Lot (recorded, never deleted); `project.status` → `review` at Section start | `S7-scope.md` | `SCOPE.md` |
 | S8 Milestone plan | Break the MVP into M0…Mn, each independently verifiable | `S8-milestones.md` | `MILESTONES.md`, `VERIFICATION.md` |
 | S9 Compile | Compile Section Records + decisions + milestones into the Blueprint Bundle | (bundle files) | all bundle files (section 8) |
-| S10 Build | Out of v0 scope; the bundle must be sufficient for any builder | — | — |
+| S10 Build | Optional (/lvr-build); not an interview Section — no section entry, no `current_section` pointer; progress is `project.status` + `milestones[].verified`; the bundle must be sufficient for any builder | — | — |
 
 Hard rules: if the chosen platform needs a paid account the user lacks, surface it during S2 with the price (do not defer it to research); any blocking risk in S6 makes a loop-back mandatory; scope lock is mandatory before S8; every Acceptance Criterion from S8 must be machine-checkable or scripted (never "looks good").
 
-Post-lock additions: `/lvr-add-feature` records captures in `.lvr/docs/sections/S4-additions.md` (append-only) and edits the bundle directly; done Section Records are never mutated, and S9 does not compile the additions file.
+**Scope locked** — one definition for every skill: a `scope_locked` event exists in the Journal **and** `pipeline.sections.S7.status` = "done". Either fact alone is not a lock (the event precedes the S7 record checkpoint; an S7 closed without the event never had its explicit confirmation). There is no state field for it; derive it every time (script: `scope_locked_seq` from `journal check` plus the S7 status).
+
+Post-lock additions: `/lvr-add-feature` records captures and their decision lines (`- **D-NNN** summary — rationale · status: …`) in `.lvr/docs/sections/S4-additions.md` (append-only) and edits the bundle directly; done Section Records are never mutated, and S9 does not compile the additions file. A parked feature still gets a requirements row marked parked, a Parking Lot row, and a `USER_FLOWS.md` section marked `(parked — see SCOPE.md)`; no milestone.
 
 ## 6. Folder Gate
 
@@ -165,7 +173,7 @@ Context guard (input side): watch for repeated instruction-following failures, f
 
 Truncation self-recovery (output side): detect `finishReason=length`, a mid-sentence cutoff, or a missing required section of a file. Recover by append-continue: reload the last complete block from the file on disk, continue exactly from there with no repetition, and append; repeat until the file's required structure is complete. Checkpoint `truncation_recovered` after every successful append. Never regenerate from scratch what can be continued; never save a truncated file as complete.
 
-Cross-model resume: on /lvr-continue, a tier change compared to `model_profile.tier` → journal `tier_changed`, re-apply this section's rules for the new tier, and warn the user when downgrading (probe re-runs). Any model finishes what any model started.
+Cross-model resume: on /lvr-continue, a tier change compared to `model_profile.tier` → journal `tier_changed`, re-apply this section's rules for the new tier, and warn the user when downgrading (probe re-runs). An upgrade keeps an earlier `passed` probe; a change that lands on T2/T3 while `model_profile.probe` is not `passed` runs the probe as well. Any model finishes what any model started.
 
 ## 8. Blueprint Bundle file list
 

@@ -1,5 +1,7 @@
 # Handoff: Grilling G1/G3 — ticket 16 (lazy-vibers-planner)
 
+> Archived 2026-11-20 (ticket 03): stale. Ticket 16 closed 11/11 (commit 67c3897 resolved G1/G3: `answer_recorded` carries q/a, the `DECISIONS.md` mirror is named). Kept for history only; nothing in the product depends on it.
+
 Peranmu sesi ini: **griller**, bukan executor. Keputusan produk = milik owner; tugasmu memaksa dia memilih dengan sadar, bukan mengiyakan.
 
 ## Konteks cepat

@@ -18,3 +18,6 @@ Source: research/K (continue + cross-skill rows).
 - [ ] `replay` handles every one of them.
 - [ ] An idempotent migration v1 → v2 for existing `.lvr/`/`.lvp/` projects.
 Verify: replay = live state on fixtures for every event; the v1 fixture migrates cleanly.
+
+## Comments
+- From ticket 03 (V-05): `error` is defined in conventions §2/spec 01, but no SKILL.md says when its own run journals it. Add it with the event-ownership work. See `runs/03-verify.md`.
