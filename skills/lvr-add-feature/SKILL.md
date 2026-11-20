@@ -17,6 +17,7 @@ Before any check, question, or file write:
 2. Read `references/conventions.md` (the operational manual): state schema, journal events, Section map, bundle list.
 3. Read `references/feature-capture.md`: the mandatory capture form, targeted-research rules, impact matrix, and append templates.
 4. Interact in `state.project.user_language`. Artifacts and stored values stay English.
+5. **Script helper (preferred when Node is available).** This skill ships `scripts/lvr.mjs` (Node ≥22, nothing to install). `<skill-dir>` = the folder holding this SKILL.md (use the base directory the harness reports; otherwise look for `lvr-<this-skill>/scripts/lvr.mjs` in the skills directories listed in INSTALL.md). Once per session run `node "<skill-dir>/scripts/lvr.mjs" version`. If it prints JSON with `"lvr_schema":1`, run the `Script:` command given at each step below (`LVR` = `node "<skill-dir>/scripts/lvr.mjs" --dir "<PROJECT_DIR>"`) and act on its JSON. If `node` is missing, the command cannot start, or `lvr_schema` differs, say once (English source): "Node.js is not available here, so I'll do the bookkeeping by hand." Then follow each step's prose — the prose is the fallback and stays authoritative for behavior. Never hand-edit `.lvr/` files to work around a script error (`"ok":false`): report its `code` plainly and stop that step. On any non-zero exit (`"ok":false`) stop the step, show the error and follow `error.details.hint`; exit code 3 means the event was journaled (`journaled_seq`) or blocked but `state.json` was NOT updated (`STATE_LAGS`, `STATE_MISSING`, `STATE_INVALID`, `STATE_SEQ_UNKNOWN`, `JOURNAL_BEHIND_STATE`): do not continue the interview, run `/lvr-continue` (its Step 2 maps each code to the exact command). Pass long text through `--in -` with a quoted heredoc (`<<'EOF'`) or a PowerShell here-string (`@'…'@ |`), never inline in double quotes.
 
 ## Flow at a glance
 
@@ -41,6 +42,8 @@ Before any check, question, or file write:
 
 ## Step 2 — Open and locate ids
 
+Script: `LVR journal append --type feature_started --payload '{"request":"<verbatim>"}'`
+
 1. Journal `feature_started` (payload: request verbatim) + a state write (no field change). One checkpoint.
 2. Load state, journal, the S4/S7/S8 records and their additions record, `SPEC/requirements.md`, `SCOPE.md`, `MILESTONES.md`, `blueprint.json`.
 3. Derive ids from the files on disk, never from memory:
@@ -51,6 +54,8 @@ Before any check, question, or file write:
 
 ## Step 3 — Capture
 
+Script: `LVR journal append --type feature_captured --payload '{"id":"F-NN","name":"…","priority":"…"}'`
+
 Follow `references/feature-capture.md` §1. Micro-batches by tier (T1 ≤3, T2 ≤2, T3 =1), every turn in the user's language, skip and enough controls visible.
 
 Required before moving on: verbatim request, English display name, named user, complete click-by-click happy path, failure cases the user cares about, priority confirmed aloud, scope proposal. A missing script or priority blocks the capture; do not fill it with a guess.
@@ -59,11 +64,15 @@ Record the whole capture in `.lvr/docs/sections/S4-additions.md` (append-only, t
 
 ## Step 4 — Targeted research
 
+Script: `LVR journal append --type feature_research --payload '{…}'`
+
 Follow `references/feature-capture.md` §2. Reuse evidenced rows from `RESEARCH.md`; research only the new service, data class, platform capability, or legal constraint this feature introduces.
 
 Every new claim carries source URL + access date, or an explicit `unverified` flag. No web access → say so loudly and keep claims `unverified`. Journal `feature_research` (payload: claims added, sources, unverified count). One checkpoint.
 
 ## Step 5 — Impact analysis
+
+Script: `LVR journal append --type impact_analysis --payload '{"files":[…]}'`
 
 Walk the matrix in `references/feature-capture.md` §3, row by row. Output a table:
 
@@ -80,6 +89,8 @@ Rules:
 
 ## Step 6 — Scope decision
 
+Script: `LVR decision record --event feature_scope_decision --payload '{"feature":"F-NN","scope":"…"}' --decision '{"section":"S4","summary":"…","rationale":"…","status":"user_confirmed"}'`
+
 Present the scope proposal in plain language with three options and consequences:
 
 1. **Extend current milestone** — only when the feature fits the milestone's one-session size and shares its flow.
@@ -89,6 +100,8 @@ Present the scope proposal in plain language with three options and consequences
 The user's explicit choice is recorded as the next `D-NNN` (`section: "S4"`, `user_confirmed`, rationale = the choice and why). A skip or "later" is not a scope decision: keep the capture and stop before applying bundle edits, reporting the open feature. Journal `feature_scope_decision` (payload: F-NN, choice, D-NNN). One checkpoint.
 
 ## Step 7 — Apply
+
+Script: `LVR journal append --type feature_applied --payload '{"feature":"F-NN","file":"…","action":"…"}'`; when a milestone is appended add `"milestones":[{"id":"M<n>","goal":"…","features":["F-NN"]}]` to that payload.
 
 Apply the impact table, one file per turn, append-only unless the row is a required edit:
 
@@ -108,6 +121,8 @@ Apply the impact table, one file per turn, append-only unless the row is a requi
 After each file: journal `feature_applied` (payload: F-NN, file, action) + state write. One checkpoint per file.
 
 ## Step 8 — Close
+
+Script: `LVR journal append --type feature_done --payload '{…}'`
 
 1. Re-read the touched files and check the matrix is fully applied: every `edit`/`append` row has evidence. A half-applied feature is a failure, not a checkpoint.
 2. Journal `feature_done` (payload: F-NN, scope, files touched, D-NNN, M-id or none). One checkpoint.

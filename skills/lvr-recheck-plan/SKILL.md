@@ -17,6 +17,7 @@ Before any check or file write:
 2. Read `references/conventions.md` (the operational manual). It owns the state schema, journal events, Section map, and the 20-file bundle list; the steps below reference it.
 3. Read `references/audit-checklist.md` (this skill's checklist). It is the audit contract: every check runs, every time.
 4. Interact in the user's language (`state.project.user_language`) from the first message. Artifacts and findings stay English; conversation is translated at runtime.
+5. **Script helper (preferred when Node is available).** This skill ships `scripts/lvr.mjs` (Node ≥22, nothing to install). `<skill-dir>` = the folder holding this SKILL.md (use the base directory the harness reports; otherwise look for `lvr-<this-skill>/scripts/lvr.mjs` in the skills directories listed in INSTALL.md). Once per session run `node "<skill-dir>/scripts/lvr.mjs" version`. If it prints JSON with `"lvr_schema":1`, run the `Script:` command given at each step below (`LVR` = `node "<skill-dir>/scripts/lvr.mjs" --dir "<PROJECT_DIR>"`) and act on its JSON. If `node` is missing, the command cannot start, or `lvr_schema` differs, say once (English source): "Node.js is not available here, so I'll do the bookkeeping by hand." Then follow each step's prose — the prose is the fallback and stays authoritative for behavior. Never hand-edit `.lvr/` files to work around a script error (`"ok":false`): report its `code` plainly and stop that step. On any non-zero exit (`"ok":false`) stop the step, show the error and follow `error.details.hint`; exit code 3 means the event was journaled (`journaled_seq`) or blocked but `state.json` was NOT updated (`STATE_LAGS`, `STATE_MISSING`, `STATE_INVALID`, `STATE_SEQ_UNKNOWN`, `JOURNAL_BEHIND_STATE`): do not continue the interview, run `/lvr-continue` (its Step 2 maps each code to the exact command). Pass long text through `--in -` with a quoted heredoc (`<<'EOF'`) or a PowerShell here-string (`@'…'@ |`), never inline in double quotes.
 
 ## Flow at a glance
 
@@ -41,11 +42,15 @@ S9 done but the bundle has gaps is exactly what this skill audits; do not refuse
 
 ## Step 2 — Open and inventory
 
+Script: `LVR journal append --type recheck_started --payload '{"project":"<slug>","report":"<path>"}'`
+
 1. **Open** — journal `recheck_started` (payload: project slug, report path) + a state write (no field change). One checkpoint.
 2. **Load material** — `state.json`, the full journal, every Section Record in `.lvr/docs/sections/`, and all 20 bundle entries (conventions §8). Per tier: T1/T2 load at start; T3 reload only what the current group needs, never the transcript. The disk is the memory (principle 13).
 3. **Inventory the bundle** — build a file → exists/size table and a list of feature ids (`F-*`), milestone ids (`M*`), decision ids (`D-*`), and pointers found. This table drives R3 and R6; do not hold it as prose.
 
 ## Step 3 — Audit
+
+Script: `LVR journal append --type recheck_finding --payload '{"id":"RC-01","check":"…","severity":"…","owner":"…"}'` per finding.
 
 Run `references/audit-checklist.md` literally, groups R1–R6 in order. Do not sample and do not skip a group because a later one "looks clean".
 
@@ -70,6 +75,8 @@ Rules:
 Do not fix anything during the audit pass. Fixing while auditing hides the second failure in the same file.
 
 ## Step 4 — Refresh evidence
+
+Script: `LVR journal append --type recheck_research_refresh --payload '{…}'` per claim.
 
 After the audit pass, take every R2 finding plus any finding whose evidence is a dated or unsourced claim:
 
@@ -124,6 +131,8 @@ Then present the fix plan in plain language, grouped by severity. Lead with bloc
 
 ## Step 6 — Apply fixes
 
+Script: mechanical fixes `LVR journal append --type recheck_fix_applied --payload '{…}'`; a user-decision fix `LVR decision record --event recheck_fix_applied --payload '{…}' --decision '{"section":"<S>","summary":"…","rationale":"…","status":"user_confirmed"}'`.
+
 Two classes, never mixed:
 
 - **Mechanical** — apply now, one file per turn, journal `recheck_fix_applied` (payload: finding id, file, change) + state write. Examples: missing mirror row, missing access date where the source exists, renamed entity drift, stale `blueprint.json`, broken pointer, count mismatch, missing stub.
@@ -134,6 +143,8 @@ Two classes, never mixed:
 If the user declines every fix, stop fixing, keep the findings open, and still close the run with an honest report.
 
 ## Step 7 — Re-audit and close
+
+Script: `LVR journal append --type recheck_done --payload '{…}'`
 
 1. Re-run R3, R6, and every group touched by a fix. A fix can break a neighbor; checking only the fixed row is not a re-audit.
 2. Append the `## Re-audit` results to the report and set each finding's status `resolved` or `open` with evidence.

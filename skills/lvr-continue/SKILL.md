@@ -14,6 +14,7 @@ Before any check, question, or file write:
 1. Read `references/principles.md` (the Constitution). All 13 principles bind this skill — especially 10 (State discipline) and 13 (Disk is memory).
 2. Read `references/conventions.md` (the operational manual). It owns the state schema (§2), journal event list (§3), Section map (§5), Folder Gate (§6), and tier tables (§7); the steps below reference it instead of repeating it.
 3. Interact in the user's language from the first message. The messages below are the English source; translate them when speaking. Artifacts and stored values follow the conventions (English source of truth).
+4. **Script helper (preferred when Node is available).** This skill ships `scripts/lvr.mjs` (Node ≥22, nothing to install). `<skill-dir>` = the folder holding this SKILL.md (use the base directory the harness reports; otherwise look for `lvr-<this-skill>/scripts/lvr.mjs` in the skills directories listed in INSTALL.md). Once per session run `node "<skill-dir>/scripts/lvr.mjs" version`. If it prints JSON with `"lvr_schema":1`, run the `Script:` command given at each step below (`LVR` = `node "<skill-dir>/scripts/lvr.mjs" --dir "<PROJECT_DIR>"`) and act on its JSON. If `node` is missing, the command cannot start, or `lvr_schema` differs, say once (English source): "Node.js is not available here, so I'll do the bookkeeping by hand." Then follow each step's prose — the prose is the fallback and stays authoritative for behavior. Never hand-edit `.lvr/` files to work around a script error (`"ok":false`): report its `code` plainly and stop that step. On any non-zero exit (`"ok":false`) stop the step, show the error and follow `error.details.hint`; exit code 3 means the event was journaled (`journaled_seq`) or blocked but `state.json` was NOT updated (`STATE_LAGS`, `STATE_MISSING`, `STATE_INVALID`, `STATE_SEQ_UNKNOWN`, `JOURNAL_BEHIND_STATE`): do not continue the interview, run `/lvr-continue` (its Step 2 maps each code to the exact command). Pass long text through `--in -` with a quoted heredoc (`<<'EOF'`) or a PowerShell here-string (`@'…'@ |`), never inline in double quotes.
 
 ## Flow at a glance
 
@@ -27,6 +28,8 @@ Every step is idempotent: re-running `/lvr-continue` is always safe.
 
 ## Step 1 — Locate the project
 
+Script: `LVR journal check` (healthy journal? `scope_locked_seq`; `state_sync` = `in_sync`, `untracked`, `lagging`, `unknown` or `journal_behind_state`) and `LVR state validate` (`"valid"`, `errors`, `warnings`).
+
 `TARGET` = the optional path argument, else cwd. Look for `TARGET/.lvr/`.
 
 - **No `.lvr/`** → say (English source): "There is no LVR project here. To start one, run `/lvr-init-new-idea` in an empty folder — or let its Folder Gate create a subfolder in a projects root. It will pick the right place." Nothing is written to disk (there is no journal here to record the refusal). Stop.
@@ -35,7 +38,16 @@ Every step is idempotent: re-running `/lvr-continue` is always safe.
 
 ## Step 2 — Load or rebuild the state
 
+Script: when a write exited 3, or `LVR journal check` shows `state_sync` other than `in_sync`/`untracked`, recover first (`LVR` as in the Script helper; show the user the error in plain words, then run exactly the command for its `code`):
+
+- `STATE_MISSING` or `STATE_INVALID` → `LVR replay --write` (a damaged file is backed up first; add `--journal-resume '{"position":"…"}'` to journal the resume).
+- `STATE_LAGS`, `STATE_SEQ_UNKNOWN` (or `state_sync` `lagging`/`unknown`) → first `LVR replay --compare` and read the `diff`. Only if nothing in `current` would be lost (the rebuild is simply newer), or the journal was written entirely by the script (`report.derived.journal_kind` = `cli`), run `LVR replay --write --force`. `LOSSY_REPLAY` lists values that would be dropped: show those paths to the user and add `--accept-loss` only after they agree. If they decline, stop: nothing was written and `state.json` stays as it is (never use `journal restore-from-state` for this).
+- `JOURNAL_BEHIND_STATE` (nothing was written) → `LVR journal restore-from-state`, then `LVR journal check` must show `in_sync` (it only runs when the journal is behind `state.json`; `RESTORE_NOT_NEEDED` means `state.json` is not ahead of the journal, so use the `replay` route above instead); continue with `LVR journal append --type resume --payload '{"state_rebuilt":true}'`.
+- After any recovery re-run `LVR state validate`; never hand-edit `.lvr/.state-seq` or the journal.
+
 ### 2a. Healthy state
+
+Script: `LVR state validate`: `"valid":true` means healthy — list its `warnings` in the summary. A repair is `LVR state write --no-journal --in -` (full corrected document) riding this run's `resume` append.
 
 `state.json` parses and matches the conventions §2 shape → load it, then run the consistency repairs:
 
@@ -46,6 +58,8 @@ Every step is idempotent: re-running `/lvr-continue` is always safe.
 The repair state-write rides the run's `resume` append (one checkpoint at resume) — conventions §3's "every state mutation emits at least one event" holds under this named interpretation.
 
 ### 2b. Damaged or missing state, journal present → rebuild by journal replay
+
+Script: `LVR replay --write --journal-resume '{"position":"…"}'` — it rebuilds `state.json` (backing up a damaged one once), appends `resume`, and returns `report` (untranslatable events, `answers.text_missing`, `decisions`, `milestones`, `unrecoverable`) for the reconstruction report. Use `LVR replay --compare` for a dry run.
 
 Replay the whole journal in `seq` order onto a fresh state object (shape per conventions §2). Event effects:
 
@@ -87,6 +101,8 @@ Then:
 
 ## Step 3 — Tier check (cross-model resume)
 
+Script: `LVR journal append --type tier_changed --payload '{"old":"T1","new":"T2"}'`; probes via `LVR probe grade …` then `LVR journal append --type capability_probe_passed|capability_probe_failed` (see the init skill, Step 2).
+
 Compare `model_profile.tier` in state with the model actually running now:
 
 - Determine the current tier from harness config where available; if not determinable, ask init's one-line tier question (large / medium / small). Never guess.
@@ -101,6 +117,8 @@ Compare `model_profile.tier` in state with the model actually running now:
 - Upgrade → no probe; `tier_changed` only.
 
 ## Step 4 — Progress summary
+
+Script: read the numbers with `LVR state get --pointer /pipeline/sections` and `LVR journal tail --n 5`.
 
 Print it in the user's language, plain and non-technical — the owner must understand it without pipeline vocabulary:
 
@@ -124,6 +142,8 @@ Pick ONE primary offer from the state; act on the user's confirmation.
 Report the last `error` event in plain words and offer to retry the failed step. Retry is idempotent: done Sections and recorded answers are never redone.
 
 ### b. Interviewing (status `interview`, `researching`, or `review`; the current Section S0–S8 is not done)
+
+Script: the same commands as the init skill's Section loop engine: `LVR answer record`, `LVR decision record`, `LVR journal append --type section_done|section_blocked|loop_back_closed`.
 
 Order of offers:
 

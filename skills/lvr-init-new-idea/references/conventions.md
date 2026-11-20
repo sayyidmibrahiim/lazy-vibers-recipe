@@ -94,6 +94,8 @@ Append-only; never rewritten. Every state mutation emits at least one event; `an
 
 Event types: `session_start`, `folder_gate_passed`, `folder_gate_rejected`, `folder_gate_subfolder_created`, `tier_declared`, `capability_probe_passed`, `capability_probe_failed`, `context_guard_triggered`, `truncation_recovered`, `tier_changed`, `booster_check`, `booster_install_ok`, `booster_install_failed`, `booster_choice`, `section_start`, `section_done`, `section_blocked`, `answer_recorded`, `loop_back_opened`, `loop_back_closed`, `scope_locked`, `doc_generated`, `handoff_started`, `gap_found`, `handoff_done`, `recheck_started`, `recheck_finding`, `recheck_research_refresh`, `recheck_fix_applied`, `recheck_done`, `feature_started`, `feature_captured`, `feature_research`, `impact_analysis`, `feature_scope_decision`, `feature_applied`, `feature_done`, `build_started`, `milestone_started`, `milestone_verified`, `milestone_failed`, `build_blocked`, `deployment_verified`, `build_done`, `brand_started`, `brand_file_generated`, `brand_done`, `error`, `resume`.
 
+Payload extensions: any event may also carry `project` as an object (`slug`, `name`, `idea_raw`, `user_language`; a string `project` is just the project slug and is ignored), `decisions[]` and `milestones[]`, which the state transition folds into `state.json`; `section_done` carries `record`, `booster_check` may carry `license` and `tier`, `milestone_verified` carries `verified_at`, `deployment_verified` carries `url`. A rebuild prefers payload data over disk derivation (spec 01, "Payload extensions").
+
 ## 4. Language rules
 
 - English is the source of truth for all artifacts. There are no stored translation files; output is translated to User Language dynamically at runtime.
@@ -197,6 +199,8 @@ Format rules for all files: GitHub-flavored Markdown · English · no Mermaid (A
 ## 9. Checkpoint rules
 
 A Checkpoint = one Journal write + one State write, together.
+
+When `scripts/lvr.mjs` is available, every Checkpoint goes through it (journal first, then state, under one lock); the prose procedures are the fallback.
 
 Checkpoint moments: every answer · every Section start and done · every Booster install or choice · every generated file · every error · each Handoff step.
 

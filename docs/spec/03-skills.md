@@ -1,6 +1,6 @@
 # Spec 03 — Skill Contracts & Constitution
 
-Skills are plain markdown instruction files (Agent Skills format) living in `skills/lvr-<name>/SKILL.md` in this repo, installed into harnesses via standard installers (see `05-boosters.md`). Per-harness thin adapters are generated from the same source.
+Skills are plain markdown instruction files (Agent Skills format) living in `skills/lvr-<name>/SKILL.md` in this repo, installed into harnesses via standard installers (see `05-boosters.md`). Per-harness thin adapters are generated from the same source. Each skill also ships `scripts/lvr.mjs` (D8): deterministic steps run there, prose stays as the fallback.
 
 ## `/lvr-init-new-idea` (v0)
 

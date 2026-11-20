@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Per-skill copies of scripts/lvr.mjs duplicate the linted canonical file.
+    "skills/**/scripts/**",
   ]),
 ]);
 

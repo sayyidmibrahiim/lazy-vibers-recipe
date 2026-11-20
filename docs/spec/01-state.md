@@ -88,6 +88,23 @@ Each line: `{"ts": "...", "seq": 1, "type": "...", "payload": { ... }}`
 
 Rules: append-only; never rewrite; every state mutation emits at least one event; `answer_recorded` fires **per answer** (checkpoint granularity). Its payload is `{ "section", "answer_id", "q", "a", "skipped" }` — `q` is the question text exactly as asked, `a` the user's verbatim answer, both in User Language; `a` is null when the answer was skipped. Legacy payloads carrying only `{ "section", "answer_id", "skipped" }` remain replayable — rebuilds fold q/a from the Section Record when the payload has no text.
 
+### Payload extensions (replay-complete journals)
+
+Payloads stay free-form objects. `scripts/lvr.mjs` additionally understands these optional keys, so that a journal it wrote replays to exactly the live `state.json` without reading Section Records:
+
+- `project` — as an **object**, on any event (a string `project`, as in `handoff_started`'s project slug, is the prose meaning and is ignored by the reducer): any of `slug`, `name`, `idea_raw`, `user_language` (strings); each present key is assigned to `state.project`. This is how S0 answers and a branding rename reach state.
+- `decisions[]` — on any event: full decision objects (`id`, `section`, `summary`, `rationale`, `status`), upserted into `state.decisions` by id at the checkpoint where the decision is made.
+- `milestones[]` — on any event (S8 `section_done`, `feature_applied`): `{ "id", "goal", "features" }`, upserted into `state.milestones` (`verified` / `verified_at` are preserved).
+- `section_done.record` — the record file name, stored as `sections.<S>.record`.
+- `booster_check` — may carry `license` and `tier` (`core|enhancer`) next to `name`, `repo`, `result`.
+- `milestone_verified.verified_at` and `deployment_verified.url` — stored as given (`verified_at` defaults to the event `ts`).
+- `cli` — the script stamps `"cli":"lvr"` on the payload of **every** event it appends. Stamped events carry every fact in their payloads: replay folds them without reading disk, so a journal made only of stamped events reproduces the live `state.json` exactly. Unstamped events (written by the prose fallback, or older journals) get the disk fallbacks on replay (Section Records, `OVERVIEW.md`, `DECISIONS.md`, `CAPABILITIES.md`, never-mentioned core boosters; the booster fill only when no event is stamped).
+- `.lvr/.state-seq` — hidden helper written by the script right after each `state.json` write: the journal `seq` the state reflects (`N`), or `lag:N` once a lag was found (sticky until a recovery command). On a write: equal to the journal tail = in sync; behind by unstamped events only = the prose fallback updated state by hand, so the script adopts it (`state.adopted`); behind by exactly one stamped event = crash heal; otherwise `STATE_LAGS`. Ahead of the journal = `JOURNAL_BEHIND_STATE` (journal lines were lost; every write is blocked until `journal restore-from-state`). `journal restore-from-state` refuses (`RESTORE_NOT_NEEDED`, nothing written) unless `state.json` holds something the journal lacks, and it moves `.state-seq` to the journal tail only when the journal was behind, empty, or already in sync; a lagging or unknown state is fixed with `replay --write --force` instead, which accepts a script-only journal without a `LOSSY_REPLAY` check (the replay is exact by construction). Missing or damaged on a script-created journal = `STATE_SEQ_UNKNOWN`. Absent on a prose-written state = untracked, no heal.
+- Exit code 3: the event was journaled (`journaled_seq`) or blocked but `state.json` was not checkpointed; the envelope is `ok:false` with `error.code` and `error.details.hint`.
+- `booster_check` from the registry maps registry tier `conditional`/`reference` to state tier `enhancer`.
+
+A rebuild prefers payload data over disk derivation; the Section Records, `OVERVIEW.md`, `DECISIONS.md` and `CAPABILITIES.md` fill only what the events did not carry, and only for unstamped events.
+
 ## Section records
 
 File: `.lvr/docs/sections/S<N>-<name>.md` (e.g. `S3-data.md`). Content: the section's questions, the user's verbatim answers (User Language), and the section's decision summary (English, written by the Conductor). These are the **only** inputs S9 compiles, plus `decisions[]` and `milestones[]`.

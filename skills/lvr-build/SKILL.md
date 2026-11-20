@@ -17,6 +17,7 @@ Before any check or file write:
 2. Read `references/conventions.md` (the operational manual): state schema, journal events, bundle list.
 3. Read `references/build-loop.md`: preflight, milestone selection, verification protocol, failure ladder, recording template, deployment check, anti-cheating rules.
 4. Interact in `state.project.user_language`. Code, commands, and stored values stay exact.
+5. **Script helper (preferred when Node is available).** This skill ships `scripts/lvr.mjs` (Node ≥22, nothing to install). `<skill-dir>` = the folder holding this SKILL.md (use the base directory the harness reports; otherwise look for `lvr-<this-skill>/scripts/lvr.mjs` in the skills directories listed in INSTALL.md). Once per session run `node "<skill-dir>/scripts/lvr.mjs" version`. If it prints JSON with `"lvr_schema":1`, run the `Script:` command given at each step below (`LVR` = `node "<skill-dir>/scripts/lvr.mjs" --dir "<PROJECT_DIR>"`) and act on its JSON. If `node` is missing, the command cannot start, or `lvr_schema` differs, say once (English source): "Node.js is not available here, so I'll do the bookkeeping by hand." Then follow each step's prose — the prose is the fallback and stays authoritative for behavior. Never hand-edit `.lvr/` files to work around a script error (`"ok":false`): report its `code` plainly and stop that step. On any non-zero exit (`"ok":false`) stop the step, show the error and follow `error.details.hint`; exit code 3 means the event was journaled (`journaled_seq`) or blocked but `state.json` was NOT updated (`STATE_LAGS`, `STATE_MISSING`, `STATE_INVALID`, `STATE_SEQ_UNKNOWN`, `JOURNAL_BEHIND_STATE`): do not continue the interview, run `/lvr-continue` (its Step 2 maps each code to the exact command). Pass long text through `--in -` with a quoted heredoc (`<<'EOF'`) or a PowerShell here-string (`@'…'@ |`), never inline in double quotes.
 
 ## Flow at a glance
 
@@ -49,11 +50,15 @@ Run `references/build-loop.md` §1. Every item must pass. Failures:
 
 ## Step 3 — Open
 
+Script: `LVR journal append --type build_started --payload '{"milestone":"M0"}'`
+
 1. Journal `build_started` (payload: first milestone id, bundle version/date) + a state write (no field change). One checkpoint.
 2. Load builder context in the order `AGENTS.md` defines: `DECISIONS.md` → `SPEC/` → `MILESTONES.md` → `VERIFICATION.md`, plus `CODE_STYLE.md`, `SECURITY.md`, and `HANDOVER.md` for their concerns.
 3. Per tier: T1/T2 load the context once per milestone; T3 reloads `state.json`, the current milestone row, its verification row, and the stack rules every turn — never the transcript.
 
 ## Step 4 — Select the milestone
+
+Script: `LVR journal append --type milestone_started --payload '{"id":"M0","goal":"…"}'`
 
 Follow `references/build-loop.md` §2:
 
@@ -73,6 +78,8 @@ Journal `milestone_started` (payload: id, goal). One checkpoint.
 
 ## Step 6 — Record the result
 
+Script: `LVR journal append --type milestone_verified --payload '{"id":"M0","attempt":1,"verified_at":"<ISO now>"}'` (sets `verified` + `verified_at`), `--type milestone_failed`, or `--type build_blocked`.
+
 Append one entry to `VERIFICATION.md` using the template in `references/build-loop.md` §5. Never rewrite earlier entries.
 
 On **PASS**:
@@ -89,6 +96,8 @@ On **FAIL**:
 
 ## Step 7 — Deployment check
 
+Script: `LVR journal append --type deployment_verified --payload '{"url":"<url>"}'` (fills `state.deployment`).
+
 When the milestone deploys the product, run `references/build-loop.md` §6:
 
 - live URL + expected HTTP status + one user-visible fact;
@@ -96,6 +105,8 @@ When the milestone deploys the product, run `references/build-loop.md` §6:
 - unverifiable deployment → `status: "pending"`, say exactly what evidence is missing.
 
 ## Step 8 — Close
+
+Script: `LVR journal append --type build_done --payload '{…}'`
 
 1. All milestones verified → journal `build_done` (payload: milestones, deployment status) + state write. One checkpoint.
 2. Report plainly: what now works, how to run it, which checks were captured, what remains (deployment pending, known limitations).

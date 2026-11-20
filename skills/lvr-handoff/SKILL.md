@@ -14,6 +14,7 @@ Before any check or file write:
 1. Read `references/principles.md` (the Constitution). All 13 principles bind this skill — especially 2 (Anti-yes-man), 9 (Verification-before-completion), and 13 (Disk is memory).
 2. Read `references/conventions.md` (the operational manual). It owns the state schema (§2), journal events (§3), Section map (§5), the tier tables (§7), and the bundle file list (§8); the steps below reference it instead of repeating it.
 3. Interact in the user's language from the first message. The messages below are the English source; translate them when speaking. Artifacts and stored values follow the conventions (English source of truth).
+4. **Script helper (preferred when Node is available).** This skill ships `scripts/lvr.mjs` (Node ≥22, nothing to install). `<skill-dir>` = the folder holding this SKILL.md (use the base directory the harness reports; otherwise look for `lvr-<this-skill>/scripts/lvr.mjs` in the skills directories listed in INSTALL.md). Once per session run `node "<skill-dir>/scripts/lvr.mjs" version`. If it prints JSON with `"lvr_schema":1`, run the `Script:` command given at each step below (`LVR` = `node "<skill-dir>/scripts/lvr.mjs" --dir "<PROJECT_DIR>"`) and act on its JSON. If `node` is missing, the command cannot start, or `lvr_schema` differs, say once (English source): "Node.js is not available here, so I'll do the bookkeeping by hand." Then follow each step's prose — the prose is the fallback and stays authoritative for behavior. Never hand-edit `.lvr/` files to work around a script error (`"ok":false`): report its `code` plainly and stop that step. On any non-zero exit (`"ok":false`) stop the step, show the error and follow `error.details.hint`; exit code 3 means the event was journaled (`journaled_seq`) or blocked but `state.json` was NOT updated (`STATE_LAGS`, `STATE_MISSING`, `STATE_INVALID`, `STATE_SEQ_UNKNOWN`, `JOURNAL_BEHIND_STATE`): do not continue the interview, run `/lvr-continue` (its Step 2 maps each code to the exact command). Pass long text through `--in -` with a quoted heredoc (`<<'EOF'`) or a PowerShell here-string (`@'…'@ |`), never inline in double quotes.
 
 ## Flow at a glance
 
@@ -24,6 +25,8 @@ Before any check or file write:
 5. **Entry prompt + close** — write `HANDOFF-PROMPT.md`, print the booster install lines and the harness kickoff command, journal `handoff_done`.
 
 ## Step 1 — Precondition
+
+Script: `LVR state validate`; scope evidence from `LVR journal check` (`scope_locked_seq`) plus `LVR state get --pointer /pipeline/sections/S7/status`.
 
 `TARGET` = cwd (or the folder the user named). Run the checks in order; the first failure stops the skill with plain guidance. Nothing is written to disk on a refusal.
 
@@ -36,8 +39,10 @@ S9 is deliberately not a precondition: an uncompiled or half-compiled bundle is 
 ## Step 2 — Gap lint
 
 1. **Open** — journal `handoff_started` (payload: project slug) + a state write (no state field changes) — one checkpoint.
+   - Script: `LVR journal append --type handoff_started --payload '{"project":"<slug>"}'`
 2. **Run the checklist** — read `references/lint-checklist.md` and execute every check literally, groups A–H in order. Material: the bundle files in `TARGET`, `TARGET/.lvr/state.json`, and the journal (scope evidence). Do not sample: every check runs, every time, on every run.
 3. **Findings** — every failed check is one finding: a plain-language line (what is wrong, where) plus its owner (the checklist's owner table). Journal `gap_found` per finding (payload: check id, one-line finding, owner) at the moment it is found.
+   - Script: `LVR journal append --type gap_found --payload '{"check":"<id>","finding":"…","owner":"…"}'`
 4. **Two finding kinds** (the checklist marks them):
    - **Bundle gaps** — owner: a Section/skill. Collected for Step 3.
    - **Self-fix items** — owner: this skill (missing or stale `blueprint.json`). Journaled, then fixed automatically in Step 4 — no user decision needed.
@@ -82,6 +87,7 @@ Only when the lint is clean. These are the only bundle writes this skill ever ma
    - `.lvr/` is read-only planning state — the builder must not modify it, except appending open questions to `.lvr/journal.ndjson`; the optional `/lvr-build` skill may also set milestone verification and deployment fields.
 2. **Close** — print, in the user's language: the recommended install lines from `CAPABILITIES.md` (every row's install command with name and license; NC items marked runtime-dependency-only), then the kickoff command for the current harness with the entry prompt as the first input. Kickoff forms: Claude Code `claude "$(cat HANDOFF-PROMPT.md)"` · Gemini CLI `gemini -p "$(cat HANDOFF-PROMPT.md)"` · Codex `codex "$(cat HANDOFF-PROMPT.md)"` · ZCode `zcode "$(cat HANDOFF-PROMPT.md)"` · harness unknown → "open a fresh session in this folder and paste the contents of `HANDOFF-PROMPT.md`".
 3. **Done** — journal `handoff_done` (payload: gaps found, self-fixes applied, entry prompt path) and fill `state.handoff` = `{ "status": "done", "completed_at": <now> }` — one checkpoint. This is the only state-field change the skill ever makes.
+   - Script: `LVR journal append --type handoff_done --payload '{…}'` — the script fills `state.handoff` for you.
 
 ## Idempotency
 

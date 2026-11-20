@@ -17,6 +17,7 @@ Before any check or file write:
 2. Read `references/conventions.md` (the operational manual): state schema, journal events, bundle list.
 3. Read `references/brand-templates.md`: the three output templates and the evidence table rules.
 4. Interact in `state.project.user_language`. Brand artifacts are English source of truth; a localized variant is a separate file, never a replacement.
+5. **Script helper (preferred when Node is available).** This skill ships `scripts/lvr.mjs` (Node ≥22, nothing to install). `<skill-dir>` = the folder holding this SKILL.md (use the base directory the harness reports; otherwise look for `lvr-<this-skill>/scripts/lvr.mjs` in the skills directories listed in INSTALL.md). Once per session run `node "<skill-dir>/scripts/lvr.mjs" version`. If it prints JSON with `"lvr_schema":1`, run the `Script:` command given at each step below (`LVR` = `node "<skill-dir>/scripts/lvr.mjs" --dir "<PROJECT_DIR>"`) and act on its JSON. If `node` is missing, the command cannot start, or `lvr_schema` differs, say once (English source): "Node.js is not available here, so I'll do the bookkeeping by hand." Then follow each step's prose — the prose is the fallback and stays authoritative for behavior. Never hand-edit `.lvr/` files to work around a script error (`"ok":false`): report its `code` plainly and stop that step. On any non-zero exit (`"ok":false`) stop the step, show the error and follow `error.details.hint`; exit code 3 means the event was journaled (`journaled_seq`) or blocked but `state.json` was NOT updated (`STATE_LAGS`, `STATE_MISSING`, `STATE_INVALID`, `STATE_SEQ_UNKNOWN`, `JOURNAL_BEHIND_STATE`): do not continue the interview, run `/lvr-continue` (its Step 2 maps each code to the exact command). Pass long text through `--in -` with a quoted heredoc (`<<'EOF'`) or a PowerShell here-string (`@'…'@ |`), never inline in double quotes.
 
 ## Flow at a glance
 
@@ -40,6 +41,8 @@ Before any check or file write:
 No handoff requirement: the brand kit needs the product evidence, not the builder prompt.
 
 ## Step 2 — Open and load evidence
+
+Script: `LVR journal append --type brand_started --payload '{"url":"<url>","live_check":"…"}'`
 
 1. Journal `brand_started` (payload: deployment URL, live-check result) + a state write (no field change). One checkpoint.
 2. Load, in this order: `OVERVIEW.md` (owner-visible truth), `DECISIONS.md` (why it is shaped this way), `SCOPE.md` (what is in and parked), `VERIFICATION.md` (what is proven), `RESEARCH.md` (market context with sources), `HANDOVER.md` (how it runs), `state.json` (milestones, deployment, user language).
@@ -71,6 +74,8 @@ No metric, user count, revenue, award, or endorsement enters the kit without evi
 
 ## Step 5 — Draft the three files
 
+Script: `LVR journal append --type brand_file_generated --payload '{"path":"brand/BRAND.md","claims":0,"unverified":0}'` per file.
+
 Create `brand/` in the project folder (beside the bundle, never inside it). One file per turn (T3: one top-level section per turn, append-chunks):
 
 1. `brand/BRAND.md` — one line, audience, problem, positioning, three message pillars with proof, voice, boilerplate bio, links.
@@ -86,6 +91,8 @@ Rules:
 - After each file: journal `brand_file_generated` (payload: path, claims count, unverified count) + state write. One checkpoint per file.
 
 ## Step 6 — Self-check and close
+
+Script: `LVR journal append --type brand_done --payload '{…}'`
 
 Run the checklist in `references/brand-templates.md`:
 
