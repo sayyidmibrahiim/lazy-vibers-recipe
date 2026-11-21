@@ -2,7 +2,7 @@
 
 Canonical source: `docs/spec/*` in the LVR repository. This file is the packaged snapshot for installed skills: every skill ships it byte-for-byte as `references/conventions.md` (`npm run check:skills` guards the copies; drift against `docs/spec` is a review item).
 
-schema_version: 1 · date: 2026-11-20
+schema_version: 2 · date: 2026-11-20
 
 Companion files: `lvr-principles.md` — the Constitution, loaded before any LVR work; `lvr-freshness.json` (installed as `references/freshness.json`) — the freshness limits for cited facts (section 10). The Conductor (the model running the pipeline) applies the rules below.
 
@@ -18,7 +18,8 @@ One folder = one idea = one product. Never mix two ideas or two products in one 
 │   ├── docs/
 │   │   ├── sections/     Section Records: S0-intake.md, S1-context.md, ...
 │   │   └── research/     domain-brief.md: Domain Brief + per-Section scan items (section 10)
-│   └── recheck/          Recheck reports: RECHECK-<date>.md (audit artifacts)
+│   ├── recheck/          Recheck reports: RECHECK-<date>.md (audit artifacts)
+│   └── migrations/       v1-to-v2-<stamp>/: copies of the old state.json + journal.ndjson kept by a migration (never deleted by LVR)
 ├── (after S9: Blueprint Bundle files + builder code live here)
 ├── HANDOFF-PROMPT.md     Builder entry prompt from /lvr-handoff (side artifact, never part of the bundle)
 └── brand/                Personal-brand kit from /lvr-personal-brand (never part of the bundle)
@@ -26,30 +27,38 @@ One folder = one idea = one product. Never mix two ideas or two products in one 
 
 `state.json` is the single source of truth for "where are we". `journal.ndjson` is the audit trail: if the State is corrupted or missing, rebuild it by journal replay. Section Records are the raw material S9 compiles.
 
-## 2. State schema (`state.json`, v1)
+## 2. State schema (`state.json`, v2)
 
 ```json
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "project": {
     "slug": "warung-cashier",
     "name": "Warung Cashier",
     "idea_raw": "...",
     "user_language": "id",
     "created_at": "2026-11-08T09:00:00Z",
-    "status": "interview"
+    "status": "interview",
+    "error": null
   },
+  "product": { "types": ["web"], "flags": { "stores_data": true, "has_ui": true, "has_llm": false }, "status": "decided", "source": "user", "rationale": null, "confirmed": true, "updated_at": "..." },
   "pipeline": {
     "current_section": "S4",
     "sections": {
       "S0": { "status": "done", "record": "S0-intake.md",
               "answers": { "S0.q1": { "q": "...", "a": "...", "skipped": false } } },
-      "S1": { "status": "in_progress" }
+      "S1": { "status": "in_progress", "coverage": { "who-pays": ["S0.q1"], "platform": [] } }
     },
     "loop_backs": [
       { "id": "L-01", "from": "S6", "to": "S3", "reason": "research found cost conflict",
         "opened_at": "...", "resolved_at": null }
-    ]
+    ],
+    "research": {
+      "brief": { "rq": ["RQ-002"], "findings": ["U-01", "U-02"], "updated_at": "..." },
+      "scans": { "S1": { "rq": ["RQ-004"], "findings": ["U-03"], "note": null, "at": "..." } },
+      "log": { "count": 5, "failed": ["RQ-005"], "last_id": "RQ-005", "last_at": "..." },
+      "web_check": { "id": "RQ-001", "outcome": "found", "reason": null, "at": "..." }
+    }
   },
   "decisions": [
     { "id": "D-001", "section": "S2",
@@ -59,7 +68,11 @@ One folder = one idea = one product. Never mix two ideas or two products in one 
   "boosters": {
     "core": [ { "name": "simple-english", "repo": "AminBlg/SimpleEnglish",
                 "license": "MIT", "tier": "core", "status": "installed" } ],
-    "enhancer": []
+    "enhancer": [],
+    "installed": [ { "name": "grilling", "kind": "skill", "repo": "owner/repo", "sha": "3fa9c1e",
+                     "scope": "project", "harness": "claude-code", "path": ".claude/skills/grilling",
+                     "tier": "enhancer", "section": "S4", "consent": false,
+                     "status": "installed", "installed_at": "...", "uninstalled_at": null } ]
   },
   "model_profile": { "tier": "T1", "probe": "skipped", "declared_at": "..." },
   "milestones": [
@@ -67,7 +80,19 @@ One folder = one idea = one product. Never mix two ideas or two products in one 
       "verified": false, "verified_at": null }
   ],
   "deployment": null,
-  "handoff": null
+  "handoff": null,
+  "framework_decision": null,
+  "release_check": {},
+  "review": null,
+  "agents_delegated": [],
+  "sessions": [
+    { "start_seq": 1, "skill": "lvr-init-new-idea", "harness": "claude-code",
+      "session_id": null, "session_id_reason": "harness does not expose it",
+      "model": "claude-opus-5-5", "tier": "T1", "cwd": "/home/u/projects/warung-cashier",
+      "started_at": "...", "ended_at": null, "end_reason": null,
+      "sections": ["S0", "S1"], "agents": [], "boosters_installed": [], "boosters_uninstalled": [],
+      "recovered_error": null }
+  ]
 }
 ```
 
@@ -83,11 +108,26 @@ Field notes:
 - `model_profile.tier`: `T1 | T2 | T3` — behavior rules in section 7.
 - `milestones`: top-level only — filled at S8, one entry per milestone; never mirrored under `pipeline`. `/lvr-build` sets `verified` + `verified_at`. `deployment`: written by `/lvr-build` when the live check passes. `handoff`: filled by /lvr-handoff.
 
+v2 fields (defaults: `project.error` null, `product` `{types: [], flags: {}, status: "unasked", source: null, rationale: null, confirmed: false, updated_at: null}`, empty `pipeline.research`, `installed: []`, `framework_decision` null, `release_check` `{}`, `review` null, `agents_delegated: []`, `sessions: []`; a missing one reads as its default):
+
+- `project.error`: `{seq, ts, skill, step, message, previous_status}` while `status` is "error" (set by `error`, cleared by the event that restores the status); null otherwise.
+- `product`: `types` = the product types (profile ids) the user chose at S1, `[]` = not asked yet; `flags` = booleans (`stores_data`, `has_ui`, `has_llm`, `regulated_domain`); `status` = `unasked | pending | decided` (`pending` = the user does not know; the AI keeps interviewing until it can recommend a type with reasons); `source` = `user | ai_recommended`; `rationale` = the AI's reasons for a recommendation; `confirmed` = the user said yes. A migrated project whose S1 is not finished stays `unasked` until the S1 interview asks (once). Written only by the `product` payload extension (section 3).
+- `pipeline.sections.<S>.coverage` (optional): exit-criteria fact → the evidence ids that make it known (answer ids, `D-NNN`, `U-NN`, `RQ-NNN`); `[]` = not known yet. "S4: 6 of 9 facts known" counts the non-empty entries. Written only by the `coverage` payload extension.
+- `pipeline.research`: an index of the research log (section 10), filled from `research_logged` / `context_research`: the brief's and each Section scan's research ids and `U-NN` findings (a `scans.<S>` entry = that scan was journaled), the log count, the failed research ids, the last web check.
+- `boosters.installed[]`: every real install LVR made, one per `(name, path)`, with `kind` (`skill | mcp | agent`), `scope` (`project` = a path inside the project; `user` = an absolute or `~/` path), pinned `sha`, `consent` (an MCP install needs `true`) and `status` (`installed | uninstalled`). Only these may be uninstalled — never user-owned skills. Agent profiles are listed here too, but never in `core`/`enhancer`.
+- `framework_decision`: the S5b stack pick (`decision_id`, `chosen` id/version, `alternatives` with scores, `confidence`, `user_override`, `defaulted`, `signals_ref`, `recheck_by`) plus `libraries[]` for later library picks; null until S5b.
+- `release_check`: per product type (or `"default"`): the proof the product is live or installable (`kind`, `status: passed|failed`, `target`, `evidence`, `checked_at`), written by /lvr-build.
+- `review`: a pointer to the review findings ledger (`.lvr/review/LEDGER.jsonl`) plus the last run (`run`, `scope`, `verdict`, `score`, `lens_scores`, open counts, `missed_earlier`, `report`); the ledger holds the findings.
+- `agents_delegated[]`: each specialist delegation (`AG-NNN`, task, profile, transport `native | prompt | inline`, model, `status: started|done|failed`); a `started` one with no result is re-run on resume.
+- `sessions[]`: one per skill run, from its `session_start`: harness, `session_id` (null with `session_id_reason` when the harness does not expose one — never invent an id), model, tier, cwd, start/end time and `end_reason` (`done | paused | context_guard | error | cancelled`) and `end_note` (the reason, always given for `cancelled`), plus what happened in it: Sections touched, delegations, boosters installed/uninstalled, and `recovered_error` (the error this run's opening cleared). The current session is the last one with `ended_at` null; an older one with `ended_at` null had no `session_end` (crash, kill, or a run from before session tracking).
+
 Project status enum: `interview` → `researching` (S5–S6) → `review` (S7 start until S9 done) → `bundled` (S9 done) → `building` → `complete`; `error` can occur at any point (recoverable via /lvr-continue, with an `error` event in the Journal). Who sets it: S5 `section_start` → `researching`; S7 `section_start` → `review`; S9 `section_done` → `bundled`; /lvr-build `build_started` → `building`, `build_done` → `complete`.
 
-`error`: any skill journals `error` (payload: `skill`, `step`, plain `message`) when an unrecoverable failure stops its run with work half-done (a file it cannot write, a tool that crashes mid-step) — never for a refusal, a failed probe, a failed milestone, or context pressure (those have their own events). It sets `project.status` = "error" and remembers the previous status; the next skill run's opening event (`resume` — every /lvr-continue run appends one — or `session_start`, `handoff_started`, `recheck_started`, `feature_started`, `brand_started`), or the next `section_start`, `section_done`, `section_blocked` or `answer_recorded`, restores it. /lvr-continue offers the retry from the status it loaded, before its own `resume`.
+`error`: any skill journals `error` (payload: `skill`, `step`, plain `message`, all required) when an unrecoverable failure stops its run with work half-done (a file it cannot write, a tool that crashes mid-step), then ends the run with `session_end` (`reason: "error"`) — never for a refusal (nothing was written: end with `session_end` `cancelled` and a `note` with the reason), a failed probe, a failed milestone, or context pressure (those have their own events). If the Journal itself cannot be written, `error` cannot be journaled either: say so and stop. Section 3 lists, per skill, when its run journals `error`. The event sets `project.status` = "error" and stores `project.error` (with the previous status); the next skill run's opening event (`session_start` — every run appends one first — or `resume`, `handoff_started`, `recheck_started`, `review_started`, `feature_started`, `brand_started`), or the next `section_start`, `section_done`, `section_blocked` or `answer_recorded`, restores the previous status, copies the error into the current session's `recovered_error`, and clears `project.error`. /lvr-continue offers the retry when the session it just opened has a `recovered_error`.
 
-ID conventions: questions `S<n>.q<n>`, unpadded (`S1.q9`) · features `F-01…` · decisions `D-001…` · milestones `M0, M1, …` · loop-backs `L-01…` · research log entries `RQ-001…` · Domain Brief items `U-01…` (section 10).
+ID conventions: questions `S<n>.q<n>`, unpadded (`S1.q9`) · features `F-01…` · decisions `D-001…` · milestones `M0, M1, …` · loop-backs `L-01…` · research log entries `RQ-001…` · Domain Brief items `U-01…` (section 10) · delegations `AG-001…` (assigned by the script).
+
+**Schema versions.** `schema_version` 2 is current. A project made by an older LVR — `schema_version: 1`, or a `.lvp/` folder (the old name of `.lvr/`) — is migrated before anything is written. Every skill except /lvr-init-new-idea starts with `LVR state migrate --check`; when it says `needed` and not `blocked`, run `LVR state migrate` and tell the user in one plain line that the bookkeeping files were updated to the new format and the old files are kept in `.lvr/migrations/`. Migration keeps every existing value, backs up the old `state.json` and Journal inside `.lvr/migrations/`, adds the new keys, and appends one `schema_migrated` event; the Journal is never rewritten, and running it again does nothing. A `.lvp/` folder is copied to `.lvr/`, never renamed or deleted: after the copy, ask once whether to remove `.lvp/` (default: keep) and remove it only on "yes", with `LVR state migrate --remove-legacy` (it refuses unless everything in `.lvp/` is also in `.lvr/`). `blocked` → /lvr-continue runs its recovery for `blocked.code` (a corrupt, invalid or lagging state is rebuilt by `replay --write`, which writes v2; on a project that has only `.lvp/` it first copies `.lvp/` to `.lvr/` and never touches `.lvp/`, so the path always ends in v2); other skills stop and recommend /lvr-continue. Without Node: copy `state.json` and `journal.ndjson` to `.lvr/migrations/v1-to-v2-<date>/` (for `.lvp/`, first copy the whole folder to `.lvr/`), add the v2 keys with their defaults keeping every existing value, set `schema_version` 2, write the State, then append `schema_migrated` (`from`, `to`, `backup`).
 
 ## 3. Journal (`journal.ndjson`)
 
@@ -97,11 +137,42 @@ Append-only; never rewritten. Every state mutation emits at least one event; `an
 {"ts": "2026-11-08T09:00:00Z", "seq": 1, "type": "answer_recorded", "payload": { }}
 ```
 
-Event types: `session_start`, `folder_gate_passed`, `folder_gate_rejected`, `folder_gate_subfolder_created`, `tier_declared`, `capability_probe_passed`, `capability_probe_failed`, `context_guard_triggered`, `truncation_recovered`, `tier_changed`, `booster_check`, `booster_install_ok`, `booster_install_failed`, `booster_choice`, `section_start`, `section_done`, `section_blocked`, `answer_recorded`, `loop_back_opened`, `loop_back_closed`, `scope_locked`, `doc_generated`, `handoff_started`, `gap_found`, `handoff_done`, `recheck_started`, `recheck_finding`, `recheck_research_refresh`, `recheck_fix_applied`, `recheck_done`, `feature_started`, `feature_captured`, `feature_research`, `impact_analysis`, `feature_scope_decision`, `feature_applied`, `feature_done`, `build_started`, `milestone_started`, `milestone_verified`, `milestone_failed`, `build_blocked`, `deployment_verified`, `build_done`, `brand_started`, `brand_file_generated`, `brand_done`, `error`, `resume`, `research_logged`, `context_research`.
+Event types: `session_start`, `session_end`, `folder_gate_passed`, `folder_gate_rejected`, `folder_gate_subfolder_created`, `tier_declared`, `capability_probe_passed`, `capability_probe_failed`, `context_guard_triggered`, `truncation_recovered`, `tier_changed`, `booster_check`, `booster_install_ok`, `booster_install_failed`, `booster_choice`, `booster_installed`, `booster_uninstalled`, `section_start`, `section_done`, `section_blocked`, `answer_recorded`, `loop_back_opened`, `loop_back_closed`, `scope_locked`, `doc_generated`, `handoff_started`, `gap_found`, `handoff_done`, `recheck_started`, `recheck_finding`, `recheck_research_refresh`, `recheck_fix_applied`, `recheck_done`, `review_started`, `review_done`, `feature_started`, `feature_captured`, `feature_research`, `impact_analysis`, `feature_scope_decision`, `feature_applied`, `feature_done`, `build_started`, `milestone_started`, `milestone_verified`, `milestone_failed`, `build_blocked`, `deployment_verified`, `release_checked`, `build_done`, `framework_selected`, `agent_delegated`, `brand_started`, `brand_file_generated`, `brand_done`, `error`, `resume`, `research_logged`, `context_research`, `schema_migrated` (written only by `state migrate`).
 
-Every event type is replayable; types with no state effect (`folder_gate_rejected`, `impact_analysis`, `brand_*`, …) are informational.
+Every event type is replayable; replay always builds a v2 State. Types with no state effect (`folder_gate_rejected`, `impact_analysis`, `brand_file_generated`, `recheck_finding`, `schema_migrated`, …) are informational.
 
-Payload extensions: any event may also carry `project` as an object (`slug`, `name`, `idea_raw`, `user_language`; a string `project` is just the project slug and is ignored), `decisions[]` and `milestones[]`, which the state transition folds into `state.json`; `section_done` carries `record`, `booster_check` may carry `license` and `tier`, `milestone_verified` carries `verified_at`, `deployment_verified` carries `url`. A rebuild prefers payload data over disk derivation. What events did not carry comes from disk: milestones from `MILESTONES.md` when the bundle exists (it also holds post-lock milestones), else the S8 record; decisions from `DECISIONS.md` (else the Section Records) plus the decision lines in `S4-additions.md`.
+v2 events (payload → State effect; "current session" = the last `sessions[]` entry with `ended_at` null):
+
+| Event | Payload | Effect |
+|---|---|---|
+| `session_start` | `skill`; `session_id`, or null plus `session_id_reason`; optional `harness`, `model`, `tier`, `cwd` | new `sessions[]` entry; restores from `error` |
+| `session_end` | `reason`: `done \| paused \| context_guard \| error \| cancelled`; optional `start_seq`, `note` (required for `cancelled`: why the run was refused) | closes the current (or named) session (`end_reason`, `end_note`); a refused run shows in `sessions[]` as `cancelled` |
+| `booster_installed` | `name`, `repo`, `sha`, `kind`, `scope`, `harness`, `path`; optional `tier`, `section`, `consent` (`true` for `mcp`) | `boosters.installed[]` entry `installed`; the `core`/`enhancer` entry → `installed` |
+| `booster_uninstalled` | `name`, `path`; optional `reason` | entry → `uninstalled`; `core`/`enhancer` entry → `missing` when no install of it remains |
+| `agent_delegated` | `status` `started` (`task`, `profile`, `transport`, …; the script assigns the `AG-NNN` id) · `done` (`id`, `record`) · `failed` (`id`, `reason`) | `agents_delegated[]` |
+| `framework_selected` | `decision_id`, `chosen`, `alternatives`, `confidence`, `user_override`, `defaulted`, `recheck_by`; optional `slot` (default `stack`), `signals_ref`, `section`; the decision itself rides `decisions[]` | `framework_decision` (another slot → `libraries[]`, after a stack pick) |
+| `review_started` | `run`, `scope` (`full \| scope-only`) | restores from `error`; opens `review.last` |
+| `review_done` | `run`, `verdict`, `score`, `open`, `missed_earlier`, `report`; optional `lens_scores`, `ledger_sha256` | closes `review.last` |
+| `release_checked` | `kind`, `status` (`passed \| failed`); optional `product_type`, `target`, `evidence` | `release_check[product_type]` |
+| `schema_migrated` | `from`, `to`, `backup`, … | none (audit record) |
+
+`research_logged` / `context_research` fill `pipeline.research`; `error` fills `project.error`; `tier_declared`/`tier_changed` and the four Section events also update the current session.
+
+Event ownership — every skill run: preflight (`version`; `state migrate --check` except in /lvr-init-new-idea) → `session_start` → the skill's opening event → work → `session_end`:
+
+| Skill | Opens with | Journals `error` when | Ends (`session_end` reason) |
+|---|---|---|---|
+| /lvr-init-new-idea | `session_start` (Journal line 1, after the Folder Gate) | a Section Record, research file or bundle file cannot be written after the Section's work began | `done`, `paused`, `context_guard`, `error` |
+| /lvr-continue | `session_start`, `resume` | a recovery step fails after a partial write; otherwise as /lvr-init-new-idea | as /lvr-init-new-idea |
+| /lvr-handoff | `session_start`, `handoff_started` | `blueprint.json`, the stubs or `HANDOFF-PROMPT.md` cannot be written after the lint started | `done`, `cancelled`, `error` |
+| /lvr-recheck-plan | `session_start`, `recheck_started` (`review_started` after the review redesign) | fixes stop half-applied; the report or ledger cannot be written | `done`, `cancelled`, `error` |
+| /lvr-add-feature | `session_start`, `feature_started` | bundle edits stop after some files changed and before `feature_applied` | `done`, `cancelled`, `error` |
+| /lvr-build | `session_start`, then `build_blocked` or `build_started` | its own bookkeeping fails (the `VERIFICATION.md` log or the State cannot be written); a failing product is `milestone_failed`/`build_blocked`, never `error` | `done`, `paused`, `cancelled`, `error` |
+| /lvr-personal-brand | `session_start`, `brand_started` | a brand file cannot be written mid-kit | `done`, `cancelled`, `error` |
+
+The other events each skill emits are named in its own steps; `booster_installed`/`booster_uninstalled`, `agent_delegated`, `framework_selected`, `review_*` and `release_checked` are written by the steps that install boosters, delegate to a specialist, pick a framework (S5b), review the plan, and check that the product is live.
+
+Payload extensions: any event may also carry `project` as an object (`slug`, `name`, `idea_raw`, `user_language`; a string `project` is just the project slug and is ignored), `decisions[]`, `milestones[]`, `product` (`{types?, flags?, status?, source?, rationale?, confirmed?}`: types replace, flags merge; types without a status mean the user decided them, except `ai_recommended` types, which stay `pending` (`confirmed` false) until an explicit `{status: "decided", confirmed: true}` (the source stays `ai_recommended`); a payload with `types` and no `source` is refused while an AI recommendation is in state, so another pick needs an explicit `source: "user"`; `ai_recommended` needs a `rationale` — the S1 product-type answer, or `feature_applied` for a flag change) and `coverage` (`{"<S>": {"<fact>": [evidence ids]}}`), which the state transition folds into `state.json`; `section_done` carries `record`, `booster_check` may carry `license` and `tier`, `milestone_verified` carries `verified_at`, `deployment_verified` carries `url`. A rebuild prefers payload data over disk derivation. What events did not carry comes from disk: milestones from `MILESTONES.md` when the bundle exists (it also holds post-lock milestones), else the S8 record; decisions from `DECISIONS.md` (else the Section Records) plus the decision lines in `S4-additions.md`.
 
 ## 4. Language rules
 
@@ -142,7 +213,7 @@ Post-lock additions: `/lvr-add-feature` records captures and their decision line
 
 Mandatory first step of idea init. Check in this order:
 
-1. cwd contains `.lvr/state.json` → refuse init. Print the progress summary and recommend /lvr-continue.
+1. cwd contains `.lvr/state.json` (or the old `.lvp/state.json` / `.lvp/journal.ndjson`) → refuse init. Print the progress summary and recommend /lvr-continue (it migrates an old project).
 2. cwd is empty (ignore OS junk: `.DS_Store`, `Thumbs.db`, `desktop.ini`) → proceed in place.
 3. cwd has project markers (`.git`, `package.json`, `Cargo.toml`, `pubspec.yaml`, `pyproject.toml`, `go.mod`, `.solution`, `*.csproj`, …) and no `.lvr/` → refuse: an existing project lives here. Recommend running init in an empty or new folder; offer the generic audit skill (/lvr-recheck-plan) for that project.
 4. cwd has at least one subdirectory with project markers (e.g. a projects root) → create the subfolder `./<slug>/` (slug from the idea, confirm with the user) and proceed there. Journal: `folder_gate_subfolder_created`.
@@ -215,7 +286,7 @@ A Checkpoint = one Journal write + one State write, together.
 
 When `scripts/lvr.mjs` is available, every Checkpoint goes through it (journal first, then state, under one lock); the prose procedures are the fallback.
 
-Checkpoint moments: every answer · every Section start and done · every research step (`research_logged` / `context_research`) · every Booster install or choice · every generated file · every error · each Handoff step.
+Checkpoint moments: every session start and end · every answer · every Section start and done · every research step (`research_logged` / `context_research`) · every Booster install, uninstall or choice · every delegation start and result · every framework pick · every review start and done · every release check · every generated file · every error · each Handoff step.
 
 - Interruption-safe: a session that dies leaves a consistent `state.json` at the last checkpoint; work loss is at most the current unanswered micro-batch.
 - Rebuild: load `state.json`; if it is unreadable, replay the Journal and report what was reconstructed; the corrupt file MAY be preserved once as `.lvr/state.corrupt-<date>.json` (not part of the canonical write set).
@@ -263,5 +334,5 @@ Principles 1 and 14 in operational form. Full contract (exact parsing, finding m
 - `research_logged` — `{ id, section, purpose: web_check|claim|s5|refresh|feature|recheck, topic, queries[], sources[{url, title, published, updated, accessed, primary, live}], outcome: found|failed, reason, conflicts[] }`. `failed` needs `reason`; `found` needs a source; a direct page read is the query `fetch <url>`.
 - `context_research` — the same without `purpose` (refused if present), plus `scope: brief|scan`, `findings` (U-ids), optional `note`. A brief step that found nothing (`outcome: failed`) may have `findings: []` with a `note`; the brief's `None found — <queries, RQ id>` line cites it.
 - `failed` has no `sources`; a source's `published`/`updated` is not after its `accessed` date or today; a source URL is a public site.
-- `id` = `RQ-NNN`, assigned by the script. Both events are informational on replay and valid before `state.json` exists.
+- `id` = `RQ-NNN`, assigned by the script. Both events fill the `pipeline.research` index (section 2) and are valid before `state.json` exists.
 - Script: `LVR research log --in -` (add `--context` for `context_research`). Check: `LVR cite check --all` or `--file <path>` — findings I1–I13; fix every one. Without Node, run the checks by reading, per `lvr-handoff/references/lint-checklist.md` group I.

@@ -52,6 +52,10 @@ npx skills add <owner>/lazy-vibers-recipe
 - To install one skill only or pick an agent explicitly: `npx skills add <owner>/lazy-vibers-recipe --skill lvr-init-new-idea -a claude-code`.
 - It does not install the loose top-level `lvr-*.md` source copies and does not create `.lvr/` anywhere — project folders are created by the skill at runtime.
 
+## Updating
+
+**Update all LVR skills together.** The skills share one project state file (`.lvr/state.json`, format version 2). A project made by a newer LVR is refused by an older skill with `SCHEMA_TOO_NEW` (nothing is changed, never downgraded), so a mix of old and new skills will stop working on projects the new ones touched. A project from an older LVR (or the pre-rename `.lvp/` folder) is migrated automatically the first time any updated skill opens it: the old files are kept in `.lvr/migrations/`, and an old `.lvp/` folder is only removed if you say yes.
+
 ## Manual install (any harness)
 
 A skill is just a folder — copy it into the harness's skills directory. Copy the whole `lvr-init-new-idea/` folder (with `references/`), never just the `SKILL.md`:

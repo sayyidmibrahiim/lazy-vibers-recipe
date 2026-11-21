@@ -43,7 +43,7 @@ function mk(name, o = {}) {
     const r = run(dir, ["journal", "append", "--type", type, "--payload", JSON.stringify(payload)], now);
     if (!r.out?.ok) throw new Error(`setup ${type} failed: ${JSON.stringify(r.out)}`);
   };
-  J("session_start", { project: { slug: "t-case", name: "Case", idea_raw: "x", user_language: "en" } });
+  J("session_start", { skill: "lvr-init-new-idea", session_id_reason: "fixture: no harness id", project: { slug: "t-case", name: "Case", idea_raw: "x", user_language: "en" } });
   J("tier_declared", { tier: "T1" });
   J("section_start", { section: "S0" });
   for (const a of o.answers ?? []) J("answer_recorded", { section: a.id.split(".")[0], answer_id: a.id, q: "Q", a: a.skipped ? null : "A", skipped: !!a.skipped });

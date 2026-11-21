@@ -36,7 +36,7 @@ function mk(name, o = {}) {
     const r = run(dir, ["journal", "append", "--type", type, "--payload", JSON.stringify(payload)], now);
     if (!r.out?.ok) throw new Error(`setup ${type} failed: ${JSON.stringify(r.out)}`);
   };
-  J("session_start", { project: { slug: "t-case", name: "Case", idea_raw: "x", user_language: "en" } });
+  J("session_start", { skill: "lvr-init-new-idea", session_id_reason: "fixture: no harness id", project: { slug: "t-case", name: "Case", idea_raw: "x", user_language: "en" } });
   J("tier_declared", { tier: "T1" });
   J("section_start", { section: "S0" });
   for (const a of o.answers ?? []) J("answer_recorded", { section: a.id.split(".")[0], answer_id: a.id, q: "Q", a: a.skipped ? null : "A", skipped: !!a.skipped });
@@ -416,11 +416,11 @@ const M = {
   const rp = run(dir, ["replay", "--compare"]);
   report("replay --compare: [] after the research events", rp.out?.ok && JSON.stringify(rp.out.diff) === "[]", JSON.stringify(rp.out));
   const ev = run(dir, ["meta", "events"]);
-  report("meta events lists research_logged and context_research last", ev.out?.events.slice(-2).join() === "research_logged,context_research", JSON.stringify(ev.out?.events.slice(-3)));
+  report("meta events lists research_logged and context_research just before the reserved schema_migrated (ticket 27 appended it)", ev.out?.events.slice(-3).join() === "research_logged,context_research,schema_migrated", JSON.stringify(ev.out?.events.slice(-3)));
   // before state.json exists: only session_start in the journal
   const d0 = path.join(TMP, "rlog-early");
   fs.rmSync(d0, { recursive: true, force: true }); fs.mkdirSync(d0, { recursive: true });
-  run(d0, ["journal", "append", "--type", "session_start", "--payload", "{}"]);
+  run(d0, ["journal", "append", "--type", "session_start", "--payload", "{\"skill\":\"lvr-init-new-idea\",\"session_id_reason\":\"fixture: no harness id\"}"]);
   const w = run(d0, ["research", "log", "--payload", JSON.stringify({ ...base, section: null, purpose: "web_check" })]);
   report("research log is valid before state.json exists (web check right after session_start)", w.out?.ok && w.out.id === "RQ-001" && w.out.state.reason === "NO_STATE_YET" && w.rc === 0, JSON.stringify(w.out));
   const d1 = path.join(TMP, "rlog-nolvr");

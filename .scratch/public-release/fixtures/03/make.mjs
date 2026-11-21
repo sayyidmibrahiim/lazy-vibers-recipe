@@ -16,7 +16,7 @@ function cli(d) {
   return { run, J, A };
 }
 function opening({ J, A }) {
-  J("session_start", { skill: "lvr-init-new-idea" }); J("folder_gate_passed", { check: 3 }); J("tier_declared", { tier: "T1" }); J("capability_probe_passed", {});
+  J("session_start", { skill: "lvr-init-new-idea", session_id_reason: "fixture: no harness id" }); J("folder_gate_passed", { check: 3 }); J("tier_declared", { tier: "T1" }); J("capability_probe_passed", {});
   J("section_start", { section: "S0" }); A("S0", "Idea?", "futsal booking", { project: { idea_raw: "futsal booking", user_language: "id", slug: "fx-booking", name: "Fx Booking" } });
 }
 function allSections(c, upto = 9) { opening(c); c.J("section_done", { section: "S0", record: "S0-intake.md" });
@@ -56,7 +56,7 @@ function allSections(c, upto = 9) { opening(c); c.J("section_done", { section: "
 // Prose (unstamped) journals: a model-written run, so replay reads disk for what events did not carry.
 const P = (seq, type, payload = {}) => JSON.stringify({ ts: `2026-11-20T09:${String(seq).padStart(2, "0")}:00Z`, seq, type, payload });
 function proseRun() { const L = []; let n = 0; const e = (t, p) => L.push(P(++n, t, p));
-  e("session_start", { skill: "lvr-init-new-idea" }); e("folder_gate_passed", { check: 3 }); e("tier_declared", { tier: "T1" }); e("capability_probe_passed", {});
+  e("session_start", { skill: "lvr-init-new-idea", session_id_reason: "fixture: no harness id" }); e("folder_gate_passed", { check: 3 }); e("tier_declared", { tier: "T1" }); e("capability_probe_passed", {});
   for (let i = 0; i <= 9; i++) { e("section_start", { section: "S" + i }); if (i === 0) e("answer_recorded", { section: "S0", answer_id: "S0.q1", q: "Idea?", a: "futsal booking", project: { idea_raw: "futsal booking", user_language: "id", slug: "fx-booking", name: "Fx Booking" } });
     if (i === 7) e("scope_locked", { in_mvp: ["F-01", "F-02"], parking_lot: [] }); e("section_done", { section: "S" + i, record: i === 9 ? null : `S${i}-rec.md` }); }
   return { L, e }; }

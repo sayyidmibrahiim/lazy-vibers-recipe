@@ -131,7 +131,7 @@ Cites with I3, I4 or I5 findings are dropped from their group first; a group wit
 
 ## 5. Research log events (normative)
 
-Every research step (one topic, any number of queries) is journaled once, found or failed. Both types are informational in v1 replay (no state field) and are valid before `state.json` exists (the journal must exist: after `session_start`).
+Every research step (one topic, any number of queries) is journaled once, found or failed. Both types are valid before `state.json` exists (the journal must exist: after `session_start`). In state schema v2 they fill the `pipeline.research` index (spec 01: the brief's and each scan's research ids and findings, the log count, the failed ids, the last web check); the payloads stay in the journal only.
 
 `research_logged`:
 

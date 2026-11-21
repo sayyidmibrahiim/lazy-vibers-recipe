@@ -1,12 +1,22 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "project": {
     "slug": "fx-booking",
     "name": "Fx Booking",
     "idea_raw": "futsal booking",
     "user_language": "id",
     "created_at": "2026-11-20T09:05:00Z",
-    "status": "building"
+    "status": "building",
+    "error": null
+  },
+  "product": {
+    "types": [],
+    "flags": {},
+    "status": "unasked",
+    "source": null,
+    "rationale": null,
+    "confirmed": false,
+    "updated_at": null
   },
   "pipeline": {
     "current_section": "S9",
@@ -86,7 +96,22 @@
         "completed_at": "2026-11-20T09:26:00Z"
       }
     },
-    "loop_backs": []
+    "loop_backs": [],
+    "research": {
+      "brief": {
+        "rq": [],
+        "findings": [],
+        "updated_at": null
+      },
+      "scans": {},
+      "log": {
+        "count": 0,
+        "failed": [],
+        "last_id": null,
+        "last_at": null
+      },
+      "web_check": null
+    }
   },
   "decisions": [
     {
@@ -113,7 +138,8 @@
   ],
   "boosters": {
     "core": [],
-    "enhancer": []
+    "enhancer": [],
+    "installed": []
   },
   "model_profile": {
     "tier": "T1",
@@ -150,5 +176,41 @@
     }
   ],
   "deployment": null,
-  "handoff": null
+  "handoff": null,
+  "framework_decision": null,
+  "release_check": {},
+  "review": null,
+  "agents_delegated": [],
+  "sessions": [
+    {
+      "start_seq": 1,
+      "skill": "lvr-init-new-idea",
+      "harness": null,
+      "session_id": null,
+      "session_id_reason": "fixture: no harness id",
+      "model": null,
+      "tier": "T1",
+      "cwd": null,
+      "started_at": "2026-11-20T09:01:00Z",
+      "ended_at": null,
+      "end_reason": null,
+      "end_note": null,
+      "sections": [
+        "S0",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6",
+        "S7",
+        "S8",
+        "S9"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    }
+  ]
 }

@@ -14,21 +14,21 @@ import { fileURLToPath } from "node:url";
 
 // ---------------------------------------------------------------- 1. constants
 const VERSION = "1.0.0";
-const LVR_SCHEMA = 1;
+const LVR_SCHEMA = 2;
 const SELF = fileURLToPath(import.meta.url);
 const SCRIPT_DIR = path.dirname(SELF);
 
 const EVENT_TYPES = [
-  "session_start", "folder_gate_passed", "folder_gate_rejected", "folder_gate_subfolder_created", "tier_declared",
+  "session_start", "session_end", "folder_gate_passed", "folder_gate_rejected", "folder_gate_subfolder_created", "tier_declared",
   "capability_probe_passed", "capability_probe_failed", "context_guard_triggered", "truncation_recovered", "tier_changed",
-  "booster_check", "booster_install_ok", "booster_install_failed", "booster_choice", "section_start",
+  "booster_check", "booster_install_ok", "booster_install_failed", "booster_choice", "booster_installed", "booster_uninstalled", "section_start",
   "section_done", "section_blocked", "answer_recorded", "loop_back_opened", "loop_back_closed",
   "scope_locked", "doc_generated", "handoff_started", "gap_found", "handoff_done",
-  "recheck_started", "recheck_finding", "recheck_research_refresh", "recheck_fix_applied", "recheck_done",
+  "recheck_started", "recheck_finding", "recheck_research_refresh", "recheck_fix_applied", "recheck_done", "review_started", "review_done",
   "feature_started", "feature_captured", "feature_research", "impact_analysis", "feature_scope_decision",
   "feature_applied", "feature_done", "build_started", "milestone_started", "milestone_verified",
-  "milestone_failed", "build_blocked", "deployment_verified", "build_done", "brand_started",
-  "brand_file_generated", "brand_done", "error", "resume", "research_logged", "context_research",
+  "milestone_failed", "build_blocked", "deployment_verified", "release_checked", "build_done", "framework_selected", "agent_delegated", "brand_started",
+  "brand_file_generated", "brand_done", "error", "resume", "research_logged", "context_research", "schema_migrated",
 ];
 const SECTIONS = ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10"];
 // S9 is the last section pointer: after S9 is done current_section stays "S9". S10 (build) is tracked by project.status
@@ -41,6 +41,24 @@ const PROJECT_STATUS = ["interview", "researching", "review", "bundled", "buildi
 const DECISION_STATUS = ["user_confirmed", "assumed", "designer_filled"];
 const BOOSTER_STATUS = ["installed", "missing", "failed", "degraded"];
 const TIERS = ["T1", "T2", "T3"];
+// v2 enums
+const PRODUCT_STATUS = ["unasked", "pending", "decided"];
+const PRODUCT_SOURCE = ["user", "ai_recommended"];
+const PRODUCT_FLAGS = ["stores_data", "has_ui", "has_llm", "regulated_domain"];
+const PRODUCT_TYPE_RE = /^[a-z][a-z0-9-]{0,31}$/;
+const SESSION_END = ["done", "paused", "context_guard", "error", "cancelled"];
+const BOOSTER_KINDS = ["skill", "mcp", "agent"];
+const BOOSTER_SCOPES = ["project", "user"];
+const TRANSPORTS = ["native", "prompt", "inline"];
+const AGENT_STATUS = ["started", "done", "failed"];
+const CONFIDENCE = ["high", "medium", "low"];
+const REVIEW_VERDICTS = ["BUILD-READY", "FIX-THEN-BUILD", "NOT-READY", "INCOMPLETE"];
+const REVIEW_SCOPES = ["full", "scope-only"];
+const RELEASE_KINDS = ["url_2xx", "package_install", "mcp_tools_listed", "workflow_import_run", "skill_trigger", "extension_load", "store_build", "build_runs"];
+const EVIDENCE_RE = /^(?:S(?:10|[0-9])\.q[0-9]+|D-\d{3,}|U-\d{2,}|RQ-\d{3,})$/;
+const FACT_KEY_RE = /^[a-z0-9][a-z0-9_.-]*$/;
+const LEGACY_SESSION_REASON = "not recorded (written before session tracking)";
+const SCHEMA_HINT = "Update all LVR skills together to the latest version, then try again. Nothing in .lvr/ was changed and it must not be edited by hand.";
 
 // The nine v0 core boosters (init Step 3). Used only as a static fallback for repo/license and legacy journals.
 const V0_BOOSTERS = [
@@ -84,7 +102,7 @@ const sha256 = (s) => crypto.createHash("sha256").update(s).digest("hex");
 const ptrEsc = (s) => String(s).replace(/~/g, "~0").replace(/\//g, "~1");
 const secNum = (s) => parseInt(String(s).slice(1), 10);
 
-const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check", "all", "context"]);
+const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check", "all", "context", "remove-legacy"]);
 /** Every `--file` value in order (cite check takes several); a symbol key so the unknown-flag check never sees it. */
 const FILE_LIST = Symbol("files");
 const OPTIONAL_VALUE_FLAGS = new Set(["compare"]);
@@ -186,6 +204,7 @@ function ptrGet(obj, pointer) {
   let cur = obj;
   for (const raw of pointer.slice(1).split("/")) {
     const k = raw.replace(/~1/g, "/").replace(/~0/g, "~");
+    if (Array.isArray(cur) && k === "-1" && cur.length) { cur = cur[cur.length - 1]; continue; } // extension: -1 = the last element (e.g. /sessions/-1/recovered_error)
     if (cur !== null && typeof cur === "object" && Object.prototype.hasOwnProperty.call(cur, k)) cur = cur[k];
     else return { found: false, value: null };
   }
@@ -199,17 +218,54 @@ function resolveDir(flags) {
   if (!st.isDirectory()) throw fail("DIR_NOT_FOUND", `Not a folder: ${dir}`);
   return dir;
 }
+/** A pre-rename `.lvp/` folder that holds a project (state or journal). */
+const legacyHolds = (dir) => fs.existsSync(path.join(dir, ".lvp", "state.json")) || fs.existsSync(path.join(dir, ".lvp", "journal.ndjson"));
+const MIGRATE_HINT = "Run `state migrate` first; it keeps the old files in .lvr/migrations/. If it reports a damaged or lagging state, run `replay --write` (add `--force` for a lagging one): on a .lvp project it first copies .lvp to .lvr, never touching .lvp, then rebuilds the state from the journal in the new format.";
 function needLvr(dir) {
-  if (!fs.existsSync(path.join(dir, ".lvr"))) throw fail("NO_LVR", "No .lvr folder here; this is not an LVR project folder.");
+  if (!fs.existsSync(path.join(dir, ".lvr"))) {
+    const legacy = legacyHolds(dir);
+    throw fail("NO_LVR", legacy ? "No .lvr folder here, but this folder has a .lvp project from an older LVR; run `state migrate` (or `replay --write` when it reports a damaged state)." : "No .lvr folder here; this is not an LVR project folder.",
+      legacy ? { legacy_folder: ".lvp", hint: MIGRATE_HINT } : undefined);
+  }
+}
+
+/** schema_version of a state file (number), or null when it is absent, unreadable or has none. */
+function peekSchema(file) {
+  try { const o = JSON.parse(readText(file)); return isObj(o) && Number.isInteger(o.schema_version) ? o.schema_version : null; } catch { return null; }
+}
+/** Newer than this script: stop every command that reads the project. Never rewrites anything. */
+function guardNewer(dir) {
+  let found = null;
+  for (const f of [".lvr", ".lvp"]) {
+    const v = peekSchema(path.join(dir, f, "state.json"));
+    if (v !== null) { found = v; break; }
+    if (f === ".lvr" && fs.existsSync(path.join(dir, ".lvr", "state.json"))) break; // unreadable .lvr state: the journal below may still say
+  }
+  if (found === null && fs.existsSync(path.join(dir, ".lvr", "journal.ndjson"))) {
+    for (const e of readJournal(dir).events) if (e.type === "schema_migrated" && Number.isInteger(e.payload.to) && e.payload.to > LVR_SCHEMA) found = Math.max(found ?? 0, e.payload.to);
+  }
+  if (found !== null && found > LVR_SCHEMA) throw tooNew(found);
+}
+const tooNew = (found) => fail("SCHEMA_TOO_NEW", `This project was made by a newer LVR (schema ${found}); this skill only understands schema ${LVR_SCHEMA}. Nothing was changed.`, { found, supported: LVR_SCHEMA, hint: SCHEMA_HINT });
+/** A v1 project (or a .lvp-only folder) cannot be written until `state migrate` ran. Recovery commands skip this guard. */
+function guardSchema(dir) {
+  const sp = path.join(dir, ".lvr", "state.json");
+  if (fs.existsSync(sp)) {
+    if (peekSchema(sp) === 1) throw fail("MIGRATION_NEEDED", "This project was made with an older LVR (schema 1) and must be migrated before anything is written. Nothing was written.", { from: 1, folder: ".lvr", hint: MIGRATE_HINT });
+    return;
+  }
+  if (!fs.existsSync(path.join(dir, ".lvr", "journal.ndjson")) && legacyHolds(dir)) {
+    throw fail("MIGRATION_NEEDED", "This folder holds a .lvp project from an older LVR; it must be migrated before anything is written. Nothing was written.", { from: 1, folder: ".lvp", hint: MIGRATE_HINT });
+  }
 }
 
 // ---------------------------------------------------------------- 3. journal
-function readJournal(dir) {
-  const jp = path.join(dir, ".lvr", "journal.ndjson");
+function readJournal(dir, folder = ".lvr") {
+  const jp = path.join(dir, folder, "journal.ndjson");
   const res = {
     path: relPath(dir, jp), exists: false, lines: 0, events: [], max_seq: 0, last_ts: null, seq_gaps: [],
     duplicate_seqs: [], corrupt_lines: [], truncated_tail: false, tail_missing_newline: false, crlf: false,
-    bom: false, unknown_types: [], duplicate_rq_ids: [], scope_locked_seq: null, healthy: true,
+    bom: false, unknown_types: [], duplicate_rq_ids: [], duplicate_ag_ids: [], scope_locked_seq: null, healthy: true,
   };
   let raw;
   try { raw = fs.readFileSync(jp, "utf8"); } catch { return res; }
@@ -249,7 +305,11 @@ function readJournal(dir) {
     if (b - a > 1) res.seq_gaps.push([a, b]);
   }
   const rqSeen = new Set();
+  const agSeen = new Set();
   for (const ev of res.events) {
+    if (ev.type === "agent_delegated" && ev.payload.status === "started" && isStr(ev.payload.id)) {
+      if (agSeen.has(ev.payload.id)) { if (!res.duplicate_ag_ids.includes(ev.payload.id)) res.duplicate_ag_ids.push(ev.payload.id); } else agSeen.add(ev.payload.id);
+    }
     if (!EVENT_TYPES.includes(ev.type)) res.unknown_types.push({ seq: ev.seq, type: ev.type });
     if ((ev.type === "research_logged" || ev.type === "context_research") && isStr(ev.payload.id)) {
       if (rqSeen.has(ev.payload.id)) { if (!res.duplicate_rq_ids.includes(ev.payload.id)) res.duplicate_rq_ids.push(ev.payload.id); } else rqSeen.add(ev.payload.id);
@@ -260,7 +320,7 @@ function readJournal(dir) {
     res.max_seq = res.events[res.events.length - 1].seq;
     res.last_ts = res.events[res.events.length - 1].ts;
   }
-  res.healthy = !res.seq_gaps.length && !res.duplicate_seqs.length && !res.corrupt_lines.length && !res.truncated_tail && !res.unknown_types.length && !res.duplicate_rq_ids.length;
+  res.healthy = !res.seq_gaps.length && !res.duplicate_seqs.length && !res.corrupt_lines.length && !res.truncated_tail && !res.unknown_types.length && !res.duplicate_rq_ids.length && !res.duplicate_ag_ids.length;
   return res;
 }
 
@@ -272,6 +332,7 @@ function journalWarnings(j) {
   for (const s of j.duplicate_seqs) w.push(`Journal sequence ${s} appears more than once; the first one is used.`);
   for (const u of j.unknown_types) w.push(`Event ${u.seq} has an unknown type "${u.type}".`);
   for (const id of j.duplicate_rq_ids) w.push(`Research id ${id} appears on more than one event; the first one is used.`);
+  for (const id of j.duplicate_ag_ids) w.push(`Delegation id ${id} appears on more than one started event; the first one is used.`);
   return w;
 }
 
@@ -298,14 +359,35 @@ function appendJournalLine(jp, ev) {
 
 // ---------------------------------------------------------------- 4. schema: validate, canonical, atomic write, lock
 const KEYS = {
-  root: ["schema_version", "project", "pipeline", "decisions", "boosters", "model_profile", "milestones", "deployment", "handoff"],
-  project: ["slug", "name", "idea_raw", "user_language", "created_at", "status"],
-  pipeline: ["current_section", "sections", "loop_backs"],
-  section: ["status", "record", "started_at", "completed_at", "answers"],
+  root1: ["schema_version", "project", "pipeline", "decisions", "boosters", "model_profile", "milestones", "deployment", "handoff"],
+  root: ["schema_version", "project", "product", "pipeline", "decisions", "boosters", "model_profile", "milestones", "deployment", "handoff", "framework_decision", "release_check", "review", "agents_delegated", "sessions"],
+  project1: ["slug", "name", "idea_raw", "user_language", "created_at", "status"],
+  project: ["slug", "name", "idea_raw", "user_language", "created_at", "status", "error"],
+  pErr: ["seq", "ts", "skill", "step", "message", "previous_status"],
+  product: ["types", "flags", "status", "source", "rationale", "confirmed", "updated_at"],
+  pipeline1: ["current_section", "sections", "loop_backs"],
+  pipeline: ["current_section", "sections", "loop_backs", "research"],
+  research: ["brief", "scans", "log", "web_check"],
+  brief: ["rq", "findings", "updated_at"],
+  scan: ["rq", "findings", "note", "at"],
+  rlog: ["count", "failed", "last_id", "last_at"],
+  webCheck: ["id", "outcome", "reason", "at"],
+  section1: ["status", "record", "started_at", "completed_at", "answers"],
+  section: ["status", "record", "started_at", "completed_at", "answers", "coverage"],
+  installed: ["name", "kind", "repo", "sha", "scope", "harness", "path", "tier", "section", "consent", "status", "installed_at", "uninstalled_at"],
+  fw: ["slot", "decision_id", "chosen", "alternatives", "confidence", "user_override", "defaulted", "signals_ref", "recheck_by", "section", "decided_at", "libraries"],
+  chosen: ["id", "name", "version"],
+  releaseEntry: ["kind", "status", "target", "evidence", "checked_at"],
+  review: ["ledger", "runs", "last"],
+  reviewLast: ["run", "scope", "started_at", "done_at", "verdict", "score", "lens_scores", "open", "missed_earlier", "report", "ledger_sha256"],
+  agent: ["id", "task", "profile", "profile_sha", "transport", "harness", "model", "tier", "section", "status", "started_at", "ended_at", "record", "reason"],
+  session: ["start_seq", "skill", "harness", "session_id", "session_id_reason", "model", "tier", "cwd", "started_at", "ended_at", "end_reason", "end_note", "sections", "agents", "boosters_installed", "boosters_uninstalled", "recovered_error"],
+  recovered: ["seq", "skill", "step", "message"],
+  boosters1: ["core", "enhancer"],
   answer: ["q", "a", "skipped"],
   loop: ["id", "from", "to", "reason", "opened_at", "resolved_at"],
   decision: ["id", "section", "summary", "rationale", "status"],
-  boosters: ["core", "enhancer"],
+  boosters: ["core", "enhancer", "installed"],
   booster: ["name", "repo", "license", "tier", "status"],
   model: ["tier", "probe", "declared_at"],
   milestone: ["id", "goal", "features", "verified", "verified_at"],
@@ -322,22 +404,38 @@ function validateState(s) {
     for (const k of Object.keys(o)) if (!keys.includes(k)) W("W_UNKNOWN_KEY", `${ptr}/${ptrEsc(k)}`, `Key "${k}" is not part of the state schema.`);
   };
   if (!isObj(s)) { E("E_ROOT", "", "State must be a JSON object."); return { errors, warnings }; }
-  unknown(s, KEYS.root, "");
-  if (s.schema_version !== 1) E("E_SCHEMA_VERSION", "/schema_version", "schema_version must be 1.");
+  const v2 = s.schema_version === 2;
+  unknown(s, v2 ? KEYS.root : KEYS.root1, "");
+  if (s.schema_version === 1) W("W_SCHEMA_V1", "/schema_version", "This is a schema 1 state; run `state migrate` before anything is written.");
+  else if (!v2) E("E_SCHEMA_VERSION", "/schema_version", Number.isInteger(s.schema_version) && s.schema_version > LVR_SCHEMA ? "schema_version is newer than this LVR understands: update all LVR skills." : "schema_version must be 2 (or 1, which needs `state migrate`).");
 
   const p = s.project;
   if (!isObj(p)) E("E_PROJECT", "/project", "project must be an object.");
   else {
-    unknown(p, KEYS.project, "/project");
+    unknown(p, v2 ? KEYS.project : KEYS.project1, "/project");
     for (const k of ["slug", "name", "idea_raw", "user_language"]) if (!isStr(p[k])) E("E_PROJECT", `/project/${k}`, `project.${k} must be a string.`);
     if (!isIso(p.created_at)) E("E_PROJECT", "/project/created_at", "project.created_at must be an ISO timestamp.");
     if (!PROJECT_STATUS.includes(p.status)) E("E_PROJECT", "/project/status", `project.status must be one of ${PROJECT_STATUS.join("|")}.`);
+    if (v2) {
+      if (p.error === undefined) { if (p.status === "error") W("W_ERROR_DETAIL_MISSING", "/project/error", "Status is error but project.error holds no detail."); }
+      else if (p.error === null) { if (p.status === "error") W("W_ERROR_DETAIL_MISSING", "/project/error", "Status is error but project.error holds no detail."); }
+      else if (!isObj(p.error)) E("E_PROJECT_ERROR", "/project/error", "project.error must be null or an object.");
+      else {
+        unknown(p.error, KEYS.pErr, "/project/error");
+        const x = p.error;
+        if (p.status !== "error") E("E_PROJECT_ERROR", "/project/error", "project.error is set but status is not error.");
+        if (!Number.isInteger(x.seq) || x.seq < 1) E("E_PROJECT_ERROR", "/project/error/seq", "seq must be an integer >= 1.");
+        if (!isIso(x.ts)) E("E_PROJECT_ERROR", "/project/error/ts", "ts must be an ISO timestamp.");
+        for (const k of ["skill", "step", "message"]) if (!(x[k] === null || isStr(x[k]))) E("E_PROJECT_ERROR", `/project/error/${k}`, `${k} must be a string or null.`);
+        if (!PROJECT_STATUS.includes(x.previous_status) || x.previous_status === "error") E("E_PROJECT_ERROR", "/project/error/previous_status", "previous_status must be a status other than error.");
+      }
+    }
   }
 
   const pl = s.pipeline;
   if (!isObj(pl)) E("E_PIPELINE", "/pipeline", "pipeline must be an object.");
   else {
-    unknown(pl, KEYS.pipeline, "/pipeline");
+    unknown(pl, v2 ? KEYS.pipeline : KEYS.pipeline1, "/pipeline");
     if (!SEC_RE.test(pl.current_section ?? "")) E("E_PIPELINE", "/pipeline/current_section", "current_section must be S0..S10.");
     if (!isObj(pl.sections)) E("E_PIPELINE", "/pipeline/sections", "pipeline.sections must be an object.");
     else {
@@ -345,7 +443,15 @@ function validateState(s) {
         const sp = `/pipeline/sections/${ptrEsc(sid)}`;
         if (!SEC_RE.test(sid)) { E("E_SECTION", sp, "Section keys must be S0..S10."); continue; }
         if (!isObj(x)) { E("E_SECTION", sp, "Section entry must be an object."); continue; }
-        unknown(x, KEYS.section, sp);
+        unknown(x, v2 ? KEYS.section : KEYS.section1, sp);
+        if (v2 && x.coverage !== undefined) {
+          if (!isObj(x.coverage)) E("E_COVERAGE", `${sp}/coverage`, "coverage must be an object.");
+          else for (const [fk, ev] of Object.entries(x.coverage)) {
+            const cp = `${sp}/coverage/${ptrEsc(fk)}`;
+            if (!FACT_KEY_RE.test(fk)) E("E_COVERAGE", cp, "Fact keys are lowercase words (a-z, 0-9, _ . -).");
+            else if (!Array.isArray(ev) || !ev.every((id) => isStr(id) && EVIDENCE_RE.test(id))) E("E_COVERAGE", cp, "Evidence must be an array of answer ids, D-NNN, U-NN or RQ-NNN.");
+          }
+        }
         if (!["pending", "in_progress", "done", "blocked"].includes(x.status)) E("E_SECTION", `${sp}/status`, "status must be pending|in_progress|done|blocked.");
         if (x.record !== undefined && !isStr(x.record)) E("E_SECTION", `${sp}/record`, "record must be a string.");
         for (const k of ["started_at", "completed_at"]) if (x[k] !== undefined && !isIso(x[k])) E("E_SECTION", `${sp}/${k}`, `${k} must be an ISO timestamp.`);
@@ -408,8 +514,8 @@ function validateState(s) {
   const b = s.boosters;
   if (!isObj(b)) E("E_BOOSTER", "/boosters", "boosters must be an object.");
   else {
-    unknown(b, KEYS.boosters, "/boosters");
-    for (const arr of KEYS.boosters) {
+    unknown(b, v2 ? KEYS.boosters : KEYS.boosters1, "/boosters");
+    for (const arr of KEYS.boosters1) {
       if (!Array.isArray(b[arr])) { E("E_BOOSTER", `/boosters/${arr}`, `boosters.${arr} must be an array.`); continue; }
       b[arr].forEach((x, i) => {
         const bp = `/boosters/${arr}/${i}`;
@@ -476,7 +582,258 @@ function validateState(s) {
       if (!isIso(h.completed_at)) E("E_HANDOFF", "/handoff/completed_at", "completed_at must be an ISO timestamp.");
     }
   }
+  if (v2) validateV2(s, E, W, unknown);
   return { errors, warnings };
+}
+
+const isInt1 = (v) => Number.isInteger(v) && v >= 1;
+const dateOk = (v) => isStr(v) && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v + "T00:00:00Z")) && new Date(v + "T00:00:00Z").toISOString().slice(0, 10) === v;
+
+/** The v2-only keys (see docs/spec/01-state.md). Absent key = warning W_MISSING_KEY (read as the default). */
+function validateV2(s, E, W, unknown) {
+  const miss = (k, what) => W("W_MISSING_KEY", `/${k}`, `${what} is absent (read as its default).`);
+  // product
+  if (s.product === undefined) miss("product", "product");
+  else if (!isObj(s.product)) E("E_PRODUCT", "/product", "product must be an object.");
+  else {
+    const x = s.product;
+    unknown(x, KEYS.product, "/product");
+    if (!Array.isArray(x.types) || !x.types.every((t) => isStr(t) && PRODUCT_TYPE_RE.test(t)) || new Set(x.types).size !== x.types.length) E("E_PRODUCT", "/product/types", "types must be an array of unique ids (a-z, 0-9, -).");
+    if (!isObj(x.flags)) E("E_PRODUCT", "/product/flags", "flags must be an object.");
+    else for (const [k, v] of Object.entries(x.flags)) {
+      if (!/^[a-z][a-z0-9_]*$/.test(k) || typeof v !== "boolean") E("E_PRODUCT", `/product/flags/${ptrEsc(k)}`, "A flag is a lowercase name with a true/false value.");
+      else if (!PRODUCT_FLAGS.includes(k)) W("W_PRODUCT_FLAG_UNKNOWN", `/product/flags/${ptrEsc(k)}`, `Flag "${k}" is not one of ${PRODUCT_FLAGS.join(", ")}.`);
+    }
+    if (!(x.updated_at === null || isIso(x.updated_at))) E("E_PRODUCT", "/product/updated_at", "updated_at must be an ISO timestamp or null.");
+    for (const k of ["status", "source", "rationale", "confirmed"]) if (x[k] === undefined) miss(`product/${k}`, `product.${k}`);
+    if (x.status !== undefined && !PRODUCT_STATUS.includes(x.status)) E("E_PRODUCT", "/product/status", `status must be ${PRODUCT_STATUS.join("|")}.`);
+    if (x.source !== undefined && !(x.source === null || PRODUCT_SOURCE.includes(x.source))) E("E_PRODUCT", "/product/source", "source must be user|ai_recommended or null.");
+    if (x.rationale !== undefined && !(x.rationale === null || isStr(x.rationale))) E("E_PRODUCT", "/product/rationale", "rationale must be a string or null.");
+    if (x.confirmed !== undefined && typeof x.confirmed !== "boolean") E("E_PRODUCT", "/product/confirmed", "confirmed must be true or false.");
+    if (PRODUCT_STATUS.includes(x.status) && Array.isArray(x.types)) {
+      if (x.status === "decided") {
+        if (!x.types.length) E("E_PRODUCT", "/product/types", "A decided product type needs at least one type.");
+        if (x.confirmed !== true) E("E_PRODUCT", "/product/confirmed", "A decided product type is confirmed.");
+        if (!PRODUCT_SOURCE.includes(x.source)) E("E_PRODUCT", "/product/source", "A decided product type records its source (user|ai_recommended).");
+      } else {
+        if (x.confirmed === true) E("E_PRODUCT", "/product/confirmed", `A product type that is ${x.status} is not confirmed.`);
+        if (x.status === "unasked" && (x.types.length || x.source)) E("E_PRODUCT", "/product/status", "An unasked product type has no types and no source.");
+      }
+      if (x.source === "ai_recommended" && !(isStr(x.rationale) && x.rationale.trim() !== "")) E("E_PRODUCT", "/product/rationale", "An AI-recommended product type records its reasons (rationale).");
+    }
+  }
+  // pipeline.research
+  const pr = s.pipeline?.research;
+  if (isObj(s.pipeline)) {
+    if (pr === undefined) miss("pipeline/research", "pipeline.research");
+    else if (!isObj(pr)) E("E_RESEARCH", "/pipeline/research", "research must be an object.");
+    else {
+      unknown(pr, KEYS.research, "/pipeline/research");
+      const rqs = (a, ptr, re) => { if (!Array.isArray(a) || !a.every((x) => isStr(x) && re.test(x)) || new Set(a).size !== a.length) E("E_RESEARCH", ptr, "Must be an array of unique ids."); };
+      const RQ = /^RQ-\d{3,}$/, U = /^U-\d{2,}$/;
+      if (!isObj(pr.brief)) E("E_RESEARCH", "/pipeline/research/brief", "brief must be an object.");
+      else {
+        unknown(pr.brief, KEYS.brief, "/pipeline/research/brief");
+        rqs(pr.brief.rq, "/pipeline/research/brief/rq", RQ); rqs(pr.brief.findings, "/pipeline/research/brief/findings", U);
+        if (!(pr.brief.updated_at === null || isIso(pr.brief.updated_at))) E("E_RESEARCH", "/pipeline/research/brief/updated_at", "updated_at must be an ISO timestamp or null.");
+      }
+      if (!isObj(pr.scans)) E("E_RESEARCH", "/pipeline/research/scans", "scans must be an object.");
+      else for (const [k, x] of Object.entries(pr.scans)) {
+        const sp = `/pipeline/research/scans/${ptrEsc(k)}`;
+        if (!/^S[1-8]$/.test(k)) { E("E_RESEARCH", sp, "Scan keys are S1..S8."); continue; }
+        if (!isObj(x)) { E("E_RESEARCH", sp, "A scan must be an object."); continue; }
+        unknown(x, KEYS.scan, sp);
+        rqs(x.rq, `${sp}/rq`, RQ); rqs(x.findings, `${sp}/findings`, U);
+        if (!(x.note === null || isStr(x.note))) E("E_RESEARCH", `${sp}/note`, "note must be a string or null.");
+        if (!isIso(x.at)) E("E_RESEARCH", `${sp}/at`, "at must be an ISO timestamp.");
+      }
+      const lg = pr.log;
+      if (!isObj(lg)) E("E_RESEARCH", "/pipeline/research/log", "log must be an object.");
+      else {
+        unknown(lg, KEYS.rlog, "/pipeline/research/log");
+        if (!Number.isInteger(lg.count) || lg.count < 0) E("E_RESEARCH", "/pipeline/research/log/count", "count must be an integer >= 0.");
+        rqs(lg.failed, "/pipeline/research/log/failed", RQ);
+        if (!(lg.last_id === null || (isStr(lg.last_id) && RQ.test(lg.last_id)))) E("E_RESEARCH", "/pipeline/research/log/last_id", "last_id must be RQ-NNN or null.");
+        if (!(lg.last_at === null || isIso(lg.last_at))) E("E_RESEARCH", "/pipeline/research/log/last_at", "last_at must be an ISO timestamp or null.");
+      }
+      const wc = pr.web_check;
+      if (wc !== null && wc !== undefined) {
+        if (!isObj(wc)) E("E_RESEARCH", "/pipeline/research/web_check", "web_check must be null or an object.");
+        else {
+          unknown(wc, KEYS.webCheck, "/pipeline/research/web_check");
+          if (!(wc.id === null || (isStr(wc.id) && RQ.test(wc.id)))) E("E_RESEARCH", "/pipeline/research/web_check/id", "id must be RQ-NNN or null.");
+          if (!["found", "failed"].includes(wc.outcome)) E("E_RESEARCH", "/pipeline/research/web_check/outcome", "outcome must be found|failed.");
+          if (!(wc.reason === null || isStr(wc.reason))) E("E_RESEARCH", "/pipeline/research/web_check/reason", "reason must be a string or null.");
+          if (!isIso(wc.at)) E("E_RESEARCH", "/pipeline/research/web_check/at", "at must be an ISO timestamp.");
+        }
+      } else if (wc === undefined) miss("pipeline/research/web_check", "pipeline.research.web_check");
+    }
+  }
+  // boosters.installed
+  if (isObj(s.boosters)) {
+    const ins = s.boosters.installed;
+    if (ins === undefined) miss("boosters/installed", "boosters.installed");
+    else if (!Array.isArray(ins)) E("E_BOOSTER_INSTALL", "/boosters/installed", "installed must be an array.");
+    else {
+      const seen = new Set();
+      ins.forEach((x, i) => {
+        const bp = `/boosters/installed/${i}`;
+        if (!isObj(x)) { E("E_BOOSTER_INSTALL", bp, "An install entry must be an object."); return; }
+        unknown(x, KEYS.installed, bp);
+        for (const k of ["name", "repo", "harness", "path"]) if (!isStr(x[k]) || (k !== "repo" && x[k] === "")) E("E_BOOSTER_INSTALL", `${bp}/${k}`, `${k} must be a string${k === "repo" ? "" : " (not empty)"}.`);
+        if (!BOOSTER_KINDS.includes(x.kind)) E("E_BOOSTER_INSTALL", `${bp}/kind`, `kind must be ${BOOSTER_KINDS.join("|")}.`);
+        if (!BOOSTER_SCOPES.includes(x.scope)) E("E_BOOSTER_INSTALL", `${bp}/scope`, "scope must be project|user.");
+        if (!(x.sha === null || (isStr(x.sha) && /^[0-9a-f]{7,40}$/.test(x.sha)))) E("E_BOOSTER_INSTALL", `${bp}/sha`, "sha must be 7-40 hex characters or null.");
+        else if (x.sha === null) W("W_BOOSTER_NO_SHA", `${bp}/sha`, "This install has no pinned sha.");
+        if (!(x.tier === null || ["core", "enhancer"].includes(x.tier))) E("E_BOOSTER_INSTALL", `${bp}/tier`, "tier must be core|enhancer or null.");
+        else if (x.tier === null && x.kind !== "agent") E("E_BOOSTER_INSTALL", `${bp}/tier`, "tier is null only for kind agent.");
+        if (!(x.section === null || SEC_RE.test(x.section ?? ""))) E("E_BOOSTER_INSTALL", `${bp}/section`, "section must be S0..S10 or null.");
+        if (typeof x.consent !== "boolean") E("E_BOOSTER_INSTALL", `${bp}/consent`, "consent must be true or false.");
+        else if (x.kind === "mcp" && x.consent !== true) E("E_BOOSTER_INSTALL", `${bp}/consent`, "An MCP install needs consent: true.");
+        if (!["installed", "uninstalled"].includes(x.status)) E("E_BOOSTER_INSTALL", `${bp}/status`, "status must be installed|uninstalled.");
+        if (!isIso(x.installed_at)) E("E_BOOSTER_INSTALL", `${bp}/installed_at`, "installed_at must be an ISO timestamp.");
+        if (!(x.uninstalled_at === null || isIso(x.uninstalled_at)) || (x.status === "installed") !== (x.uninstalled_at === null)) E("E_BOOSTER_INSTALL", `${bp}/uninstalled_at`, "uninstalled_at is set exactly when status is uninstalled.");
+        if (isStr(x.path) && x.scope === "project" && !pathProjectOk(x.path)) E("E_BOOSTER_INSTALL", `${bp}/path`, "A project-scope path is relative to the project, uses / and has no ..");
+        const key = `${x.name}\u0000${x.path}`;
+        if (seen.has(key)) E("E_BOOSTER_INSTALL", bp, `Duplicate install entry for ${x.name} at ${x.path}.`);
+        seen.add(key);
+      });
+    }
+  }
+  // framework_decision
+  if (s.framework_decision === undefined) miss("framework_decision", "framework_decision");
+  else if (s.framework_decision !== null) {
+    const f = s.framework_decision;
+    if (!isObj(f)) E("E_FRAMEWORK", "/framework_decision", "framework_decision must be null or an object.");
+    else {
+      unknown(f, KEYS.fw, "/framework_decision");
+      validateFwEntry(f, "/framework_decision", E, W, s, unknown);
+      if (!Array.isArray(f.libraries)) E("E_FRAMEWORK", "/framework_decision/libraries", "libraries must be an array.");
+      else {
+        const slots = new Set();
+        f.libraries.forEach((l, i) => {
+          const lp = `/framework_decision/libraries/${i}`;
+          if (!isObj(l)) { E("E_FRAMEWORK", lp, "A library decision must be an object."); return; }
+          unknown(l, KEYS.fw.filter((k) => k !== "libraries"), lp);
+          validateFwEntry(l, lp, E, W, s, unknown);
+          if (l.slot === "stack" || slots.has(l.slot)) E("E_FRAMEWORK", `${lp}/slot`, "Library slots are unique and not \"stack\".");
+          slots.add(l.slot);
+        });
+      }
+    }
+  }
+  // release_check
+  if (s.release_check === undefined) miss("release_check", "release_check");
+  else if (!isObj(s.release_check)) E("E_RELEASE", "/release_check", "release_check must be an object.");
+  else for (const [k, x] of Object.entries(s.release_check)) {
+    const rp = `/release_check/${ptrEsc(k)}`;
+    if (!isObj(x)) { E("E_RELEASE", rp, "A release check must be an object."); continue; }
+    unknown(x, KEYS.releaseEntry, rp);
+    if (!isStr(x.kind) || !/^[a-z][a-z0-9_]*$/.test(x.kind)) E("E_RELEASE", `${rp}/kind`, "kind must be a lowercase word.");
+    else if (!RELEASE_KINDS.includes(x.kind)) W("W_RELEASE_KIND_UNKNOWN", `${rp}/kind`, `Kind "${x.kind}" is not one of ${RELEASE_KINDS.join(", ")}.`);
+    if (!["passed", "failed"].includes(x.status)) E("E_RELEASE", `${rp}/status`, "status must be passed|failed.");
+    for (const f of ["target", "evidence"]) if (!(x[f] === null || isStr(x[f]))) E("E_RELEASE", `${rp}/${f}`, `${f} must be a string or null.`);
+    if (!isIso(x.checked_at)) E("E_RELEASE", `${rp}/checked_at`, "checked_at must be an ISO timestamp.");
+    if (k !== "default" && !(Array.isArray(s.product?.types) && s.product.types.includes(k))) W("W_RELEASE_TYPE_UNKNOWN", rp, `"${k}" is neither a product type of this project nor "default".`);
+  }
+  // review
+  if (s.review === undefined) miss("review", "review");
+  else if (s.review !== null) {
+    const r = s.review;
+    if (!isObj(r)) E("E_REVIEW", "/review", "review must be null or an object.");
+    else {
+      unknown(r, KEYS.review, "/review");
+      if (!isStr(r.ledger) || r.ledger === "") E("E_REVIEW", "/review/ledger", "ledger must be a path string.");
+      if (!Number.isInteger(r.runs) || r.runs < 0) E("E_REVIEW", "/review/runs", "runs must be an integer >= 0.");
+      const l = r.last;
+      if (l !== null && l !== undefined) {
+        if (!isObj(l)) E("E_REVIEW", "/review/last", "last must be null or an object.");
+        else {
+          unknown(l, KEYS.reviewLast, "/review/last");
+          if (!isInt1(l.run)) E("E_REVIEW", "/review/last/run", "run must be an integer >= 1.");
+          if (!REVIEW_SCOPES.includes(l.scope)) E("E_REVIEW", "/review/last/scope", "scope must be full|scope-only.");
+          if (!isIso(l.started_at)) E("E_REVIEW", "/review/last/started_at", "started_at must be an ISO timestamp.");
+          if (!(l.done_at === null || isIso(l.done_at))) E("E_REVIEW", "/review/last/done_at", "done_at must be an ISO timestamp or null.");
+          if (!(l.verdict === null || REVIEW_VERDICTS.includes(l.verdict))) E("E_REVIEW", "/review/last/verdict", `verdict must be ${REVIEW_VERDICTS.join("|")} or null.`);
+          if ((l.done_at === null) !== (l.verdict === null)) E("E_REVIEW", "/review/last/done_at", "done_at and verdict are both null while a run is open, both set once it is done.");
+          if (!(l.score === null || (typeof l.score === "number" && l.score >= 0 && l.score <= 10))) E("E_REVIEW", "/review/last/score", "score must be 0-10 or null.");
+          if (!(l.open === null || (isObj(l.open) && ["blocking", "major", "minor"].every((k) => Number.isInteger(l.open[k]) && l.open[k] >= 0)))) E("E_REVIEW", "/review/last/open", "open must be { blocking, major, minor } counts or null.");
+          if (!(l.missed_earlier === null || (Number.isInteger(l.missed_earlier) && l.missed_earlier >= 0))) E("E_REVIEW", "/review/last/missed_earlier", "missed_earlier must be an integer >= 0 or null.");
+          if (!(l.lens_scores === null || (isObj(l.lens_scores) && Object.values(l.lens_scores).every((v) => typeof v === "number" && v >= 0 && v <= 10)))) E("E_REVIEW", "/review/last/lens_scores", "lens_scores must map lens ids to 0-10 or be null.");
+          for (const k of ["report", "ledger_sha256"]) if (!(l[k] === null || isStr(l[k]))) E("E_REVIEW", `/review/last/${k}`, `${k} must be a string or null.`);
+        }
+      }
+    }
+  }
+  // agents_delegated
+  if (s.agents_delegated === undefined) miss("agents_delegated", "agents_delegated");
+  else if (!Array.isArray(s.agents_delegated)) E("E_AGENT", "/agents_delegated", "agents_delegated must be an array.");
+  else {
+    const ids = new Set();
+    s.agents_delegated.forEach((a, i) => {
+      const ap = `/agents_delegated/${i}`;
+      if (!isObj(a)) { E("E_AGENT", ap, "A delegation must be an object."); return; }
+      unknown(a, KEYS.agent, ap);
+      if (!/^AG-\d{3,}$/.test(a.id ?? "")) E("E_AGENT", `${ap}/id`, "id must look like AG-001.");
+      else if (ids.has(a.id)) E("E_AGENT", `${ap}/id`, `Duplicate delegation id ${a.id}.`);
+      ids.add(a.id);
+      for (const k of ["task", "profile"]) if (!isStr(a[k]) || a[k] === "") E("E_AGENT", `${ap}/${k}`, `${k} must be a non-empty string.`);
+      if (!TRANSPORTS.includes(a.transport)) E("E_AGENT", `${ap}/transport`, `transport must be ${TRANSPORTS.join("|")}.`);
+      if (!AGENT_STATUS.includes(a.status)) E("E_AGENT", `${ap}/status`, `status must be ${AGENT_STATUS.join("|")}.`);
+      if (!isIso(a.started_at)) E("E_AGENT", `${ap}/started_at`, "started_at must be an ISO timestamp.");
+      if (!(a.ended_at === null || isIso(a.ended_at)) || (a.status === "started") !== (a.ended_at === null)) E("E_AGENT", `${ap}/ended_at`, "ended_at is set exactly when status is done or failed.");
+      if (a.status === "failed" && !(isStr(a.reason) && a.reason !== "")) E("E_AGENT", `${ap}/reason`, "A failed delegation needs a reason.");
+      for (const k of ["profile_sha", "harness", "model", "record", "reason"]) if (!(a[k] === null || isStr(a[k]))) E("E_AGENT", `${ap}/${k}`, `${k} must be a string or null.`);
+      if (!(a.tier === null || TIERS.includes(a.tier))) E("E_AGENT", `${ap}/tier`, "tier must be T1|T2|T3 or null.");
+      if (!(a.section === null || SEC_RE.test(a.section ?? ""))) E("E_AGENT", `${ap}/section`, "section must be S0..S10 or null.");
+    });
+  }
+  // sessions
+  if (s.sessions === undefined) miss("sessions", "sessions");
+  else if (!Array.isArray(s.sessions)) E("E_SESSION", "/sessions", "sessions must be an array.");
+  else {
+    let prev = 0;
+    s.sessions.forEach((x, i) => {
+      const sp = `/sessions/${i}`;
+      if (!isObj(x)) { E("E_SESSION", sp, "A session must be an object."); return; }
+      unknown(x, KEYS.session, sp);
+      if (!isInt1(x.start_seq) || x.start_seq <= prev) E("E_SESSION", `${sp}/start_seq`, "start_seq must be an integer, unique and ascending.");
+      else prev = x.start_seq;
+      if (!isStr(x.skill) || x.skill === "") E("E_SESSION", `${sp}/skill`, "skill must be a non-empty string.");
+      for (const k of ["harness", "model", "cwd", "session_id", "session_id_reason", "end_note"]) if (x[k] !== undefined && !(x[k] === null || isStr(x[k]))) E("E_SESSION", `${sp}/${k}`, `${k} must be a string or null.`);
+      if (x.session_id === null && !(isStr(x.session_id_reason) && x.session_id_reason !== "")) E("E_SESSION", `${sp}/session_id_reason`, "A null session_id needs a reason.");
+      if (!(x.tier === null || TIERS.includes(x.tier))) E("E_SESSION", `${sp}/tier`, "tier must be T1|T2|T3 or null.");
+      if (!isIso(x.started_at)) E("E_SESSION", `${sp}/started_at`, "started_at must be an ISO timestamp.");
+      if (!(x.ended_at === null || isIso(x.ended_at))) E("E_SESSION", `${sp}/ended_at`, "ended_at must be an ISO timestamp or null.");
+      if (!(x.end_reason === null || SESSION_END.includes(x.end_reason)) || (x.end_reason === null) !== (x.ended_at === null)) E("E_SESSION", `${sp}/end_reason`, `end_reason (${SESSION_END.join("|")}) is set exactly when ended_at is.`);
+      for (const [k, re] of [["sections", SEC_RE], ["agents", /^AG-\d{3,}$/]]) if (!Array.isArray(x[k]) || !x[k].every((v) => isStr(v) && re.test(v))) E("E_SESSION", `${sp}/${k}`, `${k} must be an array of ids.`);
+      for (const k of ["boosters_installed", "boosters_uninstalled"]) if (!Array.isArray(x[k]) || !x[k].every(isStr)) E("E_SESSION", `${sp}/${k}`, `${k} must be an array of names.`);
+      const rc = x.recovered_error;
+      if (!(rc === null || (isObj(rc) && isInt1(rc.seq)))) E("E_SESSION", `${sp}/recovered_error`, "recovered_error must be null or { seq, skill, step, message }.");
+    });
+  }
+}
+
+function pathProjectOk(p) {
+  return p !== "" && !p.startsWith("/") && !/^[A-Za-z]:/.test(p) && !p.includes("\\") && !p.split("/").some((seg) => seg === ".." || seg === "");
+}
+
+function validateFwEntry(f, ptr, E, W, s, unknown) {
+  if (!isStr(f.slot) || !/^[a-z0-9-]+$/.test(f.slot)) E("E_FRAMEWORK", `${ptr}/slot`, "slot must be a lowercase word.");
+  if (!/^D-\d{3,}$/.test(f.decision_id ?? "")) E("E_FRAMEWORK", `${ptr}/decision_id`, "decision_id must look like D-001.");
+  else if (Array.isArray(s.decisions) && !s.decisions.some((d) => isObj(d) && d.id === f.decision_id)) W("W_FRAMEWORK_DECISION_UNKNOWN", `${ptr}/decision_id`, `${f.decision_id} is not in decisions[].`);
+  if (!isObj(f.chosen) || !isStr(f.chosen.id) || f.chosen.id === "") E("E_FRAMEWORK", `${ptr}/chosen`, "chosen must be { id, name, version } with an id.");
+  else {
+    unknown(f.chosen, KEYS.chosen, `${ptr}/chosen`);
+    for (const k of ["name", "version"]) if (!(f.chosen[k] === null || isStr(f.chosen[k]))) E("E_FRAMEWORK", `${ptr}/chosen/${k}`, `${k} must be a string or null.`);
+  }
+  if (!Array.isArray(f.alternatives) || !f.alternatives.every((a) => isObj(a) && isStr(a.id) && a.id !== "" && (a.score === null || typeof a.score === "number"))) E("E_FRAMEWORK", `${ptr}/alternatives`, "alternatives must be [{ id, score }].");
+  if (!CONFIDENCE.includes(f.confidence)) E("E_FRAMEWORK", `${ptr}/confidence`, "confidence must be high|medium|low.");
+  for (const k of ["user_override", "defaulted"]) if (typeof f[k] !== "boolean") E("E_FRAMEWORK", `${ptr}/${k}`, `${k} must be true or false.`);
+  if (!(f.signals_ref === null || (isObj(f.signals_ref) && isStr(f.signals_ref.path) && isStr(f.signals_ref.sha256)))) E("E_FRAMEWORK", `${ptr}/signals_ref`, "signals_ref must be null or { path, sha256 }.");
+  if (!dateOk(f.recheck_by)) E("E_FRAMEWORK", `${ptr}/recheck_by`, "recheck_by must be a calendar date (YYYY-MM-DD).");
+  if (!(f.section === null || SEC_RE.test(f.section ?? ""))) E("E_FRAMEWORK", `${ptr}/section`, "section must be S0..S10 or null.");
+  if (!isIso(f.decided_at)) E("E_FRAMEWORK", `${ptr}/decided_at`, "decided_at must be an ISO timestamp.");
 }
 
 function ordered(o, keys) {
@@ -488,12 +845,38 @@ function ordered(o, keys) {
 }
 const mapArr = (a, f) => (Array.isArray(a) ? a.map(f) : a);
 
+const secCmp = (a, b) => {
+  const ia = SECTIONS.indexOf(a), ib = SECTIONS.indexOf(b);
+  return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || (a < b ? -1 : a > b ? 1 : 0);
+};
+function canonicalFw(f) {
+  if (!isObj(f)) return f;
+  const o = ordered(f, KEYS.fw);
+  if (isObj(o.chosen)) o.chosen = ordered(o.chosen, KEYS.chosen);
+  if (Array.isArray(o.alternatives)) o.alternatives = o.alternatives.map((a) => (isObj(a) ? ordered(a, ["id", "score"]) : a));
+  if (isObj(o.signals_ref)) o.signals_ref = ordered(o.signals_ref, ["path", "sha256"]);
+  if (Array.isArray(o.libraries)) o.libraries = o.libraries.map(canonicalFw);
+  return o;
+}
 function canonicalState(s) {
   if (!isObj(s)) return s;
-  const c = ordered(s, KEYS.root);
-  if (isObj(c.project)) c.project = ordered(c.project, KEYS.project);
+  const v2 = s.schema_version === 2;
+  const c = ordered(s, v2 ? KEYS.root : KEYS.root1);
+  if (isObj(c.project)) {
+    c.project = ordered(c.project, v2 ? KEYS.project : KEYS.project1);
+    if (isObj(c.project.error)) c.project.error = ordered(c.project.error, KEYS.pErr);
+  }
+  if (isObj(c.product)) c.product = ordered(c.product, KEYS.product);
   if (isObj(c.pipeline)) {
-    const pl = ordered(c.pipeline, KEYS.pipeline);
+    const pl = ordered(c.pipeline, v2 ? KEYS.pipeline : KEYS.pipeline1);
+    if (isObj(pl.research)) {
+      const r = ordered(pl.research, KEYS.research);
+      if (isObj(r.brief)) r.brief = ordered(r.brief, KEYS.brief);
+      if (isObj(r.scans)) r.scans = Object.fromEntries(Object.keys(r.scans).sort(secCmp).map((k) => [k, ordered(r.scans[k], KEYS.scan)]));
+      if (isObj(r.log)) r.log = ordered(r.log, KEYS.rlog);
+      if (isObj(r.web_check)) r.web_check = ordered(r.web_check, KEYS.webCheck);
+      pl.research = r;
+    }
     if (isObj(pl.sections)) {
       const keys = Object.keys(pl.sections).sort((a, b) => {
         const ia = SECTIONS.indexOf(a), ib = SECTIONS.indexOf(b);
@@ -501,7 +884,7 @@ function canonicalState(s) {
       });
       const secs = {};
       for (const k of keys) {
-        const x = ordered(pl.sections[k], KEYS.section);
+        const x = ordered(pl.sections[k], v2 ? KEYS.section : KEYS.section1);
         if (isObj(x) && isObj(x.answers)) {
           const ans = {};
           for (const [id, a] of Object.entries(x.answers)) ans[id] = ordered(a, KEYS.answer);
@@ -516,29 +899,55 @@ function canonicalState(s) {
   }
   c.decisions = mapArr(c.decisions, (d) => ordered(d, KEYS.decision));
   if (isObj(c.boosters)) {
-    const b = ordered(c.boosters, KEYS.boosters);
-    for (const k of KEYS.boosters) b[k] = mapArr(b[k], (x) => ordered(x, KEYS.booster));
+    const b = ordered(c.boosters, v2 ? KEYS.boosters : KEYS.boosters1);
+    for (const k of KEYS.boosters1) b[k] = mapArr(b[k], (x) => ordered(x, KEYS.booster));
+    if (v2 && Array.isArray(b.installed)) b.installed = b.installed.map((x) => ordered(x, KEYS.installed));
     c.boosters = b;
   }
   if (isObj(c.model_profile)) c.model_profile = ordered(c.model_profile, KEYS.model);
   c.milestones = mapArr(c.milestones, (x) => ordered(x, KEYS.milestone));
   if (isObj(c.deployment)) c.deployment = ordered(c.deployment, KEYS.deployment);
   if (isObj(c.handoff)) c.handoff = ordered(c.handoff, KEYS.handoff);
+  if (v2) {
+    if (isObj(c.framework_decision)) c.framework_decision = canonicalFw(c.framework_decision);
+    if (isObj(c.release_check)) c.release_check = Object.fromEntries(Object.keys(c.release_check).sort().map((k) => [k, ordered(c.release_check[k], KEYS.releaseEntry)]));
+    if (isObj(c.review)) {
+      c.review = ordered(c.review, KEYS.review);
+      if (isObj(c.review.last)) {
+        c.review.last = ordered(c.review.last, KEYS.reviewLast);
+        if (isObj(c.review.last.open)) c.review.last.open = ordered(c.review.last.open, ["blocking", "major", "minor"]);
+      }
+    }
+    c.agents_delegated = mapArr(c.agents_delegated, (x) => ordered(x, KEYS.agent));
+    c.sessions = mapArr(c.sessions, (x) => {
+      const o = ordered(x, KEYS.session);
+      if (isObj(o) && isObj(o.recovered_error)) o.recovered_error = ordered(o.recovered_error, KEYS.recovered);
+      return o;
+    });
+  }
   return c;
 }
 const serialize = (s) => JSON.stringify(canonicalState(s), null, 2) + "\n";
 
+const freshProduct = () => ({ types: [], flags: {}, status: "unasked", source: null, rationale: null, confirmed: false, updated_at: null });
+const freshResearch = () => ({ brief: { rq: [], findings: [], updated_at: null }, scans: {}, log: { count: 0, failed: [], last_id: null, last_at: null }, web_check: null });
 function freshState() {
   return {
-    schema_version: 1,
-    project: { slug: "", name: "", idea_raw: "", user_language: "", created_at: null, status: "interview" },
-    pipeline: { current_section: "S0", sections: {}, loop_backs: [] },
+    schema_version: 2,
+    project: { slug: "", name: "", idea_raw: "", user_language: "", created_at: null, status: "interview", error: null },
+    product: freshProduct(),
+    pipeline: { current_section: "S0", sections: {}, loop_backs: [], research: freshResearch() },
     decisions: [],
-    boosters: { core: [], enhancer: [] },
+    boosters: { core: [], enhancer: [], installed: [] },
     model_profile: { tier: null, probe: null, declared_at: null },
     milestones: [],
     deployment: null,
     handoff: null,
+    framework_decision: null,
+    release_check: {},
+    review: null,
+    agents_delegated: [],
+    sessions: [],
   };
 }
 
@@ -578,10 +987,10 @@ const writeStateAtomic = (dir, s) => writeFileAtomic(path.join(dir, ".lvr", "sta
 /** `.lvr/.state-seq`: the journal seq that state.json is known to reflect, written by this CLI right after each state write.
  *  Content `N` = in sync up to N; `lag:N` = a lag was detected at N and stays reported until a recovery command resets it.
  *  Absent or unreadable = tracking unknown (normal for a prose-written state). */
-const stateSeqPath = (dir) => path.join(dir, ".lvr", ".state-seq");
-function readSidecar(dir) {
+const stateSeqPath = (dir, folder = ".lvr") => path.join(dir, folder, ".state-seq");
+function readSidecar(dir, folder = ".lvr") {
   let t;
-  try { t = fs.readFileSync(stateSeqPath(dir), "utf8").trim(); } catch { return { k: "absent", n: null }; }
+  try { t = fs.readFileSync(stateSeqPath(dir, folder), "utf8").trim(); } catch { return { k: "absent", n: null }; }
   let m = t.match(/^(\d+)$/);
   if (m) return { k: "num", n: parseInt(m[1], 10) };
   m = t.match(/^lag:(\d+)$/);
@@ -590,18 +999,29 @@ function readSidecar(dir) {
 }
 const writeStateSeq = (dir, n) => writeFileAtomic(stateSeqPath(dir), `${n}\n`);
 
+/** A lock file is stale when its owner process is gone, or when it is older than 30 s. */
+function lockIsStale(lp) {
+  try {
+    const st = fs.statSync(lp);
+    if (Date.now() - st.mtimeMs > 30000) return true;
+    let o;
+    try { o = JSON.parse(fs.readFileSync(lp, "utf8")); } catch { return Date.now() - st.mtimeMs > 2000; } // a lock killed between create and the pid write
+
+    if (Number.isInteger(o.pid) && o.pid !== process.pid) {
+      try { process.kill(o.pid, 0); } catch (e) { if (e.code === "ESRCH") return true; }
+    }
+  } catch { /* lock vanished or unreadable: treat as not stale; the retry loop decides */ }
+  return false;
+}
+
 function withLock(dir, cmd, fn) {
   const lp = path.join(dir, ".lvr", ".lock");
   const start = Date.now();
-  let staleTried = false;
   let fd;
   for (;;) {
     try { fd = fs.openSync(lp, "wx"); break; } catch (e) {
       if (e.code !== "EEXIST") throw fail("LOCKED", `Cannot create the lock file: ${e.message}`, { errno: e.code });
-      try {
-        const st = fs.statSync(lp);
-        if (!staleTried && Date.now() - st.mtimeMs > 30000) { staleTried = true; fs.unlinkSync(lp); continue; }
-      } catch { /* lock vanished: retry */ }
+      if (lockIsStale(lp)) { try { fs.unlinkSync(lp); } catch { /* raced */ } continue; }
       if (Date.now() - start > 5000) {
         let holder = null;
         try { holder = fs.readFileSync(lp, "utf8"); } catch { /* ignore */ }
@@ -617,14 +1037,15 @@ function withLock(dir, cmd, fn) {
   }
 }
 
-function loadState(dir) {
-  const p = path.join(dir, ".lvr", "state.json");
+function loadState(dir, folder = ".lvr") {
+  const p = path.join(dir, folder, "state.json");
   if (!fs.existsSync(p)) return { kind: "absent" };
   let obj;
   try { obj = JSON.parse(readText(p)); } catch (e) { return { kind: "unreadable", error: e.message }; }
+  const schema = isObj(obj) ? obj.schema_version : null;
   const v = validateState(obj);
-  if (v.errors.length) return { kind: "invalid", state: obj, errors: v.errors, warnings: v.warnings };
-  return { kind: "valid", state: obj, warnings: v.warnings };
+  if (v.errors.length) return { kind: "invalid", state: obj, schema, errors: v.errors, warnings: v.warnings };
+  return { kind: "valid", state: obj, schema, warnings: v.warnings };
 }
 
 // ---------------------------------------------------------------- 5. payload validation + reducer
@@ -640,10 +1061,132 @@ function validateDecisionObj(d, field) {
   if (!DECISION_STATUS.includes(d.status)) throw invalid(`${field}.status`, DECISION_STATUS.join("|"));
 }
 
-function validatePayload(type, p) {
+const optStr = (p, k) => { if (p[k] !== undefined && p[k] !== null && !isStr(p[k])) throw invalid(k, "a string"); };
+
+function validateProductExt(pp) {
+  if (!isObj(pp) || !Object.keys(pp).length) throw invalid("product", "a non-empty object");
+  for (const k of Object.keys(pp)) if (!["types", "flags", "status", "source", "rationale", "confirmed"].includes(k)) throw invalid(`product.${k}`, "types|flags|status|source|rationale|confirmed");
+  if (pp.types !== undefined && (!Array.isArray(pp.types) || !pp.types.every((t) => isStr(t) && PRODUCT_TYPE_RE.test(t)) || new Set(pp.types).size !== pp.types.length)) throw invalid("product.types", "an array of unique ids (a-z, 0-9, -)");
+  if (pp.flags !== undefined) {
+    if (!isObj(pp.flags)) throw invalid("product.flags", "an object of true/false values");
+    for (const [k, v] of Object.entries(pp.flags)) if (!/^[a-z][a-z0-9_]*$/.test(k) || typeof v !== "boolean") throw invalid(`product.flags.${k}`, "true or false");
+  }
+  if (pp.status !== undefined && !PRODUCT_STATUS.includes(pp.status)) throw invalid("product.status", PRODUCT_STATUS.join("|"));
+  if (pp.source !== undefined && !PRODUCT_SOURCE.includes(pp.source)) throw invalid("product.source", PRODUCT_SOURCE.join("|"));
+  if (pp.rationale !== undefined && pp.rationale !== null && !isStr(pp.rationale)) throw invalid("product.rationale", "a string or null");
+  if (pp.confirmed !== undefined && typeof pp.confirmed !== "boolean") throw invalid("product.confirmed", "true or false");
+  if (Array.isArray(pp.types) && !pp.types.length && pp.status === undefined) throw invalid("product.status", "pending or unasked when types is empty");
+  if (pp.status === "decided" && (pp.confirmed === false || (Array.isArray(pp.types) && !pp.types.length))) throw invalid("product.status", "decided only with at least one type and confirmed true");
+  if (pp.status !== undefined && pp.status !== "decided" && pp.confirmed === true) throw invalid("product.confirmed", "false while the product type is not decided");
+  if (pp.status === "unasked" && ((Array.isArray(pp.types) && pp.types.length) || pp.source !== undefined)) throw invalid("product.status", "unasked only without types and source");
+  if (pp.status === "decided" && pp.source === "ai_recommended" && pp.confirmed !== true) throw invalid("product.confirmed", "true: an AI-recommended product type is decided only after the user explicitly confirms");
+  if (pp.source === "ai_recommended" && !(isStr(pp.rationale) && pp.rationale.trim() !== "")) throw invalid("product.rationale", "the reasons for the recommendation when source is ai_recommended");
+}
+function validateCoverageExt(cv) {
+  if (!isObj(cv) || !Object.keys(cv).length) throw invalid("coverage", "{ \"<S>\": { \"<fact>\": [evidence ids] } }");
+  for (const [S, facts] of Object.entries(cv)) {
+    if (!SEC_RE.test(S)) throw invalid(`coverage.${S}`, "a Section id S0..S10");
+    if (!isObj(facts)) throw invalid(`coverage.${S}`, "an object of fact keys");
+    for (const [k, ev] of Object.entries(facts)) {
+      if (!FACT_KEY_RE.test(k)) throw invalid(`coverage.${S}.${k}`, "a lowercase fact key");
+      if (!Array.isArray(ev) || !ev.every((id) => isStr(id) && EVIDENCE_RE.test(id))) throw invalid(`coverage.${S}.${k}`, "an array of answer ids, D-NNN, U-NN or RQ-NNN");
+    }
+  }
+}
+/** `forLog`: the id is assigned by the script (journal append / agentAppend); a caller-supplied id is refused unless the event is a restore. */
+function validateAgent(p, forLog) {
+  if (!AGENT_STATUS.includes(p.status)) throw invalid("status", AGENT_STATUS.join("|"));
+  const needS = (k, re, what) => { if (!isStr(p[k]) || p[k] === "" || (re && !re.test(p[k]))) throw invalid(k, what); };
+  if (p.status === "started") {
+    if (forLog && p.id !== undefined && p.restored !== true) throw invalid("id", "absent (the script assigns AG-NNN)");
+    if (!forLog) needS("id", /^AG-\d{3,}$/, "AG-NNN");
+    needS("task", /^[a-z0-9-]+$/, "a lowercase task name (a-z, 0-9, -)");
+    needS("profile", null, "a non-empty string");
+    if (!TRANSPORTS.includes(p.transport)) throw invalid("transport", TRANSPORTS.join("|"));
+    for (const k of ["profile_sha", "harness", "model"]) optStr(p, k);
+    if (p.tier !== undefined && p.tier !== null && !TIERS.includes(p.tier)) throw invalid("tier", "T1|T2|T3");
+    if (p.section !== undefined && p.section !== null && !SEC_RE.test(p.section)) throw invalid("section", "S0..S10");
+  } else {
+    needS("id", /^AG-\d{3,}$/, "AG-NNN of a started delegation");
+    if (p.status === "failed") needS("reason", null, "a non-empty string");
+    optStr(p, "record");
+  }
+}
+
+function validatePayload(type, p, opts = {}) {
   const needSec = () => { if (!SEC_RE.test(p.section ?? "")) throw invalid("section", "S0..S10"); };
   const needStr = (k) => { if (!isStr(p[k]) || p[k] === "") throw invalid(k, "a non-empty string"); };
+  if (p.orig_ts !== undefined && !isIso(p.orig_ts)) throw invalid("orig_ts", "an ISO timestamp");
   switch (type) {
+    case "schema_migrated":
+      if (!opts.internal) throw fail("EVENT_RESERVED", "schema_migrated is written only by `state migrate`; it cannot be appended by hand.", { type });
+      break;
+    case "session_start":
+      if (!/^lvr-[a-z0-9-]+$/.test(p.skill ?? "")) throw invalid("skill", "lvr-<skill-name>");
+      if (p.session_id !== undefined && p.session_id !== null && !(isStr(p.session_id) && p.session_id !== "")) throw invalid("session_id", "a non-empty string the harness exposes, or null with session_id_reason");
+      if (!(isStr(p.session_id) && p.session_id !== "") && !(isStr(p.session_id_reason) && p.session_id_reason.trim() !== "")) throw invalid("session_id_reason", "a non-empty reason when session_id is null or absent (never invent an id)");
+      if (p.harness !== undefined && !(isStr(p.harness) && /^[a-z0-9-]+$/.test(p.harness))) throw invalid("harness", "a lowercase harness id (a-z, 0-9, -)");
+      optStr(p, "model"); optStr(p, "cwd");
+      if (p.tier !== undefined && p.tier !== null && !TIERS.includes(p.tier)) throw invalid("tier", "T1|T2|T3");
+      break;
+    case "session_end":
+      if (!SESSION_END.includes(p.reason)) throw invalid("reason", SESSION_END.join("|"));
+      if (p.start_seq !== undefined && !isInt1(p.start_seq)) throw invalid("start_seq", "an integer >= 1");
+      optStr(p, "note");
+      if (p.reason === "cancelled" && !(isStr(p.note) && p.note.trim() !== "")) throw invalid("note", "a non-empty reason when reason is cancelled");
+      break;
+    case "error":
+      for (const k of ["skill", "step", "message"]) needStr(k);
+      break;
+    case "booster_installed": {
+      for (const k of ["name", "repo", "harness", "path"]) needStr(k);
+      if (!BOOSTER_KINDS.includes(p.kind)) throw invalid("kind", BOOSTER_KINDS.join("|"));
+      if (!BOOSTER_SCOPES.includes(p.scope)) throw invalid("scope", BOOSTER_SCOPES.join("|"));
+      if (!(p.sha === null || (isStr(p.sha) && /^[0-9a-f]{7,40}$/.test(p.sha)))) throw invalid("sha", "7-40 hex characters, or null");
+      if (p.tier !== undefined && p.tier !== null && !["core", "enhancer"].includes(p.tier)) throw invalid("tier", "core|enhancer");
+      if (p.section !== undefined && p.section !== null && !SEC_RE.test(p.section)) throw invalid("section", "S0..S10");
+      if (p.consent !== undefined && typeof p.consent !== "boolean") throw invalid("consent", "true or false");
+      if (p.kind === "mcp" && p.consent !== true) throw invalid("consent", "true (the user agreed) for an MCP install");
+      if (p.scope === "project" && !pathProjectOk(p.path)) throw invalid("path", "a path inside the project: relative, / separators, no ..");
+      if (p.scope === "user" && !(p.path.startsWith("/") || p.path.startsWith("~/") || /^[A-Za-z]:[\\/]/.test(p.path))) throw invalid("path", "an absolute path or ~/... for a user-scope install");
+      break;
+    }
+    case "booster_uninstalled": needStr("name"); needStr("path"); optStr(p, "reason"); break;
+    case "agent_delegated": validateAgent(p, false); break;
+    case "framework_selected": {
+      if (!/^D-\d{3,}$/.test(p.decision_id ?? "")) throw invalid("decision_id", "D-NNN");
+      if (!isObj(p.chosen) || !isStr(p.chosen.id) || p.chosen.id === "") throw invalid("chosen.id", "a non-empty string");
+      optStr(p.chosen, "name"); optStr(p.chosen, "version");
+      if (!Array.isArray(p.alternatives) || !p.alternatives.every((a) => isObj(a) && isStr(a.id) && a.id !== "" && (a.score === undefined || a.score === null || typeof a.score === "number"))) throw invalid("alternatives", "an array of { id, score }");
+      if (!CONFIDENCE.includes(p.confidence)) throw invalid("confidence", CONFIDENCE.join("|"));
+      for (const k of ["user_override", "defaulted"]) if (typeof p[k] !== "boolean") throw invalid(k, "true or false");
+      if (!isCalendarDate(p.recheck_by)) throw invalid("recheck_by", "a calendar date YYYY-MM-DD");
+      if (p.restored !== true && parseDay(p.recheck_by).day < todayInfo().day) throw invalid("recheck_by", `a date not before today (${todayInfo().iso})`);
+      if (p.slot !== undefined && !(isStr(p.slot) && /^[a-z0-9-]+$/.test(p.slot))) throw invalid("slot", "a lowercase slot id");
+      if (p.signals_ref !== undefined && p.signals_ref !== null && !(isObj(p.signals_ref) && isStr(p.signals_ref.path) && isStr(p.signals_ref.sha256))) throw invalid("signals_ref", "{ path, sha256 } or null");
+      if (p.section !== undefined && p.section !== null && !SEC_RE.test(p.section)) throw invalid("section", "S0..S10");
+      break;
+    }
+    case "review_started":
+      if (!isInt1(p.run)) throw invalid("run", "an integer >= 1");
+      if (!REVIEW_SCOPES.includes(p.scope)) throw invalid("scope", REVIEW_SCOPES.join("|"));
+      break;
+    case "review_done":
+      if (!isInt1(p.run)) throw invalid("run", "an integer >= 1");
+      if (!REVIEW_VERDICTS.includes(p.verdict)) throw invalid("verdict", REVIEW_VERDICTS.join("|"));
+      if (typeof p.score !== "number" || p.score < 0 || p.score > 10) throw invalid("score", "a number 0-10");
+      if (!isObj(p.open) || !["blocking", "major", "minor"].every((k) => Number.isInteger(p.open[k]) && p.open[k] >= 0)) throw invalid("open", "{ blocking, major, minor } counts");
+      if (!Number.isInteger(p.missed_earlier) || p.missed_earlier < 0) throw invalid("missed_earlier", "an integer >= 0");
+      needStr("report");
+      if (p.lens_scores !== undefined && p.lens_scores !== null && !(isObj(p.lens_scores) && Object.values(p.lens_scores).every((v) => typeof v === "number" && v >= 0 && v <= 10))) throw invalid("lens_scores", "lens id -> 0-10");
+      optStr(p, "ledger_sha256");
+      break;
+    case "release_checked":
+      if (!isStr(p.kind) || !/^[a-z][a-z0-9_]*$/.test(p.kind)) throw invalid("kind", "a lowercase word (url_2xx, package_install, ...)");
+      if (!["passed", "failed"].includes(p.status)) throw invalid("status", "passed|failed");
+      if (p.product_type !== undefined && !(isStr(p.product_type) && (p.product_type === "default" || PRODUCT_TYPE_RE.test(p.product_type)))) throw invalid("product_type", "a product type id or default");
+      optStr(p, "target"); optStr(p, "evidence");
+      break;
     case "section_start": case "section_done": case "section_blocked": needSec(); break;
     case "answer_recorded":
       needSec();
@@ -701,6 +1244,8 @@ function validatePayload(type, p) {
       if (!Array.isArray(m.features) || !m.features.every((f) => /^F-\d{2,}$/.test(f))) throw invalid(`milestones[${i}].features`, "an array of F-NN");
     });
   }
+  if (p.product !== undefined) validateProductExt(p.product);
+  if (p.coverage !== undefined) validateCoverageExt(p.coverage);
 }
 
 function findBooster(st, name) {
@@ -742,11 +1287,26 @@ function computeStash(events) {
   for (const e of events) applyEvent(s, e, c);
   return c.preErrorStatus;
 }
+/** The current session = the last sessions[] entry that has no ended_at. */
+function curSession(st) {
+  const a = st.sessions;
+  if (!Array.isArray(a)) return null;
+  for (let i = a.length - 1; i >= 0; i--) if (isObj(a[i]) && a[i].ended_at === null) return a[i];
+  return null;
+}
+function attribute(st, key, val) {
+  const c = curSession(st);
+  if (c && isStr(val) && val !== "" && Array.isArray(c[key]) && !c[key].includes(val)) c[key].push(val);
+}
 function restoreFromError(st, ctx) {
   if (st.project.status !== "error") return;
-  let v = ctx.preErrorStatus;
+  const err = isObj(st.project.error) ? st.project.error : null;
+  const cur = curSession(st);
+  if (err && cur && cur.recovered_error === null) cur.recovered_error = { seq: err.seq, skill: err.skill ?? null, step: err.step ?? null, message: err.message ?? null };
+  let v = err && PROJECT_STATUS.includes(err.previous_status) ? err.previous_status : ctx.preErrorStatus;
   if (v === undefined && ctx.priorEvents) v = computeStash(ctx.priorEvents);
   st.project.status = v && v !== "error" ? v : "interview";
+  if ("error" in st.project) st.project.error = null;
   ctx.preErrorStatus = undefined;
 }
 const liveCtx = (priorEvents) => ({ mode: "live", priorEvents, preErrorStatus: undefined });
@@ -774,7 +1334,8 @@ const isStamped = (e) => isObj(e.payload) && e.payload.cli === CLI_MARK && !(e.t
 /** The ONE state-transition function. Used by checkpoints (live) and by replay. Rules are idempotent. */
 function applyEvent(st, e, ctx) {
   const p = isObj(e.payload) ? e.payload : {};
-  const ts = e.ts;
+  // `journal restore-from-state` re-records a v2 fact with the time state.json already holds for it (orig_ts)
+  const ts = p.restored === true && isIso(p.orig_ts) ? p.orig_ts : e.ts;
   const S = p.section;
   const okS = isStr(S) && SEC_RE.test(S);
   const untr = () => ctx.untranslatable?.push({ seq: e.seq, type: e.type });
@@ -782,10 +1343,14 @@ function applyEvent(st, e, ctx) {
   switch (e.type) {
     case "tier_declared":
       if (!TIERS.includes(p.tier)) { untr(); break; }
-      st.model_profile.tier = p.tier; st.model_profile.declared_at = ts; probeForTier(st); break;
+      st.model_profile.tier = p.tier; st.model_profile.declared_at = ts; probeForTier(st);
+      { const c = curSession(st); if (c) c.tier = p.tier; }
+      break;
     case "tier_changed":
       if (!TIERS.includes(p.new)) { untr(); break; }
-      st.model_profile.tier = p.new; st.model_profile.declared_at = ts; probeForTier(st); break;
+      st.model_profile.tier = p.new; st.model_profile.declared_at = ts; probeForTier(st);
+      { const c = curSession(st); if (c) c.tier = p.new; }
+      break;
     case "capability_probe_passed": st.model_profile.probe = "passed"; ctx.probeSeen = true; break;
     case "capability_probe_failed": st.model_profile.probe = "failed"; ctx.probeSeen = true; break;
     case "booster_check": {
@@ -819,6 +1384,7 @@ function applyEvent(st, e, ctx) {
       if (S === "S0") st.project.created_at ??= ts;
       if (S === "S5") st.project.status = "researching";
       if (S === "S7") st.project.status = "review";
+      attribute(st, "sections", S);
       break;
     }
     case "answer_recorded": {
@@ -834,6 +1400,7 @@ function applyEvent(st, e, ctx) {
       } else if (x.answers[id]) { q = x.answers[id].q; a = x.answers[id].a; }
       else { q = null; a = null; ctx.legacy?.add(id); }
       x.answers[id] = { q, a, skipped: !!p.skipped };
+      attribute(st, "sections", S);
       break;
     }
     case "section_done": {
@@ -845,6 +1412,7 @@ function applyEvent(st, e, ctx) {
       x.completed_at = ts;
       st.pipeline.current_section = NEXT_AFTER[S];
       if (S === "S9") st.project.status = "bundled";
+      attribute(st, "sections", S);
       break;
     }
     case "section_blocked":
@@ -853,6 +1421,7 @@ function applyEvent(st, e, ctx) {
       sec().status = "blocked";
       st.pipeline.current_section = S;
       ctx.blocked?.push({ seq: e.seq, section: S, unmet: Array.isArray(p.unmet) ? p.unmet : [] });
+      attribute(st, "sections", S);
       break;
     case "loop_back_opened": {
       if (!isStr(p.id)) { untr(); break; }
@@ -884,11 +1453,146 @@ function applyEvent(st, e, ctx) {
     case "build_started": st.project.status = "building"; break;
     case "build_done": st.project.status = "complete"; break;
     case "handoff_done": st.handoff = { status: "done", completed_at: ts }; break;
-    case "error":
-      if (st.project.status !== "error") { ctx.preErrorStatus = st.project.status; st.project.status = "error"; }
+    case "error": {
+      const detail = { seq: e.seq, ts, skill: isStr(p.skill) ? p.skill : null, step: isStr(p.step) ? p.step : null, message: isStr(p.message) ? p.message : null };
+      if (st.project.status !== "error") {
+        ctx.preErrorStatus = st.project.status;
+        st.project.error = { ...detail, previous_status: st.project.status };
+        st.project.status = "error";
+      } else {
+        let prev = isObj(st.project.error) ? st.project.error.previous_status : ctx.preErrorStatus;
+        if (prev === undefined && ctx.priorEvents) prev = computeStash(ctx.priorEvents);
+        st.project.error = { ...detail, previous_status: prev && prev !== "error" ? prev : "interview" };
+      }
       break;
-    case "resume": case "session_start": case "handoff_started": case "recheck_started": case "feature_started": case "brand_started":
+    }
+    case "resume": case "handoff_started": case "recheck_started": case "feature_started": case "brand_started":
       restoreFromError(st, ctx); break;
+    case "session_start": {
+      const hasId = isStr(p.session_id) && p.session_id !== "";
+      const reasoned = isStr(p.session_id_reason) && p.session_id_reason.trim() !== "";
+      const legacy = !hasId && !reasoned;
+      (st.sessions ??= []).push({
+        start_seq: e.seq, skill: isStr(p.skill) && p.skill !== "" ? p.skill : "unknown", harness: isStr(p.harness) && p.harness !== "" && !legacy ? p.harness : null,
+        session_id: hasId ? p.session_id : null, session_id_reason: hasId ? null : legacy ? LEGACY_SESSION_REASON : p.session_id_reason,
+        model: isStr(p.model) && p.model !== "" && !legacy ? p.model : null, tier: TIERS.includes(p.tier) ? p.tier : (st.model_profile?.tier ?? null),
+        cwd: isStr(p.cwd) && p.cwd !== "" ? p.cwd : null, started_at: ts, ended_at: null, end_reason: null, end_note: null,
+        sections: [], agents: [], boosters_installed: [], boosters_uninstalled: [], recovered_error: null,
+      });
+      restoreFromError(st, ctx);
+      break;
+    }
+    case "session_end": {
+      const open = (st.sessions ?? []).filter((x) => isObj(x) && x.ended_at === null);
+      const tgt = Number.isInteger(p.start_seq) ? open.find((x) => x.start_seq === p.start_seq) : curSession(st);
+      if (!tgt || !SESSION_END.includes(p.reason)) { untr(); break; }
+      tgt.ended_at = ts; tgt.end_reason = p.reason; tgt.end_note = isStr(p.note) && p.note !== "" ? p.note : null;
+      break;
+    }
+    case "review_started":
+      if (!isInt1(p.run) || !REVIEW_SCOPES.includes(p.scope)) { untr(); break; }
+      restoreFromError(st, ctx);
+      st.review ??= { ledger: ".lvr/review/LEDGER.jsonl", runs: 0, last: null };
+      st.review.runs = Math.max(st.review.runs ?? 0, p.run);
+      st.review.last = { run: p.run, scope: p.scope, started_at: ts, done_at: null, verdict: null, score: null, lens_scores: null, open: null, missed_earlier: null, report: null, ledger_sha256: null };
+      break;
+    case "review_done": {
+      const l = st.review?.last;
+      if (!l || l.run !== p.run || l.done_at !== null || !REVIEW_VERDICTS.includes(p.verdict)) { untr(); break; }
+      Object.assign(l, {
+        done_at: ts, verdict: p.verdict, score: typeof p.score === "number" ? p.score : null,
+        lens_scores: isObj(p.lens_scores) ? p.lens_scores : null, open: isObj(p.open) ? { blocking: p.open.blocking, major: p.open.major, minor: p.open.minor } : null,
+        missed_earlier: Number.isInteger(p.missed_earlier) ? p.missed_earlier : null, report: isStr(p.report) ? p.report : null, ledger_sha256: isStr(p.ledger_sha256) ? p.ledger_sha256 : null,
+      });
+      break;
+    }
+    case "research_logged": case "context_research": {
+      const pl = st.pipeline;
+      const r = (pl.research ??= freshResearch());
+      r.log.count += 1;
+      if (isStr(p.id)) r.log.last_id = p.id;
+      r.log.last_at = ts;
+      if (p.outcome === "failed" && isStr(p.id) && !r.log.failed.includes(p.id)) r.log.failed.push(p.id);
+      if (e.type === "research_logged" && p.purpose === "web_check") r.web_check = { id: isStr(p.id) ? p.id : null, outcome: p.outcome === "failed" ? "failed" : "found", reason: isStr(p.reason) && p.reason !== "" ? p.reason : null, at: ts };
+      if (e.type === "context_research" && (p.scope === "brief" || (p.scope === "scan" && /^S[1-8]$/.test(p.section ?? "")))) {
+        const tgt = p.scope === "brief" ? r.brief : (r.scans[p.section] ??= { rq: [], findings: [], note: null, at: ts });
+        if (isStr(p.id) && !tgt.rq.includes(p.id)) tgt.rq.push(p.id);
+        for (const f of Array.isArray(p.findings) ? p.findings : []) if (isStr(f) && !tgt.findings.includes(f)) tgt.findings.push(f);
+        if (p.scope === "brief") tgt.updated_at = ts;
+        else { if (isStr(p.note)) tgt.note = p.note; tgt.at = ts; }
+      }
+      break;
+    }
+    case "booster_installed": {
+      if (!isStr(p.name) || p.name === "" || !isStr(p.path) || p.path === "") { untr(); break; }
+      const kind = BOOSTER_KINDS.includes(p.kind) ? p.kind : "skill";
+      const found = findBooster(st, p.name);
+      const tier = kind === "agent" ? null : (["core", "enhancer"].includes(p.tier) ? p.tier : (found?.arr ?? "enhancer"));
+      const entry = {
+        name: p.name, kind, repo: isStr(p.repo) ? p.repo : "", sha: isStr(p.sha) ? p.sha : null, scope: p.scope === "user" ? "user" : "project",
+        harness: isStr(p.harness) ? p.harness : "", path: p.path, tier, section: isStr(p.section) && SEC_RE.test(p.section) ? p.section : null,
+        consent: p.consent === true, status: "installed", installed_at: ts, uninstalled_at: null,
+      };
+      const list = (st.boosters.installed ??= []);
+      const i = list.findIndex((x) => x.name === p.name && x.path === p.path);
+      if (i >= 0) list[i] = entry; else list.push(entry);
+      if (kind !== "agent") putBooster(st, p.name, { repo: entry.repo || undefined, status: "installed", tier }, ctx, p);
+      attribute(st, "boosters_installed", p.name);
+      break;
+    }
+    case "booster_uninstalled": {
+      const list = st.boosters.installed ?? [];
+      const en = list.find((x) => x.name === p.name && x.path === p.path && x.status === "installed");
+      if (!en) { untr(); break; }
+      en.status = "uninstalled"; en.uninstalled_at = ts;
+      if (en.kind !== "agent" && !list.some((x) => x.name === p.name && x.status === "installed") && findBooster(st, p.name)) putBooster(st, p.name, { status: "missing" }, ctx, p);
+      attribute(st, "boosters_uninstalled", p.name);
+      break;
+    }
+    case "agent_delegated": {
+      const list = (st.agents_delegated ??= []);
+      if (p.status === "started") {
+        if (!isStr(p.id) || list.some((x) => x.id === p.id)) { untr(); break; }
+        list.push({
+          id: p.id, task: isStr(p.task) ? p.task : "", profile: isStr(p.profile) ? p.profile : "", profile_sha: isStr(p.profile_sha) ? p.profile_sha : null,
+          transport: TRANSPORTS.includes(p.transport) ? p.transport : "inline", harness: isStr(p.harness) ? p.harness : null, model: isStr(p.model) ? p.model : null,
+          tier: TIERS.includes(p.tier) ? p.tier : null, section: isStr(p.section) && SEC_RE.test(p.section) ? p.section : null,
+          status: "started", started_at: ts, ended_at: null, record: null, reason: null,
+        });
+        attribute(st, "agents", p.id);
+      } else if (p.status === "done" || p.status === "failed") {
+        const a = list.find((x) => x.id === p.id && x.status === "started");
+        if (!a) { untr(); break; }
+        a.status = p.status; a.ended_at = ts;
+        if (isStr(p.record)) a.record = p.record;
+        if (isStr(p.reason)) a.reason = p.reason;
+      } else untr();
+      break;
+    }
+    case "framework_selected": {
+      if (!isStr(p.decision_id) || !isObj(p.chosen) || !isStr(p.chosen.id)) { untr(); break; }
+      const slot = isStr(p.slot) && p.slot !== "" ? p.slot : "stack";
+      const entry = {
+        slot, decision_id: p.decision_id, chosen: { id: p.chosen.id, name: isStr(p.chosen.name) ? p.chosen.name : null, version: isStr(p.chosen.version) ? p.chosen.version : null },
+        alternatives: (Array.isArray(p.alternatives) ? p.alternatives : []).filter(isObj).map((a) => ({ id: a.id, score: typeof a.score === "number" ? a.score : null })),
+        confidence: p.confidence, user_override: p.user_override === true, defaulted: p.defaulted === true,
+        signals_ref: isObj(p.signals_ref) ? { path: p.signals_ref.path, sha256: p.signals_ref.sha256 } : null, recheck_by: p.recheck_by,
+        section: isStr(p.section) && SEC_RE.test(p.section) ? p.section : null, decided_at: ts,
+      };
+      if (slot === "stack") st.framework_decision = { ...entry, libraries: isObj(st.framework_decision) ? (st.framework_decision.libraries ?? []) : [] };
+      else if (!isObj(st.framework_decision)) untr();
+      else {
+        const libs = (st.framework_decision.libraries ??= []);
+        const i = libs.findIndex((x) => x.slot === slot);
+        if (i >= 0) libs[i] = entry; else libs.push(entry);
+      }
+      break;
+    }
+    case "release_checked": {
+      if (!isStr(p.kind) || !["passed", "failed"].includes(p.status)) { untr(); break; }
+      (st.release_check ??= {})[isStr(p.product_type) && p.product_type !== "" ? p.product_type : "default"] = { kind: p.kind, status: p.status, target: isStr(p.target) ? p.target : null, evidence: isStr(p.evidence) ? p.evidence : null, checked_at: ts };
+      break;
+    }
     case "doc_generated": if (isStr(p.file)) ctx.docsGenerated?.push(p.file); break;
     default:
       if (!EVENT_TYPES.includes(e.type)) untr();
@@ -910,6 +1614,38 @@ function applyEvent(st, e, ctx) {
       ctx.milestonesFromEvents?.add(m.id);
     }
   }
+  if (isObj(p.product) && Object.keys(p.product).length) foldProduct(st, p.product, ts);
+  if (isObj(p.coverage)) {
+    for (const [sid, facts] of Object.entries(p.coverage)) {
+      if (!SEC_RE.test(sid) || !isObj(facts)) continue;
+      const x = (st.pipeline.sections[sid] ??= { status: "pending" });
+      for (const [k, ev] of Object.entries(facts)) {
+        if (!FACT_KEY_RE.test(k) || !Array.isArray(ev)) continue;
+        (x.coverage ??= {})[k] = ev.filter((id) => isStr(id) && EVIDENCE_RE.test(id));
+      }
+    }
+  }
+}
+
+/** The `product` payload extension. types replace, flags merge. Giving types without a status means the user decided them (decided, user, confirmed). */
+function foldProduct(st, pp, ts) {
+  const pr = (st.product ??= freshProduct());
+  pr.flags ??= {};
+  const typesGiven = Array.isArray(pp.types);
+  const keepAi = pp.source === undefined && pr.source === "ai_recommended"; // a payload with no source never changes an AI recommendation's source (owner decision P6)
+  if (typesGiven) pr.types = [...pp.types];
+  if (isObj(pp.flags)) for (const [k, v] of Object.entries(pp.flags)) if (typeof v === "boolean") pr.flags[k] = v;
+  if (PRODUCT_STATUS.includes(pp.status)) pr.status = pp.status;
+  else if (typesGiven && pp.types.length) pr.status = pp.source === "ai_recommended" || keepAi ? "pending" : "decided"; // an AI recommendation is decided only after the user explicitly confirms (owner decision P6)
+  if (pp.source !== undefined && PRODUCT_SOURCE.includes(pp.source)) pr.source = pp.source;
+  else if (typesGiven && pp.types.length && !keepAi) pr.source = "user";
+  if (pp.rationale !== undefined) pr.rationale = isStr(pp.rationale) && pp.rationale !== "" ? pp.rationale : null;
+  else if (typesGiven && pp.source === undefined && !keepAi) pr.rationale = null;
+  pr.confirmed = typeof pp.confirmed === "boolean" ? pp.confirmed : pr.status === "decided" && pr.source !== "ai_recommended";
+  if (pr.status === "decided" && pr.source === "ai_recommended" && pr.confirmed !== true) pr.status = "pending"; // never decided without the user's yes
+  if (pr.status !== "decided") pr.confirmed = false;
+  if (pr.status === "unasked") { pr.source = null; pr.rationale = null; }
+  pr.updated_at = ts;
 }
 
 // ---------------------------------------------------------------- 6. checkpoint: one journal line + one state write
@@ -943,6 +1679,31 @@ function guardJournalBehind(dir, j) {
   }
 }
 
+/** Events whose target a replay could not find would be a silent no-op live: refuse them before anything is written (against the healed state). */
+function liveGuard(st, type, p) {
+  if (p.restored === true) return;
+  if (isObj(p.product) && st.product?.source === "ai_recommended" && p.product.source === undefined) {
+    if (Array.isArray(p.product.types) && p.product.types.length) throw invalid("product.source", "explicit: \"user\" to choose another type, or \"ai_recommended\" with confirmed true to confirm the recommendation (a product payload with types and no source never changes an AI recommendation)");
+    if (p.product.status === "decided" && p.product.confirmed !== true) throw invalid("product.confirmed", "true: an AI-recommended product type is decided only after the user explicitly confirms");
+  } else if (isObj(p.product) && st.product?.source === "ai_recommended" && p.product.source === "user" && p.product.status === "decided" && p.product.types === undefined && p.product.confirmed !== true) {
+    throw invalid("product.types", "the user's own types when source is user (without types this would relabel the AI recommendation as the user's choice)");
+  }
+  if (type === "session_end") {
+    const open = (st.sessions ?? []).filter((x) => isObj(x) && x.ended_at === null);
+    const t = Number.isInteger(p.start_seq) ? open.find((x) => x.start_seq === p.start_seq) : curSession(st);
+    if (!t) throw invalid("start_seq", "an open session (this run has no session_start, or it already ended)");
+  } else if (type === "booster_uninstalled") {
+    if (!(st.boosters?.installed ?? []).some((x) => x.name === p.name && x.path === p.path && x.status === "installed")) throw invalid("path", "the path of an installed booster (name + path not found, or already uninstalled)");
+  } else if (type === "agent_delegated" && (p.status === "done" || p.status === "failed")) {
+    if (!(st.agents_delegated ?? []).some((x) => x.id === p.id && x.status === "started")) throw invalid("id", "the id of a started delegation");
+  } else if (type === "review_done") {
+    const l = st.review?.last;
+    if (!l || l.run !== p.run || l.done_at !== null) throw invalid("run", "the open review run (send review_started first)");
+  } else if (type === "framework_selected" && isStr(p.slot) && p.slot !== "stack" && !isObj(st.framework_decision)) {
+    throw invalid("slot", "stack until a stack decision exists (record the stack pick first)");
+  }
+}
+
 /** Plan the state write for a valid state.json. Pure decision; the caller writes. */
 function planValidState(dir, j, ls, event, plan) {
   const st = clone(ls.state);
@@ -953,6 +1714,7 @@ function planValidState(dir, j, ls, event, plan) {
   if (sc.k !== "num") {
     if (cliBorn) { plan.reason = "STATE_SEQ_UNKNOWN"; plan.details = { journal_max_seq: j.max_seq }; return; }
     // prose-written state: lag cannot be known; apply this event on top, track nothing
+    liveGuard(st, event.type, event.payload);
     applyEvent(st, event, liveCtx(j.events));
     return finishValid(st, ls, plan, false);
   }
@@ -966,6 +1728,7 @@ function planValidState(dir, j, ls, event, plan) {
     applyEvent(st, last, liveCtx(j.events.slice(0, -1)));
     if (serialize(st) !== before) plan.healed.push(last.seq);
   } else if (missing.length) { lagged(sc.n); return; }
+  liveGuard(st, event.type, event.payload);
   applyEvent(st, event, liveCtx(j.events));
   finishValid(st, ls, plan, true);
 }
@@ -980,7 +1743,8 @@ function finishValid(st, ls, plan, track) {
 /** Caller holds the lock. Journal first, then state. Returns the data for the JSON envelope; throws exit-3 errors when the state was not checkpointed. */
 function appendLocked(dir, type, payload, opts = {}) {
   if (!EVENT_TYPES.includes(type)) throw fail("UNKNOWN_EVENT_TYPE", `Unknown event type "${type}".`, { allowed: EVENT_TYPES });
-  validatePayload(type, payload);
+  validatePayload(type, payload, { internal: opts.internal });
+  if (!opts.skipGuard && !opts.skipSchema) guardSchema(dir);
   const lvr = path.join(dir, ".lvr");
   const jp = path.join(lvr, "journal.ndjson");
   const j = readJournal(dir);
@@ -996,6 +1760,7 @@ function appendLocked(dir, type, payload, opts = {}) {
   if (!opts.noState) {
     if (opts.stateOverride) {
       const st = clone(opts.stateOverride);
+      liveGuard(st, event.type, event.payload);
       applyEvent(st, event, liveCtx(j.events));
       const v = validateState(st);
       if (v.errors.length) throw fail("STATE_INVALID", "Event rejected: resulting state invalid.", { errors: v.errors });
@@ -1032,6 +1797,8 @@ function appendLocked(dir, type, payload, opts = {}) {
 /** One checkpoint under the lock. */
 function checkpoint(dir, type, payload, opts = {}) {
   const lvr = path.join(dir, ".lvr");
+  validatePayload(type, payload, { internal: opts.internal });
+  guardSchema(dir);
   if (!fs.existsSync(lvr)) {
     if (type !== "session_start") throw fail("NO_LVR", "No .lvr folder here; this is not an LVR project folder.");
     fs.mkdirSync(lvr, { recursive: true });
@@ -1277,6 +2044,8 @@ function replayEvents(dir, events, opts = {}) {
     decisions: { count: 0, from_events: ctx.decisionFromEvents.size, from_disk: 0, source: ctx.decisionFromEvents.size ? "events" : "none", split_ambiguous: [], section_guessed: [] },
     milestones: { count: 0, source: msource },
     derived, unrecoverable: { decisions: [], milestones: false }, validation: { errors: [], warnings: [] },
+    sessions: Array.isArray(st.sessions) ? st.sessions.length : 0,
+    research_events: events.filter((e) => RESEARCH_TYPES.includes(e.type)).length,
   };
   // Not CLI-pure: milestones the events did not carry come from MILESTONES.md when the bundle has it (post-lock milestones that
   // /lvr-add-feature appended live only there), then from the S8 record (S8 done). Unknown-id milestone_verified events are applied after.
@@ -1402,7 +2171,8 @@ function lossyPaths(dir, events, current, rebuilt) {
   // below runs instead, so content written by `state write --no-journal` (continue Step 2a) is reported, not dropped (verify Y1).
   const diffs = [];
   diffLeaves(rebuilt, current, "", diffs);
-  const held = diffs.filter((d) => d.current !== undefined && d.current !== null && d.current !== "");
+  // the version change itself (v1 file -> v2 rebuild) is never a loss; v2-only keys a v1 file lacks are never "held"
+  const held = diffs.filter((d) => d.pointer !== "/schema_version" && d.current !== undefined && d.current !== null && d.current !== "");
   if (!held.length) return [];
   const sc = readSidecar(dir);
   if (sc.k !== "num" && sc.k !== "lag" && events.every((e) => isStamped(e) && !(isObj(e.payload) && e.payload.restored === true))) return [];
@@ -1440,7 +2210,7 @@ function ignoredPtr(ptr, pats) {
 
 // ---------------------------------------------------------------- 8. gate (Folder Gate checks 1-5)
 const JUNK = new Set([".ds_store", "thumbs.db", "desktop.ini"]);
-const SKIP_DIRS = new Set(["node_modules", ".venv", "dist", "build", "target", ".lvr"]);
+const SKIP_DIRS = new Set(["node_modules", ".venv", "dist", "build", "target", ".lvr", ".lvp"]);
 const MARKERS_SPEC = new Set([".git", "package.json", "cargo.toml", "pubspec.yaml", "pyproject.toml", "go.mod", ".solution"]);
 const MARKERS_EXT = new Set(["pom.xml", "build.gradle", "build.gradle.kts", "gemfile", "composer.json", "requirements.txt", "setup.py", "deno.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "package.swift", "mix.exs"]);
 
@@ -1496,17 +2266,20 @@ function gateCheck(dir, ideaSlug) {
   const sp = path.join(lvr, "state.json");
   const jp = path.join(lvr, "journal.ndjson");
   const hasState = fs.existsSync(sp), hasJournal = fs.existsSync(jp);
-  if (hasState || hasJournal) {
+  const lvpOnly = !hasState && !hasJournal && legacyHolds(dir);
+  if (hasState || hasJournal || lvpOnly) {
     res.check = 1;
+    const folder = lvpOnly ? ".lvp" : ".lvr";
     let name = null, cur = null;
     let valid = false;
-    if (hasState) {
-      const ls = loadState(dir);
+    if (fs.existsSync(path.join(dir, folder, "state.json"))) {
+      const ls = loadState(dir, folder);
       valid = ls.kind === "valid";
       if (isObj(ls.state)) { name = ls.state.project?.name ?? null; cur = ls.state.pipeline?.current_section ?? null; }
     }
     res.verdict = valid ? "refuse_existing" : "refuse_damaged";
-    res.existing = { name, current_section: cur, last_activity: hasJournal ? readJournal(dir).last_ts : null };
+    res.existing = { name, current_section: cur, last_activity: fs.existsSync(path.join(dir, folder, "journal.ndjson")) ? readJournal(dir, folder).last_ts : null };
+    if (lvpOnly) { res.legacy_folder = ".lvp"; res.hint = "This is a project from an older LVR (.lvp). Recommend /lvr-continue: it migrates the project."; }
     return res;
   }
   let entries = fs.readdirSync(dir).filter((n) => !JUNK.has(n.toLowerCase()));
@@ -3209,10 +3982,359 @@ function researchAppend(dir, type, payload) {
   });
 }
 
+/** `journal append --type agent_delegated`: a `started` event gets its AG-NNN id from the script (max over the journal + 1) under the lock. */
+function agentAppend(dir, payload, opts = {}) {
+  if (!fs.existsSync(path.join(dir, ".lvr"))) throw fail("NO_LVR", "No .lvr folder here; this is not an LVR project folder.");
+  if (!AGENT_STATUS.includes(payload.status)) throw invalid("status", AGENT_STATUS.join("|"));
+  if (payload.status !== "started") return checkpoint(dir, "agent_delegated", payload, opts);
+  validateAgent(payload, true);
+  return withLock(dir, "journal append agent_delegated", () => {
+    let id = payload.id;
+    if (id === undefined) {
+      let max = 0;
+      for (const e of readJournal(dir).events) {
+        const m = e.type === "agent_delegated" && isStr(e.payload.id) ? e.payload.id.match(/^AG-(\d+)$/) : null;
+        if (m) max = Math.max(max, parseInt(m[1], 10));
+      }
+      id = `AG-${String(max + 1).padStart(3, "0")}`;
+    }
+    try {
+      const r = appendLocked(dir, "agent_delegated", { ...payload, id }, opts);
+      return { ...r, id };
+    } catch (e) {
+      if (e instanceof LvrError && e.extra) e.extra = { ...e.extra, id };
+      throw e;
+    }
+  });
+}
+
 async function cmdResearchLog({ dir, flags }) {
   const payload = await readPayloadInput(flags);
   if (payload === null) throw fail("MISSING_FLAG", "Give the research step with --payload JSON or --in FILE|-.", { flag: "payload" });
   return researchAppend(dir, flags.context ? "context_research" : "research_logged", payload);
+}
+
+// ---------------------------------------------------------------- 11d. migration v1 -> v2 (state migrate)
+/** Test hook: LVR_TEST_CRASH_AFTER=copy|rename|backup-staged|backup|journal|state kills the process right after that step (exit 137). */
+const crashPoint = (name) => { if (process.env.LVR_TEST_CRASH_AFTER === name) process.exit(137); };
+const fileSha = (p) => crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+const stampNow = () => now().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
+function fsyncPath(p) {
+  try { const fd = fs.openSync(p, "r"); try { fs.fsyncSync(fd); } finally { fs.closeSync(fd); } } catch { /* best effort (directories on Windows) */ }
+}
+/** Files under a folder (relative, `/`), without lock and temporary files. */
+function walkFiles(root, rel = "") {
+  const out = [];
+  let ents = [];
+  try { ents = fs.readdirSync(path.join(root, rel), { withFileTypes: true }); } catch { return out; }
+  for (const d of ents) {
+    if (d.name === ".lock" || /\.tmp-/.test(d.name)) continue;
+    const r = rel ? `${rel}/${d.name}` : d.name;
+    if (d.isDirectory()) out.push(...walkFiles(root, r)); else if (d.isFile()) out.push(r);
+  }
+  return out.sort();
+}
+
+function syncOf(dir, folder, j) {
+  const sc = readSidecar(dir, folder);
+  if (sc.k === "bad" || (sc.k === "absent" && j.events.length > 0 && isStamped(j.events[0]))) return "unknown"; // same rule the write path uses (STATE_SEQ_UNKNOWN)
+  if (sc.k === "absent") return "untracked";
+  if (sc.k === "lag") return sc.n > j.max_seq ? "journal_behind_state" : "lagging";
+  return sc.n > j.max_seq ? "journal_behind_state" : sc.n === j.max_seq ? "in_sync" : "lagging";
+}
+
+const BACKUP_RE = /^v1-to-v2-/;
+function backupManifest(bdir) {
+  try { const m = JSON.parse(readText(path.join(bdir, "manifest.json"))); return isObj(m) ? m : null; } catch { return null; }
+}
+/** Backup of a schema 1 state in .lvr/migrations/v1-to-v2-<stamp>/ : staged in a temp folder, renamed into place; manifest.json is written last. A complete backup of the same state.json is reused. */
+const MIG_DIR_HINT = "Make .lvr/migrations writable (for example `chmod -R u+w .lvr/migrations`), then run `state migrate` again. Nothing was changed.";
+function makeBackup(dir, { via, folder = ".lvr", legacy = null }) {
+  const mdir = path.join(dir, ".lvr", "migrations");
+  try { fs.mkdirSync(mdir, { recursive: true }); } catch (e) { throw fail("STATE_WRITE_FAILED", `Could not create .lvr/migrations: ${e.message}`, { errno: e.code, hint: MIG_DIR_HINT }); }
+  try {
+    for (const f of fs.readdirSync(mdir)) if (BACKUP_RE.test(f) && /\.tmp-/.test(f)) fs.rmSync(path.join(mdir, f), { recursive: true, force: true }); // ours, from a killed run
+  } catch (e) { throw fail("STATE_WRITE_FAILED", `Could not clean .lvr/migrations: ${e.message}`, { errno: e.code, hint: MIG_DIR_HINT }); }
+  const src = path.join(dir, folder);
+  const stateSha = fileSha(path.join(src, "state.json"));
+  for (const f of fs.readdirSync(mdir).sort()) {
+    if (!BACKUP_RE.test(f) || /\.tmp-/.test(f)) continue;
+    const m = backupManifest(path.join(mdir, f));
+    if (m && m.from === 1 && m.to === 2 && m.files?.["state.json"] === stateSha) return { name: f, reused: true };
+  }
+  const base = `v1-to-v2-${stampNow()}`;
+  let name = base;
+  for (let i = 2; fs.existsSync(path.join(mdir, name)); i++) name = `${base}-${i}`;
+  const tmp = path.join(mdir, `${name}.tmp-${process.pid}-${crypto.randomBytes(3).toString("hex")}`);
+  try { fs.mkdirSync(tmp); } catch (e) { throw fail("STATE_WRITE_FAILED", `Could not write the migration backup: ${e.message}`, { errno: e.code, hint: MIG_DIR_HINT }); }
+  const files = {};
+  try {
+    for (const f of ["state.json", "journal.ndjson", ".state-seq"]) {
+      const from = path.join(src, f);
+      if (!fs.existsSync(from)) continue;
+      fs.copyFileSync(from, path.join(tmp, f));
+      fsyncPath(path.join(tmp, f));
+      files[f] = fileSha(path.join(tmp, f));
+    }
+    if (legacy) {
+      const lm = {};
+      for (const f of walkFiles(path.join(dir, legacy))) lm[f] = fileSha(path.join(dir, legacy, f));
+      fs.writeFileSync(path.join(tmp, "legacy-manifest.json"), JSON.stringify({ folder: legacy, files: lm }, null, 1) + "\n");
+      fsyncPath(path.join(tmp, "legacy-manifest.json"));
+    }
+    crashPoint("backup-staged");
+    const j = readJournal(dir, folder);
+    fs.writeFileSync(path.join(tmp, "manifest.json"), JSON.stringify({ from: 1, to: 2, via, source: legacy ?? ".lvr", created_at: now(), journal_max_seq: j.max_seq, files }, null, 1) + "\n");
+    fsyncPath(path.join(tmp, "manifest.json"));
+    fsyncPath(tmp);
+    fs.renameSync(tmp, path.join(mdir, name));
+    fsyncPath(mdir);
+  } catch (e) {
+    try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* ignore */ }
+    if (e instanceof LvrError) throw e;
+    throw fail("STATE_WRITE_FAILED", `Could not write the migration backup: ${e.message}`, { errno: e.code, hint: MIG_DIR_HINT });
+  }
+  crashPoint("backup");
+  return { name, reused: false };
+}
+
+const blockedHint = {
+  MIGRATION_BLOCKED: "state.json lags the journal or its sync marker is unknown. Run `replay --write --force` (it writes a schema 2 state and keeps a backup; LOSSY_REPLAY lists anything it would drop). On a .lvp project it first copies .lvp to .lvr and leaves .lvp untouched.",
+  STATE_UNREADABLE: "state.json is not valid JSON. Run `replay --write` to rebuild it from the journal (a damaged file is kept as state.corrupt-<date>.json); the rebuilt state is schema 2. On a .lvp project it first copies .lvp to .lvr and leaves .lvp untouched.",
+  STATE_INVALID: "state.json is invalid. Run `replay --write` to rebuild it from the journal; the rebuilt state is schema 2. On a .lvp project it first copies .lvp to .lvr and leaves .lvp untouched.",
+  STATE_MISSING: "There is a journal but no state.json. Run `replay --write` to rebuild it; the rebuilt state is schema 2. On a .lvp project it first copies .lvp to .lvr and leaves .lvp untouched.",
+  NO_JOURNAL: "There is a state.json but no journal. Run `journal restore-from-state` (on a .lvp project it first copies .lvp to .lvr), then `state migrate`.",
+  JOURNAL_BEHIND_STATE: "The journal has fewer events than state.json says it reflects. Run `journal restore-from-state` (on a .lvp project it first copies .lvp to .lvr), then `state migrate`.",
+  LEGACY_CONFLICT: "A .lvp project exists, but .lvr/ already holds other files. Move or remove .lvr/ (it holds no state or journal), then migrate.",
+};
+
+/** What `state migrate` would do. Writes nothing. Throws only NO_LVR. */
+function detectMigration(dir) {
+  const lvr = path.join(dir, ".lvr");
+  const lvrHolds = fs.existsSync(path.join(lvr, "state.json")) || fs.existsSync(path.join(lvr, "journal.ndjson"));
+  const lvpHolds = legacyHolds(dir);
+  const out = { needed: false, from: null, folder: null, state_sync: null, blocked: null, legacy: { path: ".lvp", status: "absent" }, kind: null, legacySource: false };
+  const block = (code, extra) => { out.blocked = { code, hint: blockedHint[code], ...(extra || {}) }; out.needed = true; return out; }; // blocked = a migration is needed but cannot run yet
+  let folder;
+  if (!lvrHolds) {
+    if (!lvpHolds) throw fail("NO_LVR", "No LVR project here (no .lvr or .lvp state or journal).");
+    let nonEmpty = false;
+    try { nonEmpty = fs.readdirSync(lvr).length > 0; } catch { /* absent */ }
+    out.folder = ".lvp"; out.legacy.status = "copy-pending"; out.kind = "copy";
+    if (nonEmpty) return block("LEGACY_CONFLICT");
+    folder = ".lvp";
+  } else {
+    folder = ".lvr"; out.folder = ".lvr"; out.kind = "inplace";
+    if (fs.existsSync(path.join(dir, ".lvp"))) {
+      const a = path.join(dir, ".lvp", "journal.ndjson"), b = path.join(lvr, "journal.ndjson");
+      let prefix = false;
+      try { const x = fs.readFileSync(a), y = fs.readFileSync(b); prefix = x.length <= y.length && y.subarray(0, x.length).equals(x); } catch { /* none */ }
+      out.legacySource = prefix && peekSchema(path.join(lvr, "state.json")) !== 2;
+      out.legacy.status = prefix ? "kept" : "ignored";
+    }
+  }
+  const sp = path.join(dir, folder, "state.json");
+  const j = readJournal(dir, folder);
+  if (!fs.existsSync(sp)) return block("STATE_MISSING");
+  let bytes, obj;
+  try { bytes = fs.readFileSync(sp); obj = JSON.parse(stripBom(bytes.toString("utf8"))); } catch { return block("STATE_UNREADABLE"); }
+  const v = isObj(obj) ? obj.schema_version : null;
+  out.from = v;
+  if (v === 2) { out.kind = null; return out; }
+  const val = validateState(obj);
+  if (v !== 1 || val.errors.length) return block("STATE_INVALID", { errors: val.errors.slice(0, 5) });
+  if (!j.exists) return block("NO_JOURNAL");
+  out.state_sync = syncOf(dir, folder, j);
+  out.needed = true;
+  const last = j.events[j.events.length - 1];
+  const pending = last && last.type === "schema_migrated" && isStamped(last) && last.payload.to === 2 && last.payload.state_sha256_before === crypto.createHash("sha256").update(bytes).digest("hex");
+  if (out.state_sync === "journal_behind_state") return block("JOURNAL_BEHIND_STATE");
+  if (!pending && (out.state_sync === "lagging" || out.state_sync === "unknown")) return block("MIGRATION_BLOCKED", { state_sync: out.state_sync });
+  out.pending = !!pending;
+  return out;
+}
+function blockedError(b, state_sync) {
+  if (b.code === "JOURNAL_BEHIND_STATE") return stateFailure("JOURNAL_BEHIND_STATE", null, { hint: b.hint });
+  const { code, ...details } = b;
+  return fail(code, `Cannot migrate: ${code}.`, { ...details, ...(state_sync ? { state_sync } : {}) });
+}
+
+function legacyRefs(dir) {
+  const out = [];
+  const scan = (rel, depth) => {
+    let ents = [];
+    try { ents = fs.readdirSync(path.join(dir, rel), { withFileTypes: true }); } catch { return; }
+    for (const d of ents) {
+      if (d.name.startsWith(".") || d.name === "node_modules") continue;
+      const r = rel ? `${rel}/${d.name}` : d.name;
+      if (d.isDirectory()) { if (depth < 2) scan(r, depth + 1); continue; }
+      if (!d.isFile() || !/\.(md|json|txt|ya?ml)$/i.test(d.name)) continue;
+      const t = tryReadLF(path.join(dir, r));
+      if (t === null || t.length > 1_000_000) continue;
+      t.split("\n").forEach((ln, i) => { if (/\.lvp\b/.test(ln) && out.length < 200) out.push({ file: r, line: i + 1 }); });
+    }
+  };
+  scan("", 0);
+  return out;
+}
+
+const NEW_KEYS = [["project", "error", "/project/error"], [null, "product", "/product"], ["pipeline", "research", "/pipeline/research"], ["boosters", "installed", "/boosters/installed"],
+  [null, "framework_decision", "/framework_decision"], [null, "release_check", "/release_check"], [null, "review", "/review"], [null, "agents_delegated", "/agents_delegated"], [null, "sessions", "/sessions"]];
+
+/** In-place v1 -> v2 on .lvr/ (the state and journal already live there). Under the project lock. */
+function migrateInPlace(dir, legacyFolder) {
+  return withLock(dir, "state migrate", () => {
+    const info = detectMigration(dir);
+    if (info.blocked) throw blockedError(info.blocked, info.state_sync);
+    if (!info.needed) return { needed: false, migrated: false, schema_version: 2, written: false };
+    const lvr = path.join(dir, ".lvr");
+    const sp = path.join(lvr, "state.json"), jp = path.join(lvr, "journal.ndjson");
+    const j = readJournal(dir);
+    const bytes = fs.readFileSync(sp);
+    const h = crypto.createHash("sha256").update(bytes).digest("hex");
+    const S1 = JSON.parse(stripBom(bytes.toString("utf8")));
+    const sc0 = readSidecar(dir);
+    const legacy = legacyFolder ?? (info.legacySource ? ".lvp" : null);
+    const last = j.events[j.events.length - 1];
+    let m, healed = false, backup, reused = false;
+    if (info.pending) { healed = true; m = last; backup = last.payload.backup; }
+    else {
+      const bk = makeBackup(dir, { via: "migrate", legacy });
+      backup = `.lvr/migrations/${bk.name}/`; reused = bk.reused;
+      m = { ts: now(), seq: j.max_seq + 1, type: "schema_migrated", payload: { from: 1, to: 2, via: "migrate", backup, state_sha256_before: h, legacy_folder: legacy, script_version: VERSION, cli: CLI_MARK } };
+    }
+    const R = replayEvents(dir, healed ? j.events : [...j.events, m], {}).state;
+    const S2 = clone(S1);
+    S2.schema_version = 2;
+    S2.project.error = S1.project.status === "error" ? R.project.error : null;
+    S2.product = R.product;
+    S2.pipeline.research = R.pipeline.research;
+    S2.boosters.installed = R.boosters.installed;
+    for (const k of ["framework_decision", "release_check", "review", "agents_delegated", "sessions"]) S2[k] = R[k];
+    let coverageSections = 0;
+    for (const [sid, x] of Object.entries(S2.pipeline.sections)) {
+      const cv = R.pipeline.sections[sid]?.coverage;
+      if (cv !== undefined && isObj(x)) { x.coverage = cv; coverageSections++; }
+    }
+    const v = validateState(S2);
+    if (v.errors.length) throw fail("STATE_INVALID", "The migrated state would be invalid, so nothing was written.", { errors: v.errors });
+    if (!healed) { appendJournalLine(jp, m); crashPoint("journal"); }
+    writeStateAtomic(dir, S2);
+    crashPoint("state");
+    if (sc0.k === "num") writeStateSeq(dir, m.seq);
+    const added = NEW_KEYS.filter(([parent, key]) => !(parent ? isObj(S1[parent]) && key in S1[parent] : key in S1)).map((x) => x[2]);
+    const out = {
+      needed: true, migrated: true, from: 1, to: 2, seq: m.seq, healed, copied_from: legacy, backup, backup_reused: reused, added,
+      derived: { sessions: R.sessions.length, research_events: j.events.filter((e) => RESEARCH_TYPES.includes(e.type)).length, coverage_sections: coverageSections, error_detail: S2.project.error !== null },
+      state: { written: true, sidecar: sc0.k === "num" ? "tracked" : "untracked" },
+      journal_warnings: journalWarnings(j),
+    };
+    if (legacy) out.legacy_folder = { path: ".lvp", status: "kept", remove_hint: "Ask the user whether to remove .lvp/ (default: keep). On yes run `state migrate --remove-legacy`." };
+    out.legacy_refs = legacyRefs(dir);
+    return out;
+  });
+}
+
+/** `.lvp/` project: copy (never rename) into `.lvr/`, then migrate in place. */
+function migrateCopy(dir, copyOnly = false) {
+  const lockp = path.join(dir, ".lvr-migrate.lock");
+  const start = Date.now();
+  let fd;
+  for (;;) {
+    try { fd = fs.openSync(lockp, "wx"); break; } catch (e) {
+      if (e.code !== "EEXIST") throw fail("LOCKED", `Cannot create the migration lock: ${e.message}`, { errno: e.code });
+      if (lockIsStale(lockp)) { try { fs.unlinkSync(lockp); } catch { /* raced */ } continue; }
+      if (Date.now() - start > 5000) throw fail("LOCKED", "Another lvr migration is running in this folder; try again in a moment.");
+      sleepMs(25);
+    }
+  }
+  try { fs.writeSync(fd, JSON.stringify({ pid: process.pid, ts: now(), cmd: "state migrate" })); } catch { /* ignore */ }
+  const stage = path.join(dir, `.lvr.migrating-${process.pid}-${crypto.randomBytes(3).toString("hex")}`);
+  try {
+    for (const f of fs.readdirSync(dir)) if (f.startsWith(".lvr.migrating-")) fs.rmSync(path.join(dir, f), { recursive: true, force: true }); // ours, from a killed run
+    const info = detectMigration(dir);
+    if (info.blocked && (!copyOnly || info.blocked.code === "LEGACY_CONFLICT")) throw blockedError(info.blocked, info.state_sync);
+    if (info.kind !== "copy") return copyOnly ? { copied: false } : migrateInPlace(dir, null); // .lvr appeared meanwhile
+    try {
+      fs.cpSync(path.join(dir, ".lvp"), stage, { recursive: true, preserveTimestamps: true, filter: (s) => !(path.basename(s) === ".lock" || /\.tmp-/.test(path.basename(s))) });
+      const mkWritable = (r) => { for (const e of fs.readdirSync(r, { withFileTypes: true })) { const x = path.join(r, e.name); if (e.isSymbolicLink()) continue; try { fs.chmodSync(x, fs.statSync(x).mode | (e.isDirectory() ? 0o700 : 0o600)); } catch { /* best effort */ } if (e.isDirectory()) mkWritable(x); } };
+      try { fs.chmodSync(stage, fs.statSync(stage).mode | 0o700); } catch { /* best effort */ }
+      mkWritable(stage); // a read-only .lvp must not give an unwritable .lvr
+      for (const f of walkFiles(stage)) fsyncPath(path.join(stage, f));
+      crashPoint("copy");
+      let existing = false;
+      try { existing = fs.statSync(path.join(dir, ".lvr")).isDirectory(); } catch { /* none */ }
+      if (existing) {
+        if (fs.readdirSync(path.join(dir, ".lvr")).length) throw fail("LEGACY_CONFLICT", "Cannot migrate: .lvr/ already holds files.", { hint: blockedHint.LEGACY_CONFLICT });
+        fs.rmdirSync(path.join(dir, ".lvr"));
+      }
+      fs.renameSync(stage, path.join(dir, ".lvr"));
+      fsyncPath(dir);
+      crashPoint("rename");
+    } catch (e) {
+      try { fs.rmSync(stage, { recursive: true, force: true }); } catch { /* ignore */ }
+      if (e instanceof LvrError) throw e;
+      throw fail("MIGRATION_COPY_FAILED", `Could not copy .lvp to .lvr: ${e.message}. The .lvp folder is untouched.`, { errno: e.code });
+    }
+    if (copyOnly) return { copied: true };
+    return migrateInPlace(dir, ".lvp");
+  } finally {
+    try { fs.closeSync(fd); } catch { /* ignore */ }
+    try { fs.unlinkSync(lockp); } catch { /* ignore */ }
+  }
+}
+
+/** Recovery commands (`replay --write`, `journal restore-from-state`) on a `.lvp`-only project: copy `.lvp/` to `.lvr/` first (same staged copy as `state migrate`, `.lvp/` never touched), so the normal `.lvr` recovery can run. Returns true when it copied. */
+function adoptLegacy(dir) {
+  const lvr = path.join(dir, ".lvr");
+  if (fs.existsSync(path.join(lvr, "state.json")) || fs.existsSync(path.join(lvr, "journal.ndjson")) || !legacyHolds(dir)) return false;
+  return migrateCopy(dir, true).copied === true;
+}
+
+/** Delete `.lvp/` only when every file in it is also, unchanged, in `.lvr/` (or covered by the migration backup). */
+function removeLegacy(dir) {
+  const lvp = path.join(dir, ".lvp");
+  if (!fs.existsSync(lvp)) return { removed: false, reason: "absent", written: false };
+  if (peekSchema(path.join(dir, ".lvr", "state.json")) !== 2) throw fail("LEGACY_DIFFERS", ".lvr/ is not a migrated (schema 2) project yet, so .lvp/ is kept.", { files: [".lvr/state.json"], hint: "Run `state migrate` first." });
+  return withLock(dir, "state migrate --remove-legacy", () => {
+    const bad = [];
+    const sp = path.join(dir, ".lvr", "state.json");
+    if (peekSchema(sp) !== 2) throw fail("LEGACY_DIFFERS", ".lvr/ is not a migrated (schema 2) project yet, so .lvp/ is kept.", { files: [".lvr/state.json"], hint: "Run `state migrate` first." });
+    const mdir = path.join(dir, ".lvr", "migrations");
+    let man = null;
+    for (const f of fs.existsSync(mdir) ? fs.readdirSync(mdir).sort() : []) {
+      const m = BACKUP_RE.test(f) && !/\.tmp-/.test(f) ? backupManifest(path.join(mdir, f)) : null;
+      if (m && m.source === ".lvp") man = m;
+    }
+    if (!man) bad.push("(no complete migration backup of the .lvp state)");
+    const files = walkFiles(lvp).filter((f) => f !== ".state-seq");
+    for (const f of files) {
+      const a = path.join(lvp, f), b = path.join(dir, ".lvr", f);
+      if (f === "state.json") { if (man && fileSha(a) !== man.files?.["state.json"]) bad.push(".lvp/state.json"); continue; }
+      if (!fs.existsSync(b)) { bad.push(f); continue; }
+      const x = fs.readFileSync(a), y = fs.readFileSync(b);
+      if (f === "journal.ndjson" ? !(x.length <= y.length && y.subarray(0, x.length).equals(x)) : !x.equals(y)) bad.push(f);
+    }
+    if (bad.length) throw fail("LEGACY_DIFFERS", ".lvp/ holds something that is not unchanged in .lvr/, so nothing was deleted.", { files: bad });
+    fs.rmSync(lvp, { recursive: true, force: true });
+    return { removed: true, files: files.length, written: true };
+  });
+}
+
+async function cmdStateMigrate({ dir, flags }) {
+  const rootLock = path.join(dir, ".lvr-migrate.lock"); // litter from a killed .lvp copy
+  if (!flags.check && fs.existsSync(rootLock) && lockIsStale(rootLock)) { try { fs.unlinkSync(rootLock); } catch { /* raced */ } }
+  if (flags["remove-legacy"]) {
+    if (flags.check) throw fail("MISSING_FLAG", "--check and --remove-legacy cannot be combined.", { flag: "check" });
+    return removeLegacy(dir);
+  }
+  const info = detectMigration(dir);
+  if (flags.check) {
+    return { check: true, needed: info.needed, from: info.from, to: 2, folder: info.folder, state_sync: info.state_sync, blocked: info.blocked, legacy_folder: info.legacy, written: false };
+  }
+  if (info.blocked) throw blockedError(info.blocked, info.state_sync);
+  if (!info.needed) return { needed: false, migrated: false, schema_version: 2, written: false };
+  return info.kind === "copy" ? migrateCopy(dir) : migrateInPlace(dir, null);
 }
 
 // ---------------------------------------------------------------- 12. commands
@@ -3268,6 +4390,7 @@ async function cmdAnswerRecord({ dir, flags }) {
   if (!(a === null || isStr(a))) throw invalid("a", "a string or null");
   const decs = [...(Array.isArray(input.decisions) ? input.decisions : []), ...(flags.decision ?? []).map((d) => parseJsonObject(d, "--decision"))];
   return withLock(dir, "answer record", () => {
+    guardSchema(dir);
     const j = readJournal(dir);
     if (!j.exists) throw fail("NO_JOURNAL", "There is no journal here yet.");
     const ls = loadState(dir);
@@ -3280,6 +4403,8 @@ async function cmdAnswerRecord({ dir, flags }) {
     if (exists && !flags.amend) throw fail("ANSWER_EXISTS", `Answer ${id} is already recorded; use --amend to replace it.`, { id });
     const payload = { section, answer_id: id, q, a, skipped, ...(isObj(input.extra) ? input.extra : {}) };
     if (isObj(input.project)) payload.project = input.project;
+    if (isObj(input.product)) payload.product = input.product;
+    if (isObj(input.coverage)) payload.coverage = input.coverage;
     let decisionIds = [];
     if (decs.length) {
       payload.decisions = prepareDecisions(dir, decs, section, flags, st, j.events);
@@ -3299,6 +4424,7 @@ async function cmdDecisionRecord({ dir, flags }) {
   const decs = [...(Array.isArray(input.decisions) ? input.decisions : []), ...(flags.decision ?? []).map((d) => parseJsonObject(d, "--decision"))];
   if (!decs.length) throw fail("MISSING_FLAG", "At least one --decision (or decisions in --in) is required.", { flag: "decision" });
   return withLock(dir, "decision record", () => {
+    guardSchema(dir);
     const j = readJournal(dir);
     const ls = loadState(dir);
     const section = isStr(payload.section) ? payload.section : undefined;
@@ -3348,7 +4474,7 @@ function restorePass(dir, st, j0, dry) {
   };
   const done = { events: [], answers: [], decisions: [], milestones: [], boosters: [], sections: [], tier: false, project: [] };
   const push = (r) => done.events.push(r.seq);
-  if (!j.exists || !j.events.length) push(app("session_start", { skill: "lvr-continue", restored: true }));
+  if (!j.exists || !j.events.length) push(app("session_start", { skill: "lvr-continue", restored: true, session_id: null, session_id_reason: "restored from state.json" }));
   const ev = evs();
   const has = (type, f) => ev.some((e) => e.type === type && (!f || f(e.payload)));
   const mp = st.model_profile || {};
@@ -3397,11 +4523,66 @@ function restorePass(dir, st, j0, dry) {
   const proj = {};
   for (const k of ["slug", "name", "idea_raw", "user_language"]) if (isStr(st.project?.[k]) && st.project[k] !== "" && !haveProj.has(k)) proj[k] = st.project[k];
   if (Object.keys(proj).length) { carrier.project = proj; done.project = Object.keys(proj); }
+  // v2 fields: compare what the journal explains so far with state.json; re-record the difference (restored: true, with the time state.json holds)
+  const rb = replayEvents(dir, evs(), { journal: j0 }).state;
+  const v2events = [];
+  if (isObj(st.product) && JSON.stringify(canonicalState({ ...rb, schema_version: 2 }).product) !== JSON.stringify(canonicalState({ ...st, schema_version: 2 }).product)) {
+    const pr = st.product;
+    carrier.product = { ...(Array.isArray(pr.types) ? { types: pr.types } : {}), ...(isObj(pr.flags) && Object.keys(pr.flags).length ? { flags: pr.flags } : {}), status: PRODUCT_STATUS.includes(pr.status) ? pr.status : "unasked", ...(pr.source ? { source: pr.source } : {}), ...(pr.rationale ? { rationale: pr.rationale } : {}), confirmed: pr.confirmed === true };
+    if (carrier.product.status === "unasked" && !carrier.product.types?.length && !carrier.product.flags) delete carrier.product;
+    else { if (carrier.product.status === "unasked") { delete carrier.product.source; delete carrier.product.rationale; } carrier.orig_ts = isIso(pr.updated_at) ? pr.updated_at : undefined; if (carrier.orig_ts === undefined) delete carrier.orig_ts; done.product = true; }
+  }
+  const cov = {};
+  for (const S of secKeys) {
+    const have = st.pipeline.sections[S]?.coverage;
+    if (!isObj(have)) continue;
+    for (const [k, ev] of Object.entries(have)) if (JSON.stringify(rb.pipeline.sections[S]?.coverage?.[k]) !== JSON.stringify(ev)) (cov[S] ??= {})[k] = ev;
+  }
+  if (Object.keys(cov).length) { carrier.coverage = cov; done.coverage = Object.keys(cov); }
+  const rbInst = rb.boosters.installed ?? [];
+  for (const x of Array.isArray(st.boosters?.installed) ? st.boosters.installed : []) {
+    if (!isObj(x)) continue;
+    const have = rbInst.find((y) => y.name === x.name && y.path === x.path);
+    if (have && have.status === x.status) continue;
+    if (!have) v2events.push(["booster_installed", { name: x.name, kind: x.kind, repo: x.repo, sha: x.sha ?? null, scope: x.scope, harness: x.harness, path: x.path, ...(x.tier ? { tier: x.tier } : {}), ...(x.section ? { section: x.section } : {}), consent: x.consent === true, orig_ts: x.installed_at }]);
+    if (x.status === "uninstalled") v2events.push(["booster_uninstalled", { name: x.name, path: x.path, orig_ts: x.uninstalled_at ?? undefined }]);
+  }
+  const rbFw = rb.framework_decision, fw = st.framework_decision;
+  const fwPayload = (f) => ({ decision_id: f.decision_id, chosen: f.chosen, alternatives: f.alternatives, confidence: f.confidence, user_override: f.user_override, defaulted: f.defaulted, recheck_by: f.recheck_by, slot: f.slot, ...(f.signals_ref ? { signals_ref: f.signals_ref } : {}), ...(f.section ? { section: f.section } : {}), orig_ts: f.decided_at });
+  if (isObj(fw)) {
+    const top = { ...fw }; delete top.libraries;
+    if (!isObj(rbFw) || JSON.stringify(canonicalFw({ ...rbFw, libraries: [] })) !== JSON.stringify(canonicalFw({ ...fw, libraries: [] }))) v2events.push(["framework_selected", fwPayload(top)]);
+    for (const l of Array.isArray(fw.libraries) ? fw.libraries : []) {
+      const hl = (rbFw?.libraries ?? []).find((y) => y.slot === l.slot);
+      if (!hl || JSON.stringify(canonicalFw(hl)) !== JSON.stringify(canonicalFw(l))) v2events.push(["framework_selected", fwPayload(l)]);
+    }
+  }
+  for (const [k, x] of Object.entries(isObj(st.release_check) ? st.release_check : {})) {
+    if (isObj(x) && JSON.stringify(rb.release_check?.[k]) !== JSON.stringify(x)) v2events.push(["release_checked", { kind: x.kind, status: x.status, product_type: k, ...(x.target ? { target: x.target } : {}), ...(x.evidence ? { evidence: x.evidence } : {}), orig_ts: x.checked_at }]);
+  }
+  const rl = st.review?.last;
+  if (isObj(rl) && JSON.stringify(canonicalState({ ...rb, schema_version: 2 }).review?.last) !== JSON.stringify(canonicalState({ ...st, schema_version: 2 }).review?.last)) {
+    v2events.push(["review_started", { run: rl.run, scope: rl.scope, orig_ts: rl.started_at }]);
+    if (rl.done_at) v2events.push(["review_done", { run: rl.run, verdict: rl.verdict, score: rl.score, open: rl.open, missed_earlier: rl.missed_earlier, report: rl.report ?? "", ...(rl.lens_scores ? { lens_scores: rl.lens_scores } : {}), ...(rl.ledger_sha256 ? { ledger_sha256: rl.ledger_sha256 } : {}), orig_ts: rl.done_at }]);
+  }
+  for (const a of Array.isArray(st.agents_delegated) ? st.agents_delegated : []) {
+    if (!isObj(a) || (rb.agents_delegated ?? []).some((y) => y.id === a.id)) continue;
+    v2events.push(["agent_delegated", { status: "started", id: a.id, task: a.task, profile: a.profile, transport: a.transport, ...(a.profile_sha ? { profile_sha: a.profile_sha } : {}), ...(a.harness ? { harness: a.harness } : {}), ...(a.model ? { model: a.model } : {}), ...(a.tier ? { tier: a.tier } : {}), ...(a.section ? { section: a.section } : {}), orig_ts: a.started_at }]);
+    if (a.status !== "started") v2events.push(["agent_delegated", { status: a.status, id: a.id, ...(a.record ? { record: a.record } : {}), ...(a.reason ? { reason: a.reason } : {}), orig_ts: a.ended_at ?? undefined }]);
+  }
+  const lostSessions = Math.max(0, (Array.isArray(st.sessions) ? st.sessions.length : 0) - (rb.sessions?.length ?? 0));
+  if (lostSessions) done.sessions_not_restored = lostSessions;
+  if ((st.pipeline?.research?.log?.count ?? 0) > (rb.pipeline.research?.log?.count ?? 0)) done.research_not_restored = true;
   if (Object.keys(carrier).length) {
     push(app("resume", { skill: "lvr-continue", restored: true, ...carrier }));
     done.decisions = (carrier.decisions || []).map((d) => d.id);
     done.milestones = (carrier.milestones || []).map((m) => m.id);
   }
+  for (const [type, payload] of v2events) {
+    for (const k of Object.keys(payload)) if (payload[k] === undefined) delete payload[k];
+    push(app(type, payload));
+  }
+  if (v2events.length) done.v2 = v2events.map(([t]) => t);
   // Final pass: where the rebuilt section status still differs from state.json, append the one section event that sets it.
   const rebuilt = replayEvents(dir, evs(), { journal: j0 }).state;
   for (const S of secKeys) {
@@ -3418,6 +4599,7 @@ function restorePass(dir, st, j0, dry) {
 }
 
 async function cmdReplay({ dir, flags }) {
+  const adopted = flags.write ? adoptLegacy(dir) : false;
   needLvr(dir);
   if (flags["journal-resume"] !== undefined && !flags.write) throw fail("MISSING_FLAG", "--journal-resume only works together with --write.", { flag: "write" });
   const extra = flags["journal-resume"] !== undefined ? parseJsonObject(flags["journal-resume"], "--journal-resume") : null;
@@ -3436,6 +4618,7 @@ async function cmdReplay({ dir, flags }) {
   };
   let { state, report } = run();
   const out = { written: false };
+  if (adopted) out.copied_from = ".lvp";
   if (flags.compare !== undefined) {
     const file = flags.compare === true ? path.join(dir, ".lvr", "state.json") : path.resolve(dir, flags.compare);
     if (!fs.existsSync(file)) throw fail(flags.compare === true ? "STATE_MISSING" : "FILE_NOT_FOUND", "There is no state file to compare with.");
@@ -3467,13 +4650,17 @@ async function cmdReplay({ dir, flags }) {
           });
         }
       }
+      if (ls.kind === "valid" && ls.schema === 1) {
+        const bk = makeBackup(dir, { via: "replay" });
+        out.backup = `.lvr/migrations/${bk.name}/`; out.backup_reused = bk.reused;
+      }
       if (ls.kind !== "absent" && ls.kind !== "valid") {
         const bp = path.join(dir, ".lvr", `state.corrupt-${now().slice(0, 10)}.json`);
         if (fs.existsSync(bp)) out.backup_skipped = "a backup from today already exists";
         else { fs.copyFileSync(path.join(dir, ".lvr", "state.json"), bp); out.backup = relPath(dir, bp); }
       }
       if (extra) {
-        const r = appendLocked(dir, "resume", { skill: "lvr-continue", state_rebuilt: true, untranslatable: report.untranslatable.length, ...extra }, { noState: true });
+        const r = appendLocked(dir, "resume", { skill: "lvr-continue", state_rebuilt: true, untranslatable: report.untranslatable.length, ...extra }, { noState: true, skipSchema: true });
         out.seq = r.seq;
         ({ state, report } = run());
       }
@@ -3499,6 +4686,7 @@ const COMMANDS = {
       const type = need(flags, "type");
       const payload = (await readPayloadInput(flags)) ?? {};
       if (RESEARCH_TYPES.includes(type) && !flags["no-state"]) return researchAppend(dir, type, payload); // the script assigns the RQ id
+      if (type === "agent_delegated") return agentAppend(dir, payload, { noState: !!flags["no-state"] }); // the script assigns the AG id
       return checkpoint(dir, type, payload, { noState: !!flags["no-state"] });
     },
   },
@@ -3517,19 +4705,17 @@ const COMMANDS = {
       const j = readJournal(dir);
       if (!j.exists) throw fail("NO_JOURNAL", "There is no journal in this project.");
       const sc = readSidecar(dir);
-      let sync = "untracked";
-      if (sc.k === "bad" || (sc.k === "absent" && j.events.length > 0 && isStamped(j.events[0]))) sync = "unknown"; // same rule the write path uses (STATE_SEQ_UNKNOWN)
-      else if (sc.k === "absent") sync = "untracked";
-      else if (sc.k === "lag") sync = sc.n > j.max_seq ? "journal_behind_state" : "lagging";
-      else if (sc.k === "num") sync = sc.n > j.max_seq ? "journal_behind_state" : sc.n === j.max_seq ? "in_sync" : "lagging";
+      const sync = syncOf(dir, ".lvr", j);
       return { ...j, exists: undefined, events: j.events.length, state_seq: sc.n, state_sync: sync, healthy: j.healthy && sync !== "journal_behind_state" };
     },
   },
   "journal restore-from-state": {
     help: "Recovery for JOURNAL_BEHIND_STATE: re-append (stamped) every answer, decision, milestone and section event found in state.json but missing from the journal, then re-sync .state-seq. Idempotent. Refuses (RESTORE_NOT_NEEDED, nothing written) when nothing in state.json is missing from the journal; a lagging state is fixed with `replay --write --force`, never with this.", flags: [],
     run: async ({ dir }) => {
+      const adopted = adoptLegacy(dir);
       needLvr(dir);
-      return withLock(dir, "journal restore-from-state", () => restoreFromState(dir));
+      const r = withLock(dir, "journal restore-from-state", () => restoreFromState(dir));
+      return adopted ? { copied_from: ".lvp", ...r } : r;
     },
   },
   "journal tail": {
@@ -3545,13 +4731,14 @@ const COMMANDS = {
     },
   },
   "state validate": {
-    help: "Validate state.json against the v1 schema. [--file PATH] [--strict]", flags: ["file", "strict"],
+    help: "Validate state.json against the schema (2; a schema 1 file validates with W_SCHEMA_V1). [--file PATH] [--strict]", flags: ["file", "strict"],
     run: async ({ dir, flags }) => {
       if (flags.file === undefined) needLvr(dir);
       const file = flags.file ? path.resolve(dir, flags.file) : path.join(dir, ".lvr", "state.json");
       if (!fs.existsSync(file)) throw fail("STATE_MISSING", "There is no state file at that path.");
       let obj;
       try { obj = JSON.parse(readText(file)); } catch (e) { throw fail("STATE_UNREADABLE", `The state file is not valid JSON: ${e.message}`); }
+      if (isObj(obj) && Number.isInteger(obj.schema_version) && obj.schema_version > LVR_SCHEMA) throw tooNew(obj.schema_version);
       const { errors, warnings } = validateState(obj);
       const valid = errors.length === 0 && !(flags.strict && warnings.length);
       if (!valid) {
@@ -3562,8 +4749,12 @@ const COMMANDS = {
       return { valid: true, errors, warnings };
     },
   },
+  "state migrate": {
+    help: "Bring a schema 1 project (or a pre-rename .lvp folder) to schema 2: backup in .lvr/migrations/, one schema_migrated event, v2 state. Idempotent. [--check: write nothing] [--remove-legacy: delete .lvp/ after the user agreed; refuses unless it is all unchanged in .lvr/]",
+    flags: ["check", "remove-legacy"], run: cmdStateMigrate,
+  },
   "state get": {
-    help: "Read a value from state.json. [--pointer /json/pointer]", flags: ["pointer"],
+    help: "Read a value from state.json. [--pointer /json/pointer; -1 as an array index = the last element, e.g. /sessions/-1/recovered_error]", flags: ["pointer"],
     run: async ({ dir, flags }) => {
       needLvr(dir);
       const p = path.join(dir, ".lvr", "state.json");
@@ -3584,6 +4775,7 @@ const COMMANDS = {
       const payload = flags.payload !== undefined ? parseJsonObject(flags.payload, "--payload") : {};
       return withLock(dir, "state write", () => {
         guardJournalBehind(dir, readJournal(dir));
+        if (doc.schema_version === 1) throw fail("STATE_INVALID", "state write needs a schema 2 document (this one is schema 1); nothing was written. Run `state migrate` for an old project.", { errors: [{ code: "E_SCHEMA_VERSION", pointer: "/schema_version", message: "schema_version must be 2 for a write." }] });
         const v = validateState(doc);
         if (v.errors.length) throw fail("STATE_INVALID", "The state document is invalid; nothing was written.", { errors: v.errors });
         if (flags.type) {
@@ -3596,7 +4788,7 @@ const COMMANDS = {
     },
   },
   "answer record": {
-    help: "Record one answer (journal + state). --section S [--id ID] --q TEXT --a TEXT | --in JSON [--skipped] [--amend]",
+    help: "Record one answer (journal + state). --section S [--id ID] --q TEXT --a TEXT | --in JSON [--skipped] [--amend]. The JSON may also carry project, product and coverage (payload extensions)",
     flags: ["section", "id", "q", "a", "in", "payload", "skipped", "amend", "decision"], run: cmdAnswerRecord,
   },
   "decision record": {
@@ -3698,7 +4890,8 @@ function usage(group) {
     "Input: --payload JSON, or --in FILE, or --in - (stdin). Output: one JSON object on stdout.",
     "Exit codes: 0 ok (negative verdicts are data), 1 error, 2 usage error, 3 the event was journaled (or blocked) but state.json was NOT checkpointed",
     "(ok:false, error.code STATE_LAGS|STATE_MISSING|STATE_INVALID|STATE_SEQ_UNKNOWN|JOURNAL_BEHIND_STATE, journaled_seq, error.details.hint: stop and follow the hint).",
-    "LVR_NOW=<ISO> overrides the clock (tests only).");
+    "A schema 1 project (or a .lvp folder) refuses every write with MIGRATION_NEEDED until `state migrate` ran; a project made by a NEWER lvr refuses everything with SCHEMA_TOO_NEW (exit 1): update all LVR skills together.",
+    "LVR_NOW=<ISO> overrides the clock; LVR_TEST_CRASH_AFTER=copy|rename|backup-staged|backup|journal|state kills `state migrate` after that step (both tests only).");
   return lines.join("\n") + "\n";
 }
 
@@ -3730,6 +4923,7 @@ async function main() {
     const allowed = new Set([...GLOBAL_FLAGS, ...cmd.flags]);
     for (const k of Object.keys(flags)) if (!allowed.has(k)) throw fail("UNKNOWN_FLAG", `Unknown flag --${k} for "${key}".`, { flag: k });
     const dir = ["slug make", "slug validate", "probe prompts", "probe grade", "version", "meta events"].includes(key) ? path.resolve(flags.dir || process.cwd()) : resolveDir(flags);
+    if (!["slug make", "slug validate", "slug free", "probe prompts", "probe grade", "version", "meta events"].includes(key)) guardNewer(dir);
     const data = await cmd.run({ dir, flags });
     emit({ ok: true, cmd: key, ...data }, pretty);
   } catch (e) {

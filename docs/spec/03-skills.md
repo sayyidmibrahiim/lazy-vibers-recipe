@@ -27,7 +27,7 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 **Flow**:
 1. Read `.lvr/state.json`. Missing → explain and suggest `/lvr-init-new-idea` (with Folder Gate guidance). Corrupt → rebuild by journal replay, report what was reconstructed.
 2. Print a plain-language progress summary: project name, current Section, answered/total, pending loop-backs, booster status, last activity time.
-3. Offer the right next action: retry the failed step (if the loaded status is `error`) / resume interview / answer pending loop-back / finish S9 generation (if scope locked, bundle incomplete) / run handoff (if bundled, handoff open) / suggest `build`, `add-feature` or `recheck-plan` (if bundled, handoff done).
+3. Offer the right next action: retry the failed step (if this run's session recovered from an `error`: `sessions[-1].recovered_error` is not null) / resume interview / answer pending loop-back / finish S9 generation (if scope locked, bundle incomplete) / run handoff (if bundled, handoff open) / suggest `build`, `add-feature` or `recheck-plan` (if bundled, handoff done).
 4. Before any Section work: the web research check (spec 07 §1; fail → journal it, explain, stop). Then finish a missing or partial Domain Brief (S0 done) and the current Section's scan if not yet journaled.
 5. Resume the current Section exactly where it stopped (micro-batch boundary).
 
@@ -91,7 +91,7 @@ Post-lock captures and their decision lines live in `.lvr/docs/sections/S4-addit
 6. Deployment milestone → live check, then `state.deployment = { status: "live", url, verified_at }`.
 7. All verified → `build_done` (`project.status` = `complete`); recommend `/lvr-handoff`, then `/lvr-personal-brand`.
 
-`.lvr/` writes are limited to `project.status` (`building`/`complete`), `milestones[].verified`, `verified_at`, `deployment`, and journal appends. Never skip or weaken a verification.
+`.lvr/` writes are limited to `project.status` (`building`/`complete`), `milestones[].verified`, `verified_at`, `deployment`, `release_check`, its session (`session_start`/`session_end`), and journal appends. Never skip or weaken a verification.
 
 ### `/lvr-personal-brand` (v1, implemented)
 

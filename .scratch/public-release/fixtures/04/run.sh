@@ -103,6 +103,7 @@ L "$TMP/g" lint run --group G > "$TMP/o.json"; chk "lint --group G runs only gro
 L "$TMP/g" lint run --group A,B > "$TMP/o.json"; chk "lint --group A,B skips the other groups" "$TMP/o.json" 'o.ok && o.groups.join()==="A,B" && o.findings.length===0'
 L "$TMP/g" lint run --group Z > "$TMP/o.json"; rc=$?; chk "lint --group Z is a usage error (exit 2)" "$TMP/o.json" 'o.ok===false && o.error.code==="MISSING_FLAG"'
 L "$TMP/g" lint run --group Z >/dev/null; [ $? -eq 2 ] && echo "PASS lint --group Z exit code 2" || { echo "FAIL lint --group Z exit code"; fail=1; }; n=$((n+1))
+L "$TMP/g" state migrate > /dev/null   # futsal-fixed is a schema 1 project: writes need the migration first
 before=$(wc -l < "$TMP/g/.lvr/journal.ndjson")
 L "$TMP/g" lint run $AH --journal > "$TMP/o.json"
 chk "lint --journal appends one gap_found per finding" "$TMP/o.json" 'o.ok && o.journal.length===2 && o.journal.every(j=>j.seq>0)'

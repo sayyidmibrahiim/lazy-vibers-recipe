@@ -1,6 +1,6 @@
 // text.mjs: ticket-40 skill-text checks for A13-A16 (procedure steps are text, not script). node text.mjs <repo root>
-// Each check asserts the phrase is present and in the stated order; the negative control asserts HEAD's copy of the file lacks the first
-// phrase (skipped with INFO once the change is committed: the file no longer differs from HEAD).
+// Each check asserts the phrase is present and in the stated order; the negative control asserts the file as it was BEFORE ticket 40
+// (commit 52fb850, ticket 26) lacks the first phrase. Pinned to that commit so the control keeps working after later tickets edit the file.
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -9,8 +9,9 @@ import { spawnSync } from "node:child_process";
 const ROOT = process.argv[2];
 let fail = 0;
 const read = (f) => fs.readFileSync(path.join(ROOT, f), "utf8");
-const head = (f) => { const r = spawnSync("git", ["-C", ROOT, "show", `HEAD:${f}`], { encoding: "utf8" }); return r.status === 0 ? r.stdout : null; };
-const differs = (f) => spawnSync("git", ["-C", ROOT, "diff", "--quiet", "HEAD", "--", f]).status === 1;
+const head = (f) => { const r = spawnSync("git", ["-C", ROOT, "show", `${BASE}:${f}`], { encoding: "utf8" }); return r.status === 0 ? r.stdout : null; };
+const BASE = "52fb850";
+const differs = (f) => spawnSync("git", ["-C", ROOT, "diff", "--quiet", BASE, "--", f]).status === 1;
 
 function T(name, file, phrases, { absent = [] } = {}) {
   const t = read(file);
@@ -21,9 +22,9 @@ function T(name, file, phrases, { absent = [] } = {}) {
   if (!ok) fail = 1;
   if (differs(file)) {
     const h = head(file);
-    if (h === null || h.includes(phrases[0])) { console.log(`FAIL negative control ${name}: HEAD already has "${phrases[0]}"`); fail = 1; }
-    else console.log(`PASS negative control ${name}: HEAD lacks "${phrases[0].slice(0, 50)}"`);
-  } else console.log(`INFO ${name}: ${file} equals HEAD (committed), negative control skipped`);
+    if (h === null || h.includes(phrases[0])) { console.log(`FAIL negative control ${name}: pre-ticket-40 (52fb850) already has "${phrases[0]}"`); fail = 1; }
+    else console.log(`PASS negative control ${name}: pre-ticket-40 (52fb850) lacks "${phrases[0].slice(0, 50)}"`);
+  } else console.log(`INFO ${name}: ${file} equals pre-ticket-40 (52fb850), negative control skipped`);
 }
 
 const INIT = "skills/lvr-init-new-idea/SKILL.md";

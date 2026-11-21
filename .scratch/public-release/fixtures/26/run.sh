@@ -34,6 +34,7 @@ chk "crosscheck lists X8 and it fails on futsal (every finding is group I)" "$TM
 
 # 3. futsal re-sourced: citations only (+ the failed research the markers point at) -> 0 findings
 rm -rf "$TMP/fr"; cp -r "$HERE/../04/futsal-fixed" "$TMP/fr"; node "$HERE/resource.mjs" "$TMP/fr"
+L "$TMP/fr" state migrate > /dev/null   # futsal-fixed is schema 1: migrate before the research log writes
 for n in 1 2 3; do
   L "$TMP/fr" research log --payload '{"section":"S5","purpose":"claim","topic":"Price or availability of a vendor feature","queries":["vendor pricing page","fetch https://example.com/pricing"],"sources":[],"outcome":"failed","reason":"the page needs a login and no public source was found"}' > "$TMP/o.json"
 done
@@ -45,7 +46,8 @@ chk "futsal re-sourced: full lint run (A-I) clean, 0 findings" "$TMP/o.json" 'o.
 L "$TMP/fr" crosscheck > "$TMP/o.json"
 chk "futsal re-sourced: crosscheck X1-X8 all ok" "$TMP/o.json" 'o.ok&&o.clean&&o.rules.length===8&&o.rules.every(r=>r.ok)'
 L "$TMP/fr" journal check > "$TMP/o.json"; chk "futsal re-sourced: journal healthy after research log" "$TMP/o.json" 'o.ok&&o.healthy===true'
-L "$HERE/../04/futsal-fixed" replay --compare > "$TMP/o0.json"
+rm -rf "$TMP/f0"; cp -r "$HERE/../04/futsal-fixed" "$TMP/f0"; L "$TMP/f0" state migrate > /dev/null
+L "$TMP/f0" replay --compare > "$TMP/o0.json"
 L "$TMP/fr" replay --compare > "$TMP/o.json"
 node -e 'const a=JSON.parse(require("fs").readFileSync(process.argv[1])),b=JSON.parse(require("fs").readFileSync(process.argv[2]));const k=(o)=>JSON.stringify(o.diff.map(d=>d.pointer));if(!(b.ok&&k(a)===k(b)&&!b.diff.some(d=>/research/.test(d.pointer))))process.exit(1)' "$TMP/o0.json" "$TMP/o.json" && echo "PASS futsal re-sourced: replay --compare diff identical to futsal-fixed (the hand-built fixture's own differences; research events add none)" || { echo "FAIL futsal re-sourced: replay --compare"; fail=1; }
 # the same copy 100 days later: every price cite is expired and the logged failures are stale for price markers

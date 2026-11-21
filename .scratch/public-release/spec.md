@@ -73,3 +73,5 @@
 - R2: one `freshness.json` everywhere: prices/quotas/versions 30 days, ToS/legal 60, market 90, statistics 365.
 - R3: review never edits the plan; fixes go through a separate apply step after the user OKs them.
 - R4: rename to `lvr-review-plan`.
+- P6 (2026-11-21): product type unknown → the AI keeps interviewing until it can recommend the product type with reasons; the user confirms. (brainstorm-03 round 9)
+- V1 (2026-11-21): all LVR skills update together; a skill seeing a newer schema stops and asks for an update, never downgrades. Refused runs show in the dashboard as cancelled sessions.

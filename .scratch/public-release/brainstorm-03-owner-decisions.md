@@ -30,3 +30,8 @@ Naming: Lazy Vibers Recipe (prefix confirmation still implicit).
 
 ## Round 8 (2026-11-19)
 B11 no build-time agents; only specialists fit for thinking/planning/research/brainstorm. A6, P5, R1–R4 accepted as recommended (see spec.md "Owner decisions").
+
+## Round 9 (2026-11-21) — ticket 27 questions
+- Q1 Product type for migrated projects that have not finished S1: YES, ask once. AND (new, general rule): when the user doesn't know which product type fits ("gak tau"), the AI does not stop at the question. It keeps interviewing ("oke, emangnya mau bikin apa?") until it has the full context, then RECOMMENDS the product type itself with reasons (e.g. "this is best as a harness plugin" / "this is best as an AI skill"). Same spirit as D11: tell the user what they don't know and didn't say. → ticket 08 (product-type engine), schema field in ticket 27.
+- Q2 Skill version skew: all LVR skills must be updated together (install docs say so), AND a skill that finds a project with a newer schema than it knows must STOP and tell the user to update, never rewrite it in the older format.
+- Q3 Refused runs (wrong folder, no web) appear in the dashboard session list, marked as cancelled ("batal").

@@ -71,3 +71,6 @@ Verify:
 - Unit tests for each parser (ticket 22).
 - A grep shows no network calls to harness/LLM endpoints from these routes.
 - The resume commands shown match `harnesses.json`.
+
+## Comments
+- Owner 2026-11-21 (spec V1): refused runs (wrong folder, no web) are listed as sessions marked cancelled ("batal").

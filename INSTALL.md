@@ -174,6 +174,10 @@ Pi reads `.agents/skills/` (project, searched upward to the repo root) and `~/.a
 
 Not re-checked on an official page; the skills CLI table gives `.zcode/skills/` and `~/.zcode/skills/`.
 
+## Updating
+
+Update all LVR skills together (re-run the install command for every skill, or `npx skills add` without `--skill`). The skills share one state file; a skill that is older than the project (`SCHEMA_TOO_NEW`) refuses to touch it and changes nothing. Projects made by an older LVR are migrated by the first updated skill that opens them; the old files are kept in `.lvr/migrations/`.
+
 ## Verify an install
 
 Open the harness in an empty folder and run `/lvr-init-new-idea` (or `$lvr-init-new-idea` in Codex). It should run the Folder Gate and start S0 intake.
