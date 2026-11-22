@@ -2,7 +2,7 @@
 
 The bundle is the product. It is generated at S9 (and maintained by v1 skills), lives in the project folder next to `.lvr/`, and must be **self-sufficient**: any harness, with no LVR skills installed, can build the product from it.
 
-## File list (v0)
+## Twenty base Markdown files
 
 | File | Owner | Audience | Content rules |
 |---|---|---|---|
@@ -24,12 +24,17 @@ The bundle is the product. It is generated at S9 (and maintained by v1 skills), 
 | `ASSUMPTIONS.md` | S9 | builder + owner | Every decision not `user_confirmed`: `assumed` (asked, skipped) and `designer_filled` (proactively filled — the user couldn't have known to ask), each with why + how to replace/confirm it |
 | `HANDOVER.md` | S9 | owner | How to run, deploy, update, back up; where secrets/API keys live; who to ask what |
 | `CAPABILITIES.md` | S9 | builder | Recommended boosters for this stack (install lines), license-tagged; NC items marked runtime-dependency-only |
-| `blueprint.json` | S9 | UI + harness | Machine snapshot (schema below) |
 | `CLAUDE.md`, `GEMINI.md` | S9 | harnesses | One-line stubs pointing to AGENTS.md |
 
-Format rules (all files): GitHub-flavored Markdown · English source · no Mermaid (ASCII diagrams) · SimpleEnglish document rules · consistency enforced (same stack/entity/feature names everywhere).
+S9 also writes the derived `blueprint.json` index for tooling and the viewer. It accompanies the 20 Markdown files.
+
+Format rules (Markdown files): GitHub-flavored Markdown · English source · no Mermaid (ASCII diagrams) · SimpleEnglish document rules · consistency enforced (same stack/entity/feature names everywhere).
 
 For the AGENTS.md format, consult the upstream specification at [agentsmd/agents.md](https://raw.githubusercontent.com/agentsmd/agents.md/main/README.md). The format is documentation.
+
+## Profile additions
+
+After the scope is locked, `profile plan --write` saves the selected types and their extra paths in `.lvr/profile-plan.json`. It keeps that list on retries. S9 uses it for the additional files. The derived v1 index includes `profile_files` when the snapshot has extra paths. Existing indexes with no extra paths retain their original shape. The complete bundle manifest and lint expansion are ticket 28.
 
 ## Compilation order (S9)
 
@@ -42,7 +47,7 @@ For the AGENTS.md format, consult the upstream specification at [agentsmd/agents
 
 ## Maintenance after S9 (v1 skills)
 
-The 20-file list above is fixed. The v1 skills change the bundle by editing those files, never by adding a 21st:
+The base Markdown files and the frozen profile files define the plan for that run. The derived index is regenerated when its inputs change. The v1 skills maintain those outputs as follows:
 
 | Skill | Bundle effect | Side artifacts (never in the bundle) |
 |---|---|---|

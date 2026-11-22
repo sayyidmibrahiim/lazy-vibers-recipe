@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "id": "web",
+  "label": "Website or web app",
+  "flags": {
+    "has_ui": true
+  },
+  "sections": {},
+  "bundle_files": []
+}

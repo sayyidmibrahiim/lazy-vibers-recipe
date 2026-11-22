@@ -25,9 +25,17 @@ See [the section booster map](05-boosters.md) for the installed sources and use 
 ## S1 — Context awal (what & for whom)
 
 - Purpose: problem, target users, platform shape (web / mobile / desktop / multiple), what "working" means for the user.
+- Ask the product type first. Accept multiple types. When the owner is unsure, continue the interview until the recorded context supports a recommendation. Present the reasons and ask for confirmation. A pending recommendation never activates additions.
+- Use `profile list` to see available profiles and `profile plan` to join the confirmed types. A preview with `--types <id,id>` inspects options without writing a choice.
 - Booster: load grilling. Apply `define-problem-statement` and `mom-test` and consult the JTBD reference.
 - Output: `S1-context.md`; feeds `SPEC/prd.md`.
 - Exit: problem + audience + platform + success picture recorded.
+
+### Profile additions
+
+A shipped profile under `skills/lvr-profiles/<id>.json` is copied to each skill's `references/profiles/`. Its JSON fields are `schema_version: 1`, `id`, `label`, `flags`, `sections`, and `bundle_files`. Flags can define `stores_data`, `has_ui`, and `has_llm`. Entries in `sections` are keyed by S1 through S8. They may list `questions` with `id`, `question`, `why` and `feeds`, plus `exit_criteria`, `boosters`, and `agents`.
+
+The plan merges confirmed profiles in ID order. It deduplicates files and identical questions, rejects conflicting definitions for one question ID, and lists unknown profile IDs if a matching pack is unavailable. Profile defaults combine with OR and recorded project flags take precedence. The plan adds questions to the base bank within the existing batch limit and adds exit checks to the Section's checklist.
 
 ## S2 — Kondisi (resources & constraints)
 

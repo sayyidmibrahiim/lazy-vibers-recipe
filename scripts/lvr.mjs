@@ -1084,7 +1084,8 @@ function validateProductExt(pp) {
   if (pp.status !== undefined && pp.status !== "decided" && pp.confirmed === true) throw invalid("product.confirmed", "false while the product type is not decided");
   if (pp.status === "unasked" && ((Array.isArray(pp.types) && pp.types.length) || pp.source !== undefined)) throw invalid("product.status", "unasked only without types and source");
   if (pp.status === "decided" && pp.source === "ai_recommended" && pp.confirmed !== true) throw invalid("product.confirmed", "true: an AI-recommended product type is decided only after the user explicitly confirms");
-  if (pp.source === "ai_recommended" && !(isStr(pp.rationale) && pp.rationale.trim() !== "")) throw invalid("product.rationale", "the reasons for the recommendation when source is ai_recommended");
+  const confirmingExisting = pp.status === "decided" && pp.confirmed === true && pp.types === undefined;
+  if (pp.source === "ai_recommended" && !confirmingExisting && !(isStr(pp.rationale) && pp.rationale.trim() !== "")) throw invalid("product.rationale", "the reasons for the recommendation when source is ai_recommended");
 }
 function validateCoverageExt(cv) {
   if (!isObj(cv) || !Object.keys(cv).length) throw invalid("coverage", "{ \"<S>\": { \"<fact>\": [evidence ids] } }");
@@ -1121,6 +1122,7 @@ function validatePayload(type, p, opts = {}) {
   const needSec = () => { if (!SEC_RE.test(p.section ?? "")) throw invalid("section", "S0..S10"); };
   const needStr = (k) => { if (!isStr(p[k]) || p[k] === "") throw invalid(k, "a non-empty string"); };
   if (p.orig_ts !== undefined && !isIso(p.orig_ts)) throw invalid("orig_ts", "an ISO timestamp");
+  if (p.restored === true && !opts.internal) throw fail("EVENT_RESERVED", "The restored marker is written by journal restore-from-state.");
   switch (type) {
     case "schema_migrated":
       if (!opts.internal) throw fail("EVENT_RESERVED", "schema_migrated is written only by `state migrate`; it cannot be appended by hand.", { type });
@@ -1345,7 +1347,7 @@ const isStamped = (e) => isObj(e.payload) && e.payload.cli === CLI_MARK && !(e.t
 function applyEvent(st, e, ctx) {
   const p = isObj(e.payload) ? e.payload : {};
   // `journal restore-from-state` re-records a v2 fact with the time state.json already holds for it (orig_ts)
-  const ts = p.restored === true && isIso(p.orig_ts) ? p.orig_ts : e.ts;
+  const ts = p.restored === true && isStamped(e) && isIso(p.orig_ts) ? p.orig_ts : e.ts;
   const S = p.section;
   const okS = isStr(S) && SEC_RE.test(S);
   const untr = () => ctx.untranslatable?.push({ seq: e.seq, type: e.type });
@@ -1642,15 +1644,22 @@ function foldProduct(st, pp, ts) {
   const pr = (st.product ??= freshProduct());
   pr.flags ??= {};
   const typesGiven = Array.isArray(pp.types);
-  const keepAi = pp.source === undefined && pr.source === "ai_recommended"; // a payload with no source never changes an AI recommendation's source (owner decision P6)
-  if (typesGiven) pr.types = [...pp.types];
   if (isObj(pp.flags)) for (const [k, v] of Object.entries(pp.flags)) if (typeof v === "boolean") pr.flags[k] = v;
+  const source = PRODUCT_SOURCE.includes(pp.source) ? pp.source : undefined;
+  const keepAi = source === undefined && pr.source === "ai_recommended";
+  const relabelWithoutChoice = pr.source === "ai_recommended" && source === "user" && !(typesGiven && pp.types.length) && pp.status === "decided" && pp.confirmed !== true;
+  const flagsOnly = !typesGiven && pp.status === undefined && pp.source === undefined && pp.confirmed === undefined && pp.rationale === undefined;
+  if (relabelWithoutChoice || flagsOnly) {
+    pr.updated_at = ts;
+    return;
+  }
+  if (typesGiven) pr.types = [...pp.types];
   if (PRODUCT_STATUS.includes(pp.status)) pr.status = pp.status;
-  else if (typesGiven && pp.types.length) pr.status = pp.source === "ai_recommended" || keepAi ? "pending" : "decided"; // an AI recommendation is decided only after the user explicitly confirms (owner decision P6)
-  if (pp.source !== undefined && PRODUCT_SOURCE.includes(pp.source)) pr.source = pp.source;
+  else if (typesGiven && pp.types.length) pr.status = source === "ai_recommended" || keepAi ? "pending" : "decided"; // an AI recommendation is decided only after the user's confirmation
+  if (source !== undefined) pr.source = source;
   else if (typesGiven && pp.types.length && !keepAi) pr.source = "user";
   if (pp.rationale !== undefined) pr.rationale = isStr(pp.rationale) && pp.rationale !== "" ? pp.rationale : null;
-  else if (typesGiven && pp.source === undefined && !keepAi) pr.rationale = null;
+  else if (typesGiven && source === undefined && !keepAi) pr.rationale = null;
   pr.confirmed = typeof pp.confirmed === "boolean" ? pp.confirmed : pr.status === "decided" && pr.source !== "ai_recommended";
   if (pr.status === "decided" && pr.source === "ai_recommended" && pr.confirmed !== true) pr.status = "pending"; // never decided without the user's yes
   if (pr.status !== "decided") pr.confirmed = false;
@@ -2722,6 +2731,144 @@ function cleanupBoosters(dir, flags) {
   });
 }
 
+const PROFILE_SECTIONS = SECTIONS.slice(1, 9);
+const PROFILE_FLAGS = ["stores_data", "has_ui", "has_llm"];
+const PROFILE_PLAN_PATH = ".lvr/profile-plan.json";
+const profileFilePath = (file) => boosterPath(file) && file.split("/").every((part) => !part.startsWith("."));
+const profileNames = (values) => Array.isArray(values) && values.every((name) => isStr(name) && PRODUCT_TYPE_RE.test(name));
+
+function validateProfile(data, file) {
+  const bad = (field) => {
+    throw fail("PROFILE_INVALID", `Invalid profile field ${field} in ${file}.`, { file, field });
+  };
+  if (!isObj(data) || data.schema_version !== 1) bad("schema_version");
+  if (!isStr(data.id) || !PRODUCT_TYPE_RE.test(data.id) || path.basename(file) !== `${data.id}.json`) bad("id");
+  if (!nonEmpty(data.label)) bad("label");
+  if (!isObj(data.flags) || !Object.entries(data.flags).every(([key, value]) => PROFILE_FLAGS.includes(key) && typeof value === "boolean")) bad("flags");
+  if (!Array.isArray(data.bundle_files) || !data.bundle_files.every(profileFilePath)) bad("bundle_files");
+  if (!isObj(data.sections)) bad("sections");
+  for (const [section, entry] of Object.entries(data.sections)) {
+    if (!PROFILE_SECTIONS.includes(section) || !isObj(entry)) bad(`sections.${section}`);
+    const id = `sections.${section}`;
+    const questions = entry.questions ?? [];
+    if (!Array.isArray(questions) || !questions.every((q) => isObj(q) && isStr(q.id) && PRODUCT_TYPE_RE.test(q.id) && nonEmpty(q.question) && nonEmpty(q.why) && Array.isArray(q.feeds) && q.feeds.length && q.feeds.every(profileFilePath))) bad(`${id}.questions`);
+    if (new Set(questions.map((q) => q.id)).size !== questions.length) bad(`${id}.questions.id`);
+    if (entry.exit_criteria !== undefined && (!Array.isArray(entry.exit_criteria) || !entry.exit_criteria.every(nonEmpty))) bad(`${id}.exit_criteria`);
+    if (entry.boosters !== undefined && !profileNames(entry.boosters)) bad(`${id}.boosters`);
+    if (entry.agents !== undefined && !profileNames(entry.agents)) bad(`${id}.agents`);
+  }
+  return data;
+}
+
+function loadProfiles(directory) {
+  const candidates = directory ? [path.resolve(directory)] : [
+    path.resolve(SCRIPT_DIR, "../references/profiles"),
+    path.resolve(SCRIPT_DIR, "../skills/lvr-profiles"),
+  ];
+  const selected = candidates.find((candidate) => fs.existsSync(candidate));
+  if (!selected || !fs.statSync(selected).isDirectory()) {
+    throw fail("PROFILES_MISSING", "No directory of LVR product profiles was found.", { searched: candidates });
+  }
+  const profiles = new Map();
+  for (const item of fs.readdirSync(selected, { withFileTypes: true }).sort((a, b) => cmpStr(a.name, b.name))) {
+    if (!item.name.endsWith(".json")) continue;
+    if (!item.isFile()) throw fail("PROFILE_INVALID", "Product profiles must be plain JSON files.", { file: item.name });
+    let data;
+    try {
+      data = JSON.parse(readText(path.join(selected, item.name)));
+    } catch {
+      throw fail("PROFILE_INVALID", "The profile file could not be read as JSON.", { file: item.name });
+    }
+    const profile = validateProfile(data, item.name);
+    profiles.set(profile.id, profile);
+  }
+  if (!profiles.size) throw fail("PROFILES_MISSING", "The profile directory has no JSON profiles.", { searched: [selected] });
+  return profiles;
+}
+
+function mergeProfiles(profiles, types, explicitFlags) {
+  const flags = {};
+  const extraFiles = new Set();
+  const sections = {};
+  const missing = [];
+  for (const type of types) {
+    const profile = profiles.get(type);
+    if (!profile) { missing.push(type); continue; }
+    for (const [key, value] of Object.entries(profile.flags)) flags[key] = (flags[key] ?? false) || value;
+    for (const file of profile.bundle_files) extraFiles.add(file);
+    for (const section of PROFILE_SECTIONS) {
+      const addition = profile.sections[section];
+      if (!addition) continue;
+      const current = (sections[section] ??= { questions: [], exit_criteria: [], boosters: [], agents: [] });
+      for (const q of addition.questions ?? []) {
+        const prior = current.questions.find((candidate) => candidate.id === q.id);
+        if (prior && canonJson(prior) !== canonJson(q)) throw fail("PROFILE_CONFLICT", `Different questions share the ID ${q.id} in ${section}.`, { section, id: q.id });
+        if (!prior) current.questions.push(q);
+      }
+      for (const key of ["exit_criteria", "boosters", "agents"]) {
+        current[key] = [...new Set([...current[key], ...(addition[key] ?? [])])];
+      }
+    }
+  }
+  return { types, missing_profiles: missing, flags: { ...flags, ...explicitFlags }, sections, profile_files: [...extraFiles].sort(cmpStr) };
+}
+
+function productProfilePlan(dir, config) {
+  const { profiles: directory, types: selection } = config;
+  const profiles = loadProfiles(directory);
+  const loaded = loadState(dir);
+  if (!["absent", "valid"].includes(loaded.kind)) throw fail("STATE_INVALID", "A profile plan requires readable, valid project state.");
+  const product = loaded.state?.product;
+  const explicit = selection === undefined ? null : selection.split(",").map((type) => type.trim());
+  if (explicit && !profileNames(explicit)) throw invalid("types", "comma-separated product type IDs");
+  const confirmed = product?.status === "decided" && product.confirmed === true;
+  const types = [...new Set(explicit ?? (confirmed ? product.types : []))].sort(cmpStr);
+  return {
+    status: explicit ? "preview" : confirmed ? "decided" : product?.status ?? "unasked",
+    ...mergeProfiles(profiles, types, product?.flags),
+  };
+}
+
+function readProfilePlan(dir) {
+  if (!boosterDir(dir, ".lvr")) return null;
+  const file = path.join(dir, PROFILE_PLAN_PATH);
+  try {
+    if (!fs.lstatSync(file).isFile()) throw fail("PROFILE_PLAN_INVALID", "The frozen profile plan must be a plain file.");
+    const snapshot = JSON.parse(readText(file));
+    if (snapshot?.schema_version !== 1 || !profileNames(snapshot.types) || !Array.isArray(snapshot.profile_files) || !snapshot.profile_files.every(profileFilePath)) {
+      throw fail("PROFILE_PLAN_INVALID", "The frozen profile plan has invalid types or file paths.");
+    }
+    return snapshot;
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    if (error instanceof SyntaxError) throw fail("PROFILE_PLAN_INVALID", "The frozen profile plan is not valid JSON.");
+    throw error;
+  }
+}
+
+function profilePlanCommand(dir, flags) {
+  const plan = productProfilePlan(dir, flags);
+  if (flags.types !== undefined) {
+    if (flags.write) throw invalid("types", "a preview without --write");
+    return plan;
+  }
+  const pinned = readProfilePlan(dir);
+  if (!flags.write) return pinned ? { ...plan, profile_files: pinned.profile_files, frozen: true } : plan;
+  needLvr(dir);
+  return withLock(dir, "profile plan", () => {
+    const snapshot = readProfilePlan(dir);
+    if (snapshot) return { ...plan, profile_files: snapshot.profile_files, frozen: true, written: false };
+    const state = loadState(dir), journal = readJournal(dir);
+    if (state.kind !== "valid" || !journal.healthy || journal.scope_locked_seq === null || state.state.pipeline.sections.S7?.status !== "done") {
+      throw fail("SCOPE_UNLOCKED", "Complete the scope lock before freezing the profile files.");
+    }
+    const current = productProfilePlan(dir, flags);
+    if (current.status !== "decided") throw fail("PRODUCT_UNCONFIRMED", "Confirm the product type before freezing the profile files.");
+    writeFileAtomic(path.join(dir, PROFILE_PLAN_PATH), JSON.stringify({ schema_version: 1, types: current.types, profile_files: current.profile_files }, null, 2) + "\n", "PROFILE_PLAN_WRITE_FAILED");
+    return { ...current, frozen: true, written: true };
+  });
+}
+
 // ---------------------------------------------------------------- 11b. bundle: lint, crosscheck, blueprint, handoff
 // Read-only checks over the Blueprint Bundle (lint-checklist.md groups A-H; the S9 cross-check is a view over the same checks).
 // Judgment checks are never guessed: they come back as `needs_model` items for the model. Writes (handoff only):
@@ -2990,15 +3137,16 @@ function validateBlueprint(bp) {
   const T = (p, v, ok, what) => { if (v !== undefined && !ok(v)) e.push(`${p}: expected ${what}`); };
   const str = (v) => isStr(v), bool = (v) => typeof v === "boolean", num = (v) => typeof v === "number" && Number.isFinite(v), arr = Array.isArray;
   if (!isObj(bp)) return ["(root): expected an object"];
-  const exact = (p, o, keys) => {
+  const exact = (p, o, keys, optional = []) => {
     if (o === undefined) return false; // reported as missing by the parent
     if (!isObj(o)) { e.push(`${p}: expected an object`); return false; }
     const at = (k) => (p === "(root)" ? k : `${p}.${k}`);
     for (const k of keys) if (!(k in o)) e.push(`${at(k)}: missing`);
-    for (const k of Object.keys(o)) if (!keys.includes(k)) e.push(`${at(k)}: unknown key`);
+    for (const k of Object.keys(o)) if (!keys.includes(k) && !optional.includes(k)) e.push(`${at(k)}: unknown key`);
     return true;
   };
-  exact("(root)", bp, ["schema_version", "generated_at", "project", "stack", "features", "decisions_count", "milestones", "costs", "capabilities", "pointers"]);
+  exact("(root)", bp, ["schema_version", "generated_at", "project", "stack", "features", "decisions_count", "milestones", "costs", "capabilities", "pointers"], ["profile_files"]);
+  T("profile_files", bp.profile_files, (files) => arr(files) && files.every(profileFilePath) && new Set(files).size === files.length, "unique project-relative file paths");
   if (bp.schema_version !== 1) e.push("schema_version: expected 1");
   if ("generated_at" in bp) T("generated_at", bp.generated_at, isIso, "an ISO timestamp");
   if (exact("project", bp.project, ["slug", "name", "user_language", "idea_summary_en", "status"])) for (const k of ["slug", "name", "user_language", "idea_summary_en", "status"]) if (k in bp.project) T(`project.${k}`, bp.project[k], str, "a string");
@@ -3029,7 +3177,7 @@ function jsonDiff(a, c, p = "", out = []) {
   return out;
 }
 
-const BLUEPRINT_KEYS = ["schema_version", "generated_at", "project", "stack", "features", "decisions_count", "milestones", "costs", "capabilities", "pointers"];
+const BLUEPRINT_KEYS = ["schema_version", "generated_at", "project", "stack", "features", "decisions_count", "milestones", "costs", "capabilities", "pointers", "profile_files"];
 const ordBp = (bp) => Object.fromEntries(BLUEPRINT_KEYS.filter((k) => k in bp).map((k) => [k, bp[k]]));
 const serializeBp = (bp) => JSON.stringify(ordBp(bp), null, 2) + "\n";
 
@@ -3096,7 +3244,10 @@ function deriveBlueprint(b, input = {}) {
   };
   const capabilities = b.capabilities();
   const pointers = { agents: "AGENTS.md", overview: "OVERVIEW.md", verification: "VERIFICATION.md", state: ".lvr/state.json" };
-  return { bp: { schema_version: 1, project, stack, features, decisions_count, milestones, costs, capabilities, pointers }, missing, preserved };
+  const bp = { schema_version: 1, project, stack, features, decisions_count, milestones, costs, capabilities, pointers };
+  const profileFiles = readProfilePlan(b.dir)?.profile_files ?? [];
+  if (profileFiles.length) bp.profile_files = profileFiles;
+  return { bp, missing, preserved };
 }
 const oldCostNum = (old, k) => (isObj(old.costs) && typeof old.costs[k] === "number" ? old.costs[k] : undefined);
 
@@ -6932,7 +7083,7 @@ function restorePass(dir, st, j0, dry) {
   const evs = () => (dry ? [...j0.events, ...synth] : readJournal(dir).events);
   const app = (type, payload) => {
     payload = { ...payload, restored: true };
-    if (!dry) return appendLocked(dir, type, payload, { noState: true, skipGuard: true });
+    if (!dry) return appendLocked(dir, type, payload, { noState: true, skipGuard: true, internal: true });
     const e = { ts: now(), seq: nextSeq++, type, payload: { ...payload, cli: CLI_MARK } };
     synth.push(e);
     return { seq: e.seq };
@@ -7360,6 +7511,18 @@ const COMMANDS = {
     help: "Preview Recipe-owned skills eligible for cleanup. Pass --confirm --path PATH only after user approval of that path.",
     flags: ["confirm", "path"],
     run: async ({ dir, flags }) => cleanupBoosters(dir, flags),
+  },
+  "profile list": {
+    help: "List the available planning profiles. [--profiles DIR]",
+    flags: ["profiles"],
+    run: async ({ flags }) => ({
+      profiles: [...loadProfiles(flags.profiles).values()].map(({ id, label }) => ({ id, label })),
+    }),
+  },
+  "profile plan": {
+    help: "Merge confirmed profiles, preview choices, or freeze the profile file list after scope lock. [--types ID,ID | --write] [--profiles DIR]",
+    flags: ["types", "profiles", "write"],
+    run: async ({ dir, flags }) => profilePlanCommand(dir, flags),
   },
 };
 

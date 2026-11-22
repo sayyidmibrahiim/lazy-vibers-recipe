@@ -211,6 +211,7 @@ Generic procedure for every Section. Per-Section procedures for S0–S9 live in 
    - Script: `LVR research log --context --in -` with `{"section":"<S>","scope":"scan","topic":"…","queries":["…"],"sources":[…],"outcome":"found","findings":["U-11"]}` (`"findings":[]` plus `"note"` when nothing is new).
 2. **Load** — follow the tier's reload discipline (conventions §7): T1/T2 load this Section's procedure block and its Boosters at Section start; T3 loads, every turn, only principles + `state.json` + this Section's procedure block + the current record — never the transcript.
    - Use [the section map](references/booster-map.md). After a skill or reference actually informs the work, journal `LVR journal append --type booster_loaded --payload '{"section":"<S>","name":"<name>","usage":"start|pass|reference"}'`, setting one usage value. This also applies to the S0 clarifiers. Record a fallback in the Section Record whenever an applicable install was unavailable.
+   - Run `LVR profile plan` after the product choice. Add that Section's profile questions and exit checks to the base bank. Apply the same question cap. Use profile suggestions for the relevant planning aids and specialist roles. Keep those additions inactive until the choice is confirmed.
 3. **Micro-batch loop** — batch size by tier: T1 up to 3, T2 up to 2, T3 exactly 1 (conventions §7). Phrase every question in User Language, plain and outcome-oriented, with a one-line reason it matters; choose the next batch from the previous answers. After EVERY answer: journal `answer_recorded` (payload `{ "section", "answer_id", "q", "a", "skipped" }` — `q` as asked, `a` verbatim, both User Language; `a` null for skipped) + state write (`sections.<S>.answers["<S>.qNN"] = { "q", "a", "skipped" }`, `q` stored as asked in User Language) — one checkpoint per answer. Bank question numbers are a suggested pool order; the authoritative id is `S<N>.qNN`, assigned at ask time within the Section. Keep both controls visible with every batch: **skip** (recorded with `"skipped": true`; never blocks) and **"cukup" / that's enough for this Section** (jumps straight to the exit-criteria check). A deferral ("later") is not a skip: the question stays open and may be re-asked in a targeted batch. Only an explicit skip — or leaving it unanswered at the exit check, which fires the `assumed` fallback — records `skipped: true`. Never re-ask a recorded answer — check `answers` before composing each batch.
    - Script: after every answer `LVR answer record --section <S> --in -` with `{"q":"<as asked>","a":"<verbatim>"}` (add `"skipped":true` for a skip; the id `<S>.q<n>` is assigned for you). Answers can never be silently overwritten (`ANSWER_EXISTS`).
 4. **Decisions** — any decision surfaced in the Section goes into `decisions[]` (`D-NNN`, status `user_confirmed | assumed | designer_filled` per principle 12) at the checkpoint where it is made; `assumed` and `designer_filled` also land in ASSUMPTIONS.md at S9. Status follows who decided: an explicit user choice made in conversation is `user_confirmed` even if the topic was designer-surfaced; `designer_filled` is only for decisions the user never made themselves. A decision that rests on a fact cites it in its rationale (a `U-NN` item or a cite tag, conventions §10); one that rests on an unverified fact is never `designer_filled` — ask the user, or it becomes an S6 blocking risk (principle 1).
@@ -219,6 +220,7 @@ Generic procedure for every Section. Per-Section procedures for S0–S9 live in 
    - Script: `LVR journal append --type section_blocked --payload '{"section":"<S>","unmet":["…"]}'`
 6. **Done** — write the Section Record `PROJECT_DIR/.lvr/docs/sections/<S>-<name>.md`: the questions, the user's verbatim answers (User Language), an English summary per answer, the Section's decision summary, and the exit-criteria results. Update state (`status` "done", `record`, `completed_at`, `current_section` = next Section (after S9 it stays S9)). Journal `section_done`. One checkpoint.
    - Script: `LVR journal append --type section_done --payload '{"section":"<S>","record":"<S>-<name>.md"}'`
+   - After S7 closes, freeze the chosen profile files with `LVR profile plan --write`. The command records the planned additions once. Keep that list through S9 and show any profile packs it could not find.
 7. **Next** — continue with the next Section's procedure block. After S9 closes, suggest `/lvr-handoff`. S10 Build is not an interview Section: the bundle must suffice for any builder without this skill, and the optional `/lvr-build` tracks its progress in `project.status`.
 
 ### Section procedures index
@@ -254,7 +256,11 @@ Purpose: problem, target users, platform shape, what "working" means for the use
 4. What "working" means — the change the user wants to see in six months.
 5. Gap-fillers for whatever the opening answers left open: the workaround today, who it is not for, rough scale, screen language, other approvals, the day-one task.
 
-**First batch** — bank questions 1 → 2 → 4, taking only the first N the tier allows (conventions §7), then continue down the strategy order.
+**First question** — ask what kind of product the owner wants and show the plausible choices in User Language. Use `LVR profile list` for the shipped profiles. Accept several types, for example web and mobile. If the owner says they are unsure, ask what people will do, what it produces, where it runs, and what it connects to. Continue the base questions until the context supports a recommendation. Explain the recommendation from recorded answers and ask the owner to confirm it. A preview with `LVR profile plan --types <id,id>` leaves the choice open.
+
+Record a direct choice on the answer with `"product":{"types":["web"],"source":"user"}`. Record a recommendation with `"product":{"types":["web"],"source":"ai_recommended","status":"pending","rationale":"<recorded reasons>"}`. On a clear yes, carry `"product":{"status":"decided","source":"ai_recommended","confirmed":true}` on the confirmation answer. Record an explicit alternative as a direct choice. Do not close S1 while the recommendation is awaiting confirmation.
+
+Then use bank questions 1, 2 and 4 within the tier's batch limit and continue in the strategy order.
 
 **Decision surfaces**:
 
@@ -616,15 +622,17 @@ Script: close S8 with `LVR journal append --type section_done --payload '{"secti
 
 ### S9 — Compile
 
-Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the 20-file Blueprint Bundle (conventions §8; the per-file specs are packaged in `references/bundle/templates.md`). The bundle lives in the project folder next to `.lvr/` and must be self-sufficient: any harness, with no LVR skills installed, can build the product from it. Mostly AI work: the Conductor compiles; the user is brought in only when a gap needs their call. English is the source — the bundle is written in English; the web UI renders it in User Language (principle 5, conventions §4). The bundle files are S9's output: no `S9-*.md` Section Record is written (conventions §5).
+Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the Blueprint Bundle of 20 base Markdown files, frozen profile additions and the derived index (conventions §8; the per-file specs are packaged in `references/bundle/templates.md`). The bundle lives in the project folder next to `.lvr/` and must be self-sufficient: any harness, with no LVR skills installed, can build the product from it. Mostly AI work: the Conductor compiles; the user is brought in only when a gap needs their call. English is the source — the bundle is written in English; the web UI renders it in User Language (principle 5, conventions §4). The bundle files are S9's output: no `S9-*.md` Section Record is written (conventions §5).
 
 **Booster** — apply `deliver-prd` for PRD, `api-designer` when applicable, and `user-stories` and `deliver-acceptance-criteria` for requirements. Reference `develop-adr` and the Spec Kit templates when applicable. Apply ponytail to code style, then SimpleEnglish and anti-slop to prose. Apply the applicable UI or AI aids to those files. Fetch [the AGENTS.md format](https://raw.githubusercontent.com/agentsmd/agents.md/main/README.md) as documentation. Use the licensed anti-slop snapshot only as a degraded fallback when needed. Surface degraded uses in OVERVIEW.
+
+**Profile files** — read the frozen `profile_files` from `LVR profile plan`. Draft each additional file from the relevant profile questions and records. Keep the previously closed bundle outputs and existing IDs. The blueprint generator copies the extra paths into `profile_files` when the list is nonempty.
 
 **Work material (engine step 2)** — at Section start load: every Section Record in `.lvr/docs/sections/` (S0–S8), `state.json` (for `decisions[]`, `milestones[]`, `boosters.core`), and `references/bundle/templates.md`. T3: never the transcript — each turn reloads only the templates plus the records that feed the one file being compiled.
 
 **Work strategy** — the 6-step compilation order, run in sequence:
 
-1. **Draft** — compile each of the 20 files from the Section Records + `decisions[]` + `milestones[]`, following its skeleton in `references/bundle/templates.md`, in bundle order (conventions §8): `AGENTS.md` → `OVERVIEW.md` → … → `CLAUDE.md`/`GEMINI.md`. Templates carry the structure; content comes only from the records — never invented. A gap the records cannot fill becomes an `assumed` decision (listed in ASSUMPTIONS.md) or a Limitations note, not a fabrication.
+1. **Draft** — compile each base file from the Section Records + `decisions[]` + `milestones[]`, following its skeleton in `references/bundle/templates.md`, in bundle order (conventions §8): `AGENTS.md` → `OVERVIEW.md` → … → `CLAUDE.md`/`GEMINI.md`. Then compile the frozen additions. Templates carry the structure; content comes only from the records — never invented. A gap the records cannot fill becomes an `assumed` decision (listed in ASSUMPTIONS.md) or a Limitations note, not a fabrication.
 2. **Cross-check pass** — over the drafted bundle; fix every failure with a targeted edit to the offending file(s), then re-check. The full list:
    - every F-NN has a USER_FLOWS.md entry and a SPEC/requirements.md row;
    - every decision in `decisions[]` has a DECISIONS.md row — and DECISIONS.md holds nothing `decisions[]` lacks;
@@ -633,7 +641,7 @@ Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the 2
    - every milestone acceptance criterion has a VERIFICATION.md procedure (exact commands, expected outputs, what to look at);
    - every price in the OVERVIEW.md and RESEARCH.md cost tables cites its S2 or S5 row (principle 1);
    - every claim in the records and the bundle carries a valid, fresh cite group or a logged `[unverified: …]` marker; no memory sources; no unsourced recommendation; no `designer_filled` decision on an unverified fact; every Domain Brief item became a question or decision (principles 1 and 14; conventions §10) — an expired fact is researched again, never compiled stale;
-   - all 20 files exist and are non-empty.
+   - all base Markdown files and frozen profile additions exist and are non-empty.
    - Script: `LVR crosscheck` runs this whole list (rules X1–X8, read-only; X8 = `cite check --all`, findings I1–I13) over the drafted bundle and returns `findings[]` with exact messages; fix only what it reports, with targeted edits, then run it again until `clean` is true. Its `needs_model[]` items (stack and entity names identical across files; Why and confirm lines specific; verification steps exact and covering their criterion; OVERVIEW and RESEARCH prices really sourced; also the cost tables agree) are yours to check by reading — the script never guesses them. A duplicated `## F-NN` block or an F-NN that exists in only some files is reported by the script (X1). Parked features keep a `SPEC/requirements.md` block marked parked, a `SCOPE.md` row, and a `USER_FLOWS.md` heading marked `(parked — see SCOPE.md)` (conventions §5); the script checks all three.
 3. **SimpleEnglish document-rules pass** — short sentences, active voice, jargon defined on first use (principle 7); applies to all bundle files, strictest for OVERVIEW.md; never fights GFM structure.
 4. **Anti-slop editing pass** — concrete and specific, no filler (principle 6); rewrite slop lines, never drop content.
@@ -667,7 +675,7 @@ Script: a confirmed display-name change is `LVR decision record --event doc_gene
 
 **Exit criteria** (engine step 5; cite the file path):
 
-- [ ] All 20 bundle files exist and are non-empty: GFM, English, ASCII diagrams only, no Mermaid.
+- [ ] Every base Markdown file and frozen profile addition exists and is non-empty. Apply the documented bundle format to each file.
 - [ ] The cross-check list above passes on every item.
 - [ ] blueprint.json matches `state.json` and follows the schema in `references/bundle/templates.md` §19.
 - [ ] CLAUDE.md + GEMINI.md stubs written; AGENTS.md follows the agents.md spec.

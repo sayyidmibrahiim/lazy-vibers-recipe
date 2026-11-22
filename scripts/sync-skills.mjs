@@ -33,6 +33,11 @@ const sources = [
   { src: path.join(ROOT, "docs", "spec", "08-review.md"), dest: (s) => path.join(s, "references", "contract.md"), only: "lvr-review-plan" },
 ];
 
+const profiles = path.join(SKILLS, "lvr-profiles");
+for (const file of fs.readdirSync(profiles).filter((name) => name.endsWith(".json")).sort()) {
+  sources.push({ src: path.join(profiles, file), dest: (skill) => path.join(skill, "references", "profiles", file) });
+}
+
 const copied = [];
 const drift = [];
 const problems = [];

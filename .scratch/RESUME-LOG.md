@@ -18,3 +18,7 @@
 2026-11-22T18:28:06Z | codex/gpt-6 | task 06 | native install and cleanup verified; 12 registry/lifecycle tests and shared regressions green; closed | next: ticket 07 section-by-section tool mapping and credits
 2026-11-22T18:28:17Z | codex/gpt-6 | task 07 | claimed and mapped old booster instructions | next: installable procedure map, credits, licensed fallback and load journal
 2026-11-22T18:35:28Z | codex/gpt-6 | task 07 | native route, 26 use records, credits and shared tests verified; closed | next: ticket 08 profile engine and base file definition
+2026-11-22T18:35:38Z | codex/gpt-6 | task 08 | claimed; asked owner about 20 Markdown artifacts plus derived blueprint index | next: independent profile schema/merge and confirmation fixes
+2026-11-22T18:36:49Z | codex/gpt-6 | task 08 | profile contract drafted and confirmation protections started | next: implement deterministic profile planner and tests while bundle answer pending
+2026-11-22T18:43:16Z | codex/gpt-6 | task 08 | planner, confirmation and frozen additions implemented; retained 20 Markdown plus existing derived index | next: complete shared verification and close
+2026-11-22T18:44:57Z | codex/gpt-6 | task 08 | five profile tests, replay fixes and shared regressions verified; closed | next: ticket 09 ten profile definitions
