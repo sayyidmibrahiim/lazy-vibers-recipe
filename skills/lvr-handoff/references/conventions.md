@@ -157,6 +157,8 @@ v2 events (payload → State effect; "current session" = the last `sessions[]` e
 | `release_checked` | `kind`, `status` (`passed \| failed`); optional `product_type`, `target`, `evidence` | `release_check[product_type]` |
 | `schema_migrated` | `from`, `to`, `backup`, … | none (audit record) |
 
+The deployment helper may add an ownership receipt to its journal event. The helper uses the receipt and exact contents to identify copies it can remove after approval. See `booster-lifecycle.md`.
+
 `research_logged` / `context_research` fill `pipeline.research`; `error` fills `project.error`; `tier_declared`/`tier_changed` and the four Section events also update the current session.
 
 Event ownership — every skill run: preflight (`version`; `state migrate --check` except in /lvr-init-new-idea) → `session_start` → the skill's opening event → work → `session_end`:

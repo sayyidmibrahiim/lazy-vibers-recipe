@@ -13,3 +13,6 @@
 2026-11-22T18:06:32Z | codex/gpt-6 | task 05 | claimed and confirmed upstream repository pins | next: verify licenses and skill paths, then implement registry and checker
 2026-11-22T18:12:26Z | codex/gpt-6 | task 05 | registry, planner, copied skills and source checker implemented | next: same-context schema, online and shared regression verification
 2026-11-22T18:15:01Z | codex/gpt-6 | task 05 | verified 5 schema and behavior tests; 27 upstream entries; regressions pass; closed | next: ticket 06 project-local install and cleanup
+2026-11-22T18:17:45Z | codex/gpt-6 | task 06 | claimed; native Codex install/remove verified on a disposable copy; native remove leaves empty roots and its lockfile | next: implement isolated native staging and ownership-checked cleanup
+2026-11-22T18:25:16Z | codex/gpt-6 | task 06 | native staging, deployment receipt, cleanup guard and skill entry points implemented | next: verify native load, ownership regressions and paired S4 review
+2026-11-22T18:28:06Z | codex/gpt-6 | task 06 | native install and cleanup verified; 12 registry/lifecycle tests and shared regressions green; closed | next: ticket 07 section-by-section tool mapping and credits

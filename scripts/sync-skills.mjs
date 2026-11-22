@@ -3,7 +3,8 @@
 //   node scripts/sync-skills.mjs          copy sources over every skills/lvr-*/ copy that differs
 //   node scripts/sync-skills.mjs --check  report drift without writing; exit 1 when anything is off
 // Sources: scripts/lvr.mjs -> skills/<s>/scripts/lvr.mjs; skills/lvr-conventions.md and lvr-principles.md
-// -> skills/<s>/references/; skills/lvr-boosters.json -> references/boosters.json (once it exists);
+// -> skills/<s>/references/; skills/lvr-booster-lifecycle.md -> references/booster-lifecycle.md;
+// skills/lvr-boosters.json -> references/boosters.json (once it exists);
 // skills/lvr-freshness.json -> references/freshness.json; docs/spec/08-review.md -> skills/lvr-review-plan/references/contract.md
 // (that skill only: the installed review skill needs the work-file and ledger contract, and installs do not ship docs/).
 import fs from "node:fs";
@@ -25,6 +26,7 @@ const sources = [
   { src: path.join(ROOT, "scripts", "lvr.mjs"), dest: (s) => path.join(s, "scripts", "lvr.mjs") },
   { src: path.join(SKILLS, "lvr-conventions.md"), dest: (s) => path.join(s, "references", "conventions.md") },
   { src: path.join(SKILLS, "lvr-principles.md"), dest: (s) => path.join(s, "references", "principles.md") },
+  { src: path.join(SKILLS, "lvr-booster-lifecycle.md"), dest: (s) => path.join(s, "references", "booster-lifecycle.md") },
   { src: path.join(SKILLS, "lvr-boosters.json"), dest: (s) => path.join(s, "references", "boosters.json"), optional: true },
   { src: path.join(SKILLS, "lvr-freshness.json"), dest: (s) => path.join(s, "references", "freshness.json") },
   { src: path.join(ROOT, "docs", "spec", "08-review.md"), dest: (s) => path.join(s, "references", "contract.md"), only: "lvr-review-plan" },

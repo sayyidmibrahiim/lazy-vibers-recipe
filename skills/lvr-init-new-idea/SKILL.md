@@ -134,7 +134,7 @@ Script: `LVR booster check --journal` checks every core booster in the registry 
 Run this loop once per core booster, in the table order above, then move to the next booster:
 
 1. **Presence check** — the harness's skill/plugin list, or its known skills directories (e.g. `~/.claude/skills/`, `<cwd>/.claude/skills/`, `~/.agents/skills/`). Journal `booster_check` for this booster (payload: name, result `present|missing`). Presence maps to status `installed` only if the skill is actually loadable in this harness (listed/importable); present-but-unloadable → status `degraded` with a note (degraded surfacing rules apply).
-2. Result `present` → next booster. Result `missing` → install with the first mechanism that works. Success → journal `booster_install_ok`, status `installed`, next booster. Failure → journal `booster_install_failed`, then the interactive choice below.
+2. For a missing skill, follow [the project-local staging procedure](references/booster-lifecycle.md). It records newly deployed copies with `booster_installed`. Confirm the skill loads before marking the check complete. On failure, journal `booster_install_failed` and offer the choice below.
 3. **Interactive failure choice** — core boosters are output-quality dependencies, so failure is never silent. Say (English source): "Core booster '\<name\>' could not be installed (\<reason\>). Output quality depends on it. Choose: 1. Help me install it fully — I'll walk through this harness's install steps with you. 2. Continue degraded — output quality drops; the project is marked 'degraded' in state, journal, and the final OVERVIEW. 3. Stop here — nothing is lost; you can resume later with /lvr-continue."
 
    Journal `booster_choice` (payload: booster, choice) and set the status:
@@ -197,7 +197,7 @@ Purpose: capture the raw idea fully; detect User Language; propose slug + displa
 
 ## Section loop engine (S1 onward)
 
-Generic procedure for every Section. Per-Section procedures for S0–S9 live in this file (index below). When S0 closes, continue straight into S1 unless the user pauses.
+Generic procedure for every Section. Per-Section procedures for S0–S9 live in this file (index below). When S0 closes, continue straight into S1 unless the user pauses. Before opening a section, run the section's booster plan and follow [the project-local staging procedure](references/booster-lifecycle.md) for any applicable missing conditional skills. In a resumed section, check its current skills before continuing the recorded step.
 
 1. **Start** — journal `section_start` (payload: the Section id); set `sections.<S>` = `{ "status": "in_progress", "started_at": <now> }`; `current_section` = \<S\>. Checkpoint (journal + state).
    - Script: `LVR journal append --type section_start --payload '{"section":"<S>"}'`

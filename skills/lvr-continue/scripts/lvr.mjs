@@ -102,7 +102,7 @@ const sha256 = (s) => crypto.createHash("sha256").update(s).digest("hex");
 const ptrEsc = (s) => String(s).replace(/~/g, "~0").replace(/\//g, "~1");
 const secNum = (s) => parseInt(String(s).slice(1), 10);
 
-const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check", "all", "context", "remove-legacy"]);
+const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check", "all", "context", "remove-legacy", "confirm"]);
 /** Every `--file` value in order (cite check takes several); a symbol key so the unknown-flag check never sees it. */
 const FILE_LIST = Symbol("files");
 /** Repeatable review flags (--text, --claim, --id): every value in order. */
@@ -1153,6 +1153,7 @@ function validatePayload(type, p, opts = {}) {
       if (p.kind === "mcp" && p.consent !== true) throw invalid("consent", "true (the user agreed) for an MCP install");
       if (p.scope === "project" && !pathProjectOk(p.path)) throw invalid("path", "a path inside the project: relative, / separators, no ..");
       if (p.scope === "user" && !(p.path.startsWith("/") || p.path.startsWith("~/") || /^[A-Za-z]:[\\/]/.test(p.path))) throw invalid("path", "an absolute path or ~/... for a user-scope install");
+      if (p.managed !== undefined && (!opts.internal || !validBoosterReceipt(p.managed))) throw invalid("managed", "an ownership receipt written by booster deploy");
       break;
     }
     case "booster_uninstalled": needStr("name"); needStr("path"); optStr(p, "reason"); break;
@@ -2520,6 +2521,199 @@ function detectBoosters(dir, boosters) {
       id: b.id, name: b.name, tier: b.tier, kind: b.kind, present, where, mcp_configured: mcpConfigured,
       keys_present: keysPresent, loadable: "unknown", suggested_status: present ? "installed" : "missing",
     };
+  });
+}
+
+function boosterSkillPath(relative) {
+  if (!boosterPath(relative)) throw invalid("path", "one project-local skill directory");
+  const slash = relative.lastIndexOf("/");
+  const root = relative.slice(0, slash), name = relative.slice(slash + 1);
+  if (!SKILL_ROOTS.includes(root) || !/^[a-z0-9][a-z0-9_-]*$/.test(name)) throw invalid("path", "one project-local skill directory");
+  return name;
+}
+
+function validBoosterReceipt(receipt) {
+  return isObj(receipt) && /^[a-f0-9]{64}$/.test(receipt.hash ?? "") && Array.isArray(receipt.parents) &&
+    receipt.parents.every((item) => isObj(item) && boosterPath(item.path) && Number.isSafeInteger(item.dev) && Number.isSafeInteger(item.ino));
+}
+
+function boosterDir(dir, relative, { create = false, created = [] } = {}) {
+  let full = dir;
+  let partial = "";
+  for (const part of relative.split("/")) {
+    full = path.join(full, part);
+    partial = partial ? `${partial}/${part}` : part;
+    try {
+      if (!fs.lstatSync(full).isDirectory()) throw fail("BOOSTER_UNSAFE_PATH", `Expected a real directory at ${partial}.`, { path: partial });
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      if (!create) return null;
+      fs.mkdirSync(full);
+      const stats = fs.statSync(full);
+      created.push({ path: partial, dev: stats.dev, ino: stats.ino });
+    }
+  }
+  return full;
+}
+
+function skillTreeHash(dir) {
+  const files = [];
+  const walk = (base, relative = "") => {
+    for (const entry of fs.readdirSync(base, { withFileTypes: true }).sort((a, b) => cmpStr(a.name, b.name))) {
+      const child = path.join(base, entry.name);
+      const name = relative ? `${relative}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        files.push([name, "dir"]);
+        walk(child, name);
+      } else if (entry.isFile()) {
+        const stats = fs.lstatSync(child);
+        if (stats.nlink !== 1) throw fail("BOOSTER_UNSAFE_PATH", `The skill contains a linked entry at ${name}.`, { path: name });
+        files.push([name, stats.mode & 0o777, sha256(fs.readFileSync(child))]);
+      } else {
+        throw fail("BOOSTER_UNSAFE_PATH", `The skill contains a linked or unsupported entry at ${name}.`, { path: name });
+      }
+    }
+  };
+  walk(dir);
+  if (!files.some(([name, mode]) => name === "SKILL.md" && typeof mode === "number")) throw fail("BOOSTER_SKILL_MISSING", "The staged skill has no SKILL.md.");
+  return sha256(JSON.stringify(files));
+}
+
+function pruneBoosterParents(dir, parents) {
+  const removed = [];
+  for (const item of [...parents].sort((a, b) => b.path.length - a.path.length)) {
+    if (!SKILL_ROOTS.some((root) => root === item.path || root.startsWith(item.path + "/"))) continue;
+    try {
+      const full = boosterDir(dir, item.path);
+      if (!full) continue;
+      const stats = fs.lstatSync(full);
+      if (stats.dev !== item.dev || stats.ino !== item.ino || fs.readdirSync(full).length) continue;
+      fs.rmdirSync(full);
+      removed.push(item.path);
+    } catch (error) {
+      if (!["ENOENT", "ENOTEMPTY", "EEXIST", "BOOSTER_UNSAFE_PATH"].includes(error.code)) throw error;
+    }
+  }
+  return removed;
+}
+
+function journaledBooster(dir, type, relative, afterSeq) {
+  return readJournal(dir).events.some((event) => event.seq > afterSeq && event.type === type && event.payload.path === relative);
+}
+
+function deployBooster(dir, flags) {
+  const registry = boosterRegistry(dir, flags.registry, true).data;
+  const entry = registry.boosters.find((item) => item.id === flags.name);
+  if (!entry?.install) throw invalid("name", "an installable booster id from the registry");
+  if (flags.sha !== entry.sha) throw invalid("sha", "the exact pinned Git commit from the registry");
+  if (!registry.harnesses.includes(flags.harness)) throw invalid("harness", "a harness from the registry");
+  if (!/^\.lvr\/booster-stage\.[a-zA-Z0-9_-]+$/.test(flags.from ?? "")) throw invalid("from", "a disposable .lvr/booster-stage.<id> directory");
+  const section = flags.section ?? null;
+  if (section !== null && !SECTIONS.includes(section)) throw invalid("section", "S0..S10");
+  if (entry.tier === "conditional" && !sectionBoosters(dir, registry, section).boosters.some((item) => item.id === entry.id)) {
+    throw fail("BOOSTER_NOT_APPLICABLE", "This booster is not yet applicable to the requested section.");
+  }
+  const relative = need(flags, "path");
+  const skill = boosterSkillPath(relative);
+  if (!entry.install.skills.includes(skill)) throw invalid("path", "a native location for one of the booster's selected skills");
+  const staged = boosterDir(dir, `${flags.from}/${relative}`);
+  if (!staged) throw fail("BOOSTER_SKILL_MISSING", "The native installer did not produce the requested staged skill.");
+  needLvr(dir);
+  return withLock(dir, "booster deploy", () => {
+    const journal = readJournal(dir);
+    if (!journal.exists || !journal.healthy) throw fail("BOOSTER_JOURNAL_INVALID", "Recover the project journal before installing a booster.");
+    guardJournalBehind(dir, journal);
+    const exists = detectBoosters(dir, [{ ...entry, install: { skills: [skill] }, detect: { ...entry.detect, skill_dirs: [skill] } }])[0].present;
+    if (exists || boosterDir(dir, relative)) return { status: "already-present", path: relative };
+    const target = path.join(dir, ...relative.split("/"));
+    const hash = skillTreeHash(staged), parents = [];
+    let created = false;
+    try {
+      boosterDir(dir, relative.slice(0, relative.lastIndexOf("/")), { create: true, created: parents });
+      fs.mkdirSync(target);
+      created = true;
+      for (const item of fs.readdirSync(staged)) {
+        fs.cpSync(path.join(staged, item), path.join(target, item), { recursive: true, force: false, errorOnExist: true });
+      }
+      if (skillTreeHash(target) !== hash) throw fail("BOOSTER_COPY_CHANGED", "The native skill changed during copy. Inspect the generated project path.");
+      const result = appendLocked(dir, "booster_installed", {
+        name: entry.name, repo: entry.repo, sha: entry.sha, kind: "skill", scope: "project",
+        harness: flags.harness, path: relative, tier: entry.tier === "core" ? "core" : "enhancer", section,
+        managed: { hash, parents },
+      }, { internal: true });
+      return { status: "installed", path: relative, seq: result.seq };
+    } catch (error) {
+      if (!journaledBooster(dir, "booster_installed", relative, journal.max_seq)) {
+        if (created && !fs.readdirSync(target).length) fs.rmdirSync(target);
+        else if (created && fs.existsSync(path.join(target, "SKILL.md")) && skillTreeHash(target) === hash) fs.rmSync(target, { recursive: true });
+        pruneBoosterParents(dir, parents);
+      }
+      throw error;
+    }
+  });
+}
+
+function cleanupBoosters(dir, flags) {
+  needLvr(dir);
+  boosterDir(dir, ".lvr");
+  if (flags.confirm && !flags.path) throw invalid("path", "one previously reviewed cleanup path");
+  return withLock(dir, "booster cleanup", () => {
+    const journal = readJournal(dir);
+    const loaded = loadState(dir);
+    if (!journal.exists || !journal.healthy || loaded.kind !== "valid") throw fail("BOOSTER_JOURNAL_INVALID", "Recover the project journal and state before cleaning up boosters.");
+    guardJournalBehind(dir, journal);
+    const installed = loaded.state.boosters?.installed ?? [];
+    const receipts = new Map();
+    for (const { type, payload } of journal.events) {
+      if (type === "booster_installed") receipts.set(payload.path, payload);
+    }
+    const result = [];
+    for (const entry of installed) {
+      if (entry.status !== "installed" || (flags.path && flags.path !== entry.path)) continue;
+      const receipt = receipts.get(entry.path);
+      const item = { name: entry.name, path: entry.path, status: "unmanaged" };
+      if (entry.scope === "project" && entry.kind === "skill" && receipt?.name === entry.name && receipt.sha === entry.sha && validBoosterReceipt(receipt.managed)) {
+        try {
+          boosterSkillPath(entry.path);
+          const full = boosterDir(dir, entry.path);
+          if (full && skillTreeHash(full) === receipt.managed.hash) item.status = "eligible";
+          else item.status = full ? "modified" : "missing";
+        } catch (error) {
+          if (!(error instanceof LvrError)) throw error;
+          item.status = "modified";
+        }
+      }
+      result.push(item);
+    }
+    if (!flags.confirm) return { boosters: result };
+    if (result.length !== 1 || result[0].status !== "eligible") throw fail("BOOSTER_CLEANUP_REFUSED", "This path is missing, modified, or outside the recorded project-local installs.", { path: flags.path });
+    const [item] = result;
+    const sidecar = readSidecar(dir);
+    if (sidecar.k !== "num" || sidecar.n !== journal.max_seq) throw fail("BOOSTER_JOURNAL_INVALID", "Replay the project journal before removing a booster.");
+    const target = boosterDir(dir, item.path);
+    const stage = fs.mkdtempSync(path.join(dir, ".lvr", "booster-remove."));
+    const moved = path.join(stage, "skill");
+    const receiptFile = path.join(stage, "receipt.json");
+    const hash = receipts.get(item.path).managed.hash;
+    let event;
+    try {
+      fs.writeFileSync(receiptFile, JSON.stringify({ name: item.name, path: item.path, hash }) + "\n", { flag: "wx", mode: 0o600 });
+      fs.renameSync(target, moved);
+      if (skillTreeHash(moved) !== hash) throw fail("BOOSTER_CLEANUP_REFUSED", "The skill changed during cleanup.");
+      event = appendLocked(dir, "booster_uninstalled", { name: item.name, path: item.path });
+    } catch (error) {
+      if (fs.existsSync(moved) && !journaledBooster(dir, "booster_uninstalled", item.path, journal.max_seq) && !fs.existsSync(target)) fs.renameSync(moved, target);
+      if (!fs.existsSync(moved)) {
+        if (fs.existsSync(receiptFile)) fs.unlinkSync(receiptFile);
+        fs.rmdirSync(stage);
+      }
+      throw error;
+    }
+    fs.rmSync(moved, { recursive: true });
+    fs.unlinkSync(receiptFile);
+    fs.rmdirSync(stage);
+    const parents = [...receipts.values()].filter((receipt) => validBoosterReceipt(receipt.managed)).flatMap((receipt) => receipt.managed.parents);
+    return { removed: item.path, seq: event.seq, cleaned_parents: pruneBoosterParents(dir, parents) };
   });
 }
 
@@ -7151,6 +7345,16 @@ const COMMANDS = {
     help: "List applicable boosters and pending conditions for a section without installing anything. [--section S] [--harness NAME] [--registry PATH]",
     flags: ["section", "harness", "registry"],
     run: async ({ dir, flags }) => boosterPlan(dir, flags),
+  },
+  "booster deploy": {
+    help: "Record and deploy one project-local skill staged by the native installer. --name ID --harness NAME --sha SHA --from DIR --path PATH [--section S] [--registry PATH]",
+    flags: ["name", "harness", "sha", "from", "path", "section", "registry"],
+    run: async ({ dir, flags }) => deployBooster(dir, flags),
+  },
+  "booster cleanup": {
+    help: "Preview Recipe-owned skills eligible for cleanup. Pass --confirm --path PATH only after user approval of that path.",
+    flags: ["confirm", "path"],
+    run: async ({ dir, flags }) => cleanupBoosters(dir, flags),
   },
 };
 

@@ -94,8 +94,8 @@ Only when the lint is clean. These are the only bundle writes this skill ever ma
 
    Script: `LVR handoff prompt` writes exactly this file from the fixed template (title from `project.name`; the file's bytes depend on nothing else) and rewrites it only when the bytes change; its `kickoff` object holds the harness commands below.
 2. **Close** — print, in the user's language: the recommended install lines from `CAPABILITIES.md` (every row's install command with name and license; NC items marked runtime-dependency-only; Script: `LVR handoff install-lines` → `lines[]`), then the kickoff command for the current harness with the entry prompt as the first input. Kickoff forms: Claude Code `claude "$(cat HANDOFF-PROMPT.md)"` · Gemini CLI `gemini -p "$(cat HANDOFF-PROMPT.md)"` · Codex `codex "$(cat HANDOFF-PROMPT.md)"` · ZCode `zcode "$(cat HANDOFF-PROMPT.md)"` · harness unknown → "open a fresh session in this folder and paste the contents of `HANDOFF-PROMPT.md`".
-3. **Done** — journal `handoff_done` (payload: gaps found, self-fixes applied, entry prompt path) and fill `state.handoff` = `{ "status": "done", "completed_at": <now> }` — one checkpoint. This is the only state-field change the skill ever makes.
-   - Script: `LVR journal append --type handoff_done --payload '{…}'` — the script fills `state.handoff` for you.
+3. **Done** — journal `handoff_done` (payload: gaps found, self-fixes applied, entry prompt path) and fill `state.handoff` = `{ "status": "done", "completed_at": <now> }` — one checkpoint.
+   - Script: `LVR journal append --type handoff_done --payload '{…}'` — the script fills `state.handoff` for you. Then follow the consent and exact-path checks in [the project-local booster lifecycle](references/booster-lifecycle.md) for optional cleanup.
 
 ## Idempotency
 
@@ -106,7 +106,7 @@ Only when the lint is clean. These are the only bundle writes this skill ever ma
 
 ## Checkpoint discipline
 
-One journal append + one state write together, at every handoff event boundary (conventions §9): `handoff_started` (Step 2 open), `gap_found` (per finding, the moment it is found), `handoff_done` (Step 5 close — the only one that changes a state field: `handoff`). A run that dies mid-lint leaves only extra journal lines and a consistent state; the next run re-lints from disk.
+Checkpoint each handoff event according to conventions §9. Append `handoff_started` at Step 2, `gap_found` when a finding appears, and `handoff_done` at closure. Approved cleanup checkpoints each affected copy with `booster_uninstalled`. If interrupted during lint, re-lint from disk on the next run.
 
 ## Never list
 
