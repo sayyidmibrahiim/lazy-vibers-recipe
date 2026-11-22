@@ -283,7 +283,7 @@ The bundle lives in the project folder next to `.lvr/` and must be self-sufficie
 | `blueprint.json` | Machine snapshot for UI and harnesses; derived file — regenerate it, never hand-edit |
 | `CLAUDE.md`, `GEMINI.md` | One-line stubs pointing to AGENTS.md |
 
-Format rules for all files: GitHub-flavored Markdown · English · no Mermaid (ASCII diagrams only) · plain-language rules · identical stack, entity, and feature names everywhere.
+Format rules for all files: GitHub-flavored Markdown · English · ASCII diagrams except for the Mermaid ERD in SPEC/data-model.md · plain-language rules · identical stack, entity, and feature names everywhere.
 
 ## 9. Checkpoint rules
 

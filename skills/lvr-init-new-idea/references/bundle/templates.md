@@ -48,7 +48,7 @@ Fill: one block per F-NN from the S4 record — every captured feature gets a bl
 ## 6. SPEC/data-model.md
 Headings, in order: `# Data model` · `## Entities` (one `### <Entity>` subsection per entity, each with a fields table: field · type · constraints · notes) · `## Relations` (one line per relation: A 1—N B + why) · `## Indexes` (one line per index: entity.field + why) · `## Validation rules` (one line per rule) · `## Sample JSON` (one realistic sample object for the main entity)
 
-Fill: entities and fields from the S3 inventory + the S4 features; entity names identical everywhere in the bundle.
+Fill the entities and fields from the S3 inventory and S4 features. Use identical entity names throughout. When `stores_data` is true, apply [the data module](data-module.md) for the storage decision, Mermaid ERD, query-to-index map, and migrations up and down. Keep the matching access and privacy plan in SECURITY.md.
 
 ## 7. SPEC/api.md
 Headings, in order: `# API` · `## Conventions` · `## Endpoints` · `## Critical endpoints` · `## Status codes` · `## Error format`

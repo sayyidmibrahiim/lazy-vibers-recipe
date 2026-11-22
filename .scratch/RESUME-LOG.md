@@ -27,3 +27,5 @@
 2026-11-22T18:51:29Z | codex/gpt-6 | task 09 | all ten profiles, 130 questions, 36 upstream sources and shared tests verified; closed | next: ticket 10 personal workflow files
 2026-11-22T18:52:06Z | codex/gpt-6 | task 10 | claimed and drafted private workflow bundle policy | next: connect skill and agent profile outputs and rehearse KPR
 2026-11-22T18:56:35Z | codex/gpt-6 | task 10 | workflow pack and six synthetic KPR evaluations verified; closed | next: ticket 11 data storage and schemas
+2026-11-22T18:56:58Z | codex/gpt-6 | task 11 | claimed, pinned reference sources resolved and storage module drafted | next: wire data flags, vendor routes and the ERD exception
+2026-11-22T19:01:57Z | codex/gpt-6 | task 11 | data routes, Supabase and local schemas, ERD checks and shared regressions verified; closed | next: ticket 12 framework evidence and ranking

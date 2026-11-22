@@ -1085,6 +1085,116 @@
       "note": "Use pattern selection and tool boundary planning."
     },
     {
+      "id": "database-schema-designer",
+      "name": "database-schema-designer",
+      "kind": "skill",
+      "repo": "onewave-ai/claude-skills",
+      "sha": "b2267d9171af4f56848d82992381b20b89b44056",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S6",
+        "S9"
+      ],
+      "triggers": {
+        "flags": {
+          "stores_data": true
+        }
+      },
+      "source_paths": [
+        "database-schema-designer/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "database-schema-designer"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "database-schema-designer"
+        ]
+      }
+    },
+    {
+      "id": "supabase",
+      "name": "supabase",
+      "kind": "skill",
+      "repo": "supabase/agent-skills",
+      "sha": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S6",
+        "S9"
+      ],
+      "triggers": {
+        "flags": {
+          "stores_data": true,
+          "storage_supabase": true
+        }
+      },
+      "source_paths": [
+        "skills/supabase/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "supabase"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "supabase"
+        ]
+      }
+    },
+    {
+      "id": "firebase-firestore",
+      "name": "firebase-firestore",
+      "kind": "skill",
+      "repo": "firebase/agent-skills",
+      "sha": "99954a30898bb5ddc8152ee10e124dc3b4106bf7",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S6",
+        "S9"
+      ],
+      "triggers": {
+        "flags": {
+          "stores_data": true,
+          "storage_firestore": true
+        }
+      },
+      "source_paths": [
+        "skills/firebase-firestore/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "firebase-firestore"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "firebase-firestore"
+        ]
+      }
+    },
+    {
       "id": "define-jtbd-canvas",
       "name": "define-jtbd-canvas",
       "kind": "skill",
@@ -1261,6 +1371,38 @@
       },
       "source_paths": [
         "command.md"
+      ],
+      "detect": {
+        "skill_dirs": [],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": null
+    },
+    {
+      "id": "supabase-postgres-best-practices",
+      "name": "supabase-postgres-best-practices",
+      "kind": "skill",
+      "repo": "supabase/agent-skills",
+      "sha": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "reference",
+      "sections": [
+        "S6",
+        "S9"
+      ],
+      "triggers": {
+        "flags": {
+          "stores_data": true,
+          "storage_supabase": true
+        }
+      },
+      "source_paths": [
+        "skills/supabase-postgres-best-practices/SKILL.md",
+        "skills/supabase-postgres-best-practices/references/security-rls-basics.md",
+        "skills/supabase-postgres-best-practices/references/schema-foreign-key-indexes.md"
       ],
       "detect": {
         "skill_dirs": [],

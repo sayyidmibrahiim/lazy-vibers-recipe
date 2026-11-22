@@ -11,7 +11,7 @@ The bundle is the product. It is generated at S9 (and maintained by v1 skills), 
 | `DECISIONS.md` | S9 | builder | Append-only log: D-001… with summary, rationale, alternatives considered (optional — record when a real alternative was rejected; `None recorded` is valid), date. Mirrors `decisions[]` |
 | `SPEC/prd.md` | S9 | builder | Problem, context, target users, value proposition, goals/non-goals, success metrics |
 | `SPEC/requirements.md` | S9 | builder | F-01… per feature: behavior, priority (must/should/could), acceptance criteria (Gherkin where natural) |
-| `SPEC/data-model.md` | S9 | builder | Entities, fields (name/type/constraints), relations + cardinality, indexes + why, validation rules, sample JSON |
+| `SPEC/data-model.md` | S9 | builder | Entities, fields (name/type/constraints), relations + cardinality, indexes linked to queries, storage decision, migration and verification. Use the [data module](10-data-module.md) for stored data. |
 | `SPEC/api.md` | S9 | builder | Conventions, endpoint table, request/response examples for critical endpoints, status codes, error format |
 | `SPEC/architecture.md` | S9 | builder | Stack + reasons (mirrors DECISIONS), components, **ASCII data-flow diagram**, folder structure, local run instructions, failure points |
 | `USER_FLOWS.md` | S9 | builder + owner | Per feature: flow diagram (ASCII) + numbered click-by-click interaction script (the "posting ke IG" style), both happy path and key alternatives |
@@ -28,7 +28,7 @@ The bundle is the product. It is generated at S9 (and maintained by v1 skills), 
 
 S9 also writes the derived `blueprint.json` index for tooling and the viewer. It accompanies the 20 Markdown files.
 
-Format rules (Markdown files): GitHub-flavored Markdown · English source · no Mermaid (ASCII diagrams) · SimpleEnglish document rules · consistency enforced (same stack/entity/feature names everywhere).
+Format rules (Markdown files): GitHub-flavored Markdown · English source · ASCII diagrams except for the Mermaid ERD in SPEC/data-model.md · SimpleEnglish document rules · consistency enforced (same stack/entity/feature names everywhere).
 
 For the AGENTS.md format, consult the upstream specification at [agentsmd/agents.md](https://raw.githubusercontent.com/agentsmd/agents.md/main/README.md). The format is documentation.
 

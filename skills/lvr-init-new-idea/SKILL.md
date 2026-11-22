@@ -248,6 +248,8 @@ Purpose: problem, target users, platform shape, what "working" means for the use
 
 **Booster** — load grilling at start for ready interview decisions. Apply `define-problem-statement` and `mom-test` when shaping the problem and grounded follow-ups. Use `define-jtbd-canvas` as a reference. Keep the internal question bank for degraded mode.
 
+**Storage trigger** — record `product.flags.stores_data` on the evidence-bearing S3 answer for any product type. When the answer is unclear, ask which information must survive between uses. When true, use [the data module](references/bundle/data-module.md) within the existing batch limit and carry its evidence to S6.
+
 **Question strategy** — establish in this order, each batch composed from the previous answers (bank: `references/sections/S1-context.md`):
 
 1. The problem, in the user's own words — one concrete moment, not a category.
@@ -451,7 +453,7 @@ Purpose: competitor scan, stack candidates with reasons, cost table, regional av
 
 Purpose: confront the S5 findings with the recorded answers; surface conflicts, risks, cost surprises. Output: risks appended to `S5-research.md` — S6 keeps no record of its own (conventions §5). Mostly AI work: the Conductor walks the findings itself; the user is asked only when a risk needs their call. The English text here is the source; questions are spoken in User Language at runtime.
 
-**Booster** — apply `architecture-designer` to trade-offs and `threat-modeling` when triggered. Use `cost-estimator` as a checklist and refresh all prices. Work from the S5 record and the S1–S4 records.
+**Booster** — apply `architecture-designer` to trade-offs and `threat-modeling` when triggered. Use `cost-estimator` as a checklist and refresh all prices. Work from the S5 record and the S1–S4 records. For a project that stores data, apply the storage choice and schema checks in [the data module](references/bundle/data-module.md). After the owner confirms a store, record the applicable vendor flags and rerun the section's booster plan before loading vendor guidance.
 
 **Work strategy** — first the freshness re-check (engine step 1b: `LVR cite check --all`; research every expired fact again and update every record that repeats it). Then walk every S5 finding (competitor lessons, stack trade-offs, cost rows, regional constraints, `[unverified: …]` claims) and classify each. An unverified key fact that a recommendation, a decision, or the plan rests on is `blocking` unless the user confirms it aloud (record that as a `user_confirmed` decision):
 
@@ -627,6 +629,8 @@ Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the B
 **Booster** — apply `deliver-prd` for PRD, `api-designer` when applicable, and `user-stories` and `deliver-acceptance-criteria` for requirements. Reference `develop-adr` and the Spec Kit templates when applicable. Apply ponytail to code style, then SimpleEnglish and anti-slop to prose. Apply the applicable UI or AI aids to those files. Fetch [the AGENTS.md format](https://raw.githubusercontent.com/agentsmd/agents.md/main/README.md) as documentation. Use the licensed anti-slop snapshot only as a degraded fallback when needed. Surface degraded uses in OVERVIEW.
 
 **Profile files** — read the frozen `profile_files` from `LVR profile plan`. Draft each additional file from the relevant profile questions and records. Keep the previously closed bundle outputs and existing IDs. The blueprint generator copies the extra paths into `profile_files` when the list is nonempty. For a skill/plugin or agent, use [the personal workflow templates](references/bundle/workflow.md) for the draft skill, local profile schema, tools, evaluations and install plan. Carry each destination's exact data boundary into the plan.
+
+**Stored data output** — when `stores_data` is true, compile the chosen storage and schema into SPEC/data-model.md and its access and privacy checks into SECURITY.md. Use [the data module](references/bundle/data-module.md). The schema's Mermaid ERD is the diagram exception.
 
 **Work material (engine step 2)** — at Section start load: every Section Record in `.lvr/docs/sections/` (S0–S8), `state.json` (for `decisions[]`, `milestones[]`, `boosters.core`), and `references/bundle/templates.md`. T3: never the transcript — each turn reloads only the templates plus the records that feed the one file being compiled.
 

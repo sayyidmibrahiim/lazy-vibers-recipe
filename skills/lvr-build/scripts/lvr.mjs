@@ -2889,6 +2889,27 @@ const HTML_OK_RE = /^(?:\/|!--|https?:|mailto:|(?:a|b|i|p|br|hr|em|kbd|sub|sup|d
 const selfFixId = (id) => ["G1", "G2", "H1", "H2", "H3"].includes(id);
 const ownerOf = (id) => (selfFixId(id) ? "lvr-handoff" : id[0] === "D" ? "S8" : ["F1", "F2", "F3"].includes(id) ? "S7 or S9" : "S9");
 
+function forbiddenMermaidLines(file, lines) {
+  const invalidLines = [];
+  let fence = null;
+  for (let index = 0; index < lines.length; index++) {
+    const marker = lines[index].match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (!marker) continue;
+    const [, delimiter, info] = marker;
+    if (fence) {
+      if (delimiter[0] === fence[0] && delimiter.length >= fence.length && !info.trim()) fence = null;
+      continue;
+    }
+    fence = delimiter;
+    if (!/^mermaid(?:\s|$)/i.test(info.trim())) continue;
+    let first = index + 1;
+    while (first < lines.length && !lines[first].trim()) first++;
+    const erd = file === "SPEC/data-model.md" && lines[first]?.trim() === "erDiagram";
+    if (!erd) invalidLines.push(index + 1);
+  }
+  return invalidLines;
+}
+
 /** Headings outside code fences: [{level, text, line}] (line is 0-based). */
 function parseHeadings(text) {
   const out = [];
@@ -3254,7 +3275,7 @@ const oldCostNum = (old, k) => (isObj(old.costs) && typeof old.costs[k] === "num
 
 // ----- the checks
 const NEEDS_MODEL = [
-  ["B19", "B", "all bundle files", "Check that every bundle file is written in English GitHub-flavored Markdown with ASCII diagrams only (the script checks for Mermaid fences and unfilled placeholders, not language)."],
+  ["B19", "B", "all bundle files", "Check English GitHub-flavored Markdown and ASCII diagrams, with the Mermaid ERD in SPEC/data-model.md as the exception."],
   ["B21", "B", "all bundle files", "Check that stack and entity names are identical across all files (the script compares display name and feature names only)."],
   ["C4", "C", "ASSUMPTIONS.md", "Check that every Why and confirm-instruction line is specific, not boilerplate (the script checks that they are filled)."],
   ["D3", "D", "MILESTONES.md", "Check that every acceptance criterion is machine-checkable: a command with expected output, a scripted step, or an observable visual fact (the script flags only known vague phrases)."],
@@ -3361,7 +3382,7 @@ function runChecks(b, wanted) {
     for (const f of BUNDLE_FILES) {
       if (!ok(f)) continue;
       const lines = b.lines(f);
-      lines.forEach((ln, i) => { if (/^ {0,3}(`{3,}|~{3,})\s*mermaid\b/i.test(ln)) add("B19", f, `File ${f} has a Mermaid fence at line ${i + 1}; use an ASCII diagram in a text block.`); });
+      for (const line of forbiddenMermaidLines(f, lines)) add("B19", f, `File ${f} has a Mermaid fence at line ${line}; use an ASCII diagram in a text block.`);
       const documented = codeTokens(b.text(f)); // a <token> that the file itself shows in code is a documented runtime parameter, not a leftover
       blankFences(b.text(f)).split("\n").forEach((ln, i) => {
         const free = ln.replace(/`[^`]*`/g, "");
