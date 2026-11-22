@@ -48,7 +48,13 @@ If a task is unclear, mark it IN PROGRESS and verify it read-only before acting.
 1. **First, the IN-PROGRESS tasks**, from their exact step and in the protocol's order. Then pick NOT STARTED tasks following the protocol's frontier rule; if there is no protocol, take the lowest number whose blockers are DONE.
 2. **Different harness, same rigour:**
    - **No subagents:** do the roles one after another. Before verifying, re-read only the task + `git diff` as if you'd never seen it, and label the notes "same-context verify".
-   - **Different models than the protocol's table:** use your strongest available model for design and verification.
+   - **Different models than the protocol's table:** the table's model names are *capability tiers*, not products. Read them as roles and map each to your own provider's lineup yourself. Don't ask the owner, and don't hard-code a model name anywhere in the repo:
+     - **Top tier** (table says the strongest tier, e.g. `Opus`): skill/principle/procedure text, architecture and contract design, adversarial verification. Use your provider's most capable model at the highest reasoning effort it offers.
+     - **Mid tier** (e.g. `Sonnet`): code from a clear design, data files, manifests, docs drafts, mechanical verification. Use a strong, fast model at medium–high effort.
+     - **Low tier** (e.g. `Haiku`): pure scans and greps. Use the cheapest model or no special effort.
+     - The effort word in the table (`low`/`medium`/`high`/`xhigh`) maps to your harness's closest reasoning setting. `xhigh` means the maximum available.
+     - If you can't switch model or effort mid-task (one model per session), run every step on the model of the **highest tier any step of the current task needs**. Never go lower than the table asks for verification.
+     - Write the model you actually used in the RESUME-LOG line (`<harness/model>`), so the owner can audit the mapping.
    - **No web access:** mark external facts as unverified instead of guessing.
    - Never weaken a test or skip a Verify step to get green.
 3. **Checkpoint after every step.** Append one line to `.scratch/RESUME-LOG.md`, so the next agent can continue if you get cut off too:
