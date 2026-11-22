@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "id": "mobile",
+  "label": "Phone or tablet app",
+  "flags": {
+    "has_ui": true
+  },
+  "sections": {
+    "S2": {
+      "questions": [
+        {
+          "id": "mobile-platform",
+          "question": "Do you want iPhone, Android, tablets, or a mix?",
+          "why": "Each target changes the build and checks.",
+          "feeds": [
+            "STORE_LISTING.md"
+          ]
+        },
+        {
+          "id": "mobile-distribution",
+          "question": "Is the app for your team or for anyone to find in a store?",
+          "why": "Private testing and public release need different steps.",
+          "feeds": [
+            "STORE_LISTING.md"
+          ]
+        },
+        {
+          "id": "mobile-accounts",
+          "question": "Which store accounts do you already have, and who controls them?",
+          "why": "A release can stall if the account is unavailable.",
+          "feeds": [
+            "STORE_LISTING.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Confirm target platforms, distribution path and access to the required store accounts."
+      ],
+      "boosters": [
+        "mobile-design"
+      ],
+      "agents": [
+        "ux"
+      ]
+    },
+    "S3": {
+      "questions": [
+        {
+          "id": "mobile-permissions",
+          "question": "Which parts of the phone does the core task genuinely need?",
+          "why": "Ask for access only where the task depends on it.",
+          "feeds": [
+            "PLATFORM_PERMISSIONS.md"
+          ]
+        },
+        {
+          "id": "mobile-timing",
+          "question": "At what step should the app ask for each permission?",
+          "why": "The user should understand the request when it appears.",
+          "feeds": [
+            "PLATFORM_PERMISSIONS.md"
+          ]
+        },
+        {
+          "id": "mobile-declined",
+          "question": "What can people still do if they decline access?",
+          "why": "The app needs a usable next step after a refusal.",
+          "feeds": [
+            "PLATFORM_PERMISSIONS.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Pair each requested device permission with a reason, timing and denied fallback."
+      ],
+      "boosters": [
+        "mobile-design"
+      ],
+      "agents": [
+        "security"
+      ]
+    },
+    "S4": {
+      "questions": [
+        {
+          "id": "mobile-offline",
+          "question": "Which tasks should keep working if the phone loses signal?",
+          "why": "This defines what to keep on the device.",
+          "feeds": [
+            "OFFLINE_SYNC.md"
+          ]
+        },
+        {
+          "id": "mobile-sync",
+          "question": "When the connection comes back, what should upload and what should be visible first?",
+          "why": "The user needs a clear view of what has synced.",
+          "feeds": [
+            "OFFLINE_SYNC.md"
+          ]
+        },
+        {
+          "id": "mobile-conflict",
+          "question": "If two phones edit the same item offline, which change should stay?",
+          "why": "The plan needs an explicit way to handle conflicting work.",
+          "feeds": [
+            "OFFLINE_SYNC.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Confirm whether offline mode is needed and how interrupted or conflicting work is handled."
+      ],
+      "boosters": [
+        "antislop-layoutmobile"
+      ],
+      "agents": [
+        "ux"
+      ]
+    },
+    "S8": {
+      "questions": [
+        {
+          "id": "mobile-test",
+          "question": "Which phone models can you use to test the main task?",
+          "why": "A device list turns compatibility into a check.",
+          "feeds": [
+            "STORE_LISTING.md"
+          ]
+        },
+        {
+          "id": "mobile-listing",
+          "question": "Who will prepare screenshots, age rating and the privacy description?",
+          "why": "These items must be ready before a store review.",
+          "feeds": [
+            "STORE_LISTING.md"
+          ]
+        },
+        {
+          "id": "mobile-rejection",
+          "question": "Who handles feedback if a store rejects the first submission?",
+          "why": "A recovery owner keeps the release moving.",
+          "feeds": [
+            "STORE_LISTING.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Name the store checklist evidence, devices, and fallback for a rejected submission."
+      ],
+      "boosters": [],
+      "agents": []
+    }
+  },
+  "bundle_files": [
+    "PLATFORM_PERMISSIONS.md",
+    "STORE_LISTING.md",
+    "OFFLINE_SYNC.md"
+  ]
+}

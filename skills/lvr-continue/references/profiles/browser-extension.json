@@ -1,0 +1,155 @@
+{
+  "schema_version": 1,
+  "id": "browser-extension",
+  "label": "Browser extension",
+  "flags": {
+    "has_ui": true
+  },
+  "sections": {
+    "S1": {
+      "questions": [
+        {
+          "id": "extension-sites",
+          "question": "Which sites or pages should the extension work on?",
+          "why": "Narrow page access keeps the scope clear.",
+          "feeds": [
+            "EXTENSION_MANIFEST_PLAN.md"
+          ]
+        },
+        {
+          "id": "extension-entry",
+          "question": "How does the user start it, from a toolbar, menu, or page itself?",
+          "why": "The entry point shapes the work flow.",
+          "feeds": [
+            "EXTENSION_MANIFEST_PLAN.md"
+          ]
+        },
+        {
+          "id": "extension-effect",
+          "question": "What should the person see change after running it?",
+          "why": "The result should be observable.",
+          "feeds": [
+            "EXTENSION_MANIFEST_PLAN.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Name supported pages, user entry points and the action on each one."
+      ],
+      "boosters": [],
+      "agents": [
+        "ux"
+      ]
+    },
+    "S2": {
+      "questions": [
+        {
+          "id": "extension-browser",
+          "question": "Which browsers do you actually need for the first release?",
+          "why": "Their store and permission rules differ.",
+          "feeds": [
+            "STORE_LISTING.md"
+          ]
+        },
+        {
+          "id": "extension-share",
+          "question": "Is this only for your team or for anyone in a store?",
+          "why": "The answer determines how users get it.",
+          "feeds": [
+            "STORE_LISTING.md"
+          ]
+        },
+        {
+          "id": "extension-listing",
+          "question": "Who prepares screenshots, support details and privacy information?",
+          "why": "Someone should own each release requirement.",
+          "feeds": [
+            "STORE_LISTING.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Confirm browsers, distribution path and ownership of store submissions."
+      ],
+      "boosters": [],
+      "agents": []
+    },
+    "S3": {
+      "questions": [
+        {
+          "id": "extension-permission",
+          "question": "Which exact browser permissions does the task need?",
+          "why": "The browser should ask only for required access.",
+          "feeds": [
+            "PRIVACY_POLICY_OUTLINE.md"
+          ]
+        },
+        {
+          "id": "extension-transfer",
+          "question": "Will any page text, browsing history or account data leave the browser?",
+          "why": "Users need to understand what is sent and why.",
+          "feeds": [
+            "PRIVACY_POLICY_OUTLINE.md"
+          ]
+        },
+        {
+          "id": "extension-remove",
+          "question": "How can someone remove stored extension data?",
+          "why": "The plan needs a clear removal path.",
+          "feeds": [
+            "PRIVACY_POLICY_OUTLINE.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Explain why each permission is needed and describe the handling of any collected page data."
+      ],
+      "boosters": [
+        "threat-modeling"
+      ],
+      "agents": [
+        "security"
+      ]
+    },
+    "S4": {
+      "questions": [
+        {
+          "id": "extension-denied",
+          "question": "What should the extension show when a user declines permission?",
+          "why": "People need to understand what still works.",
+          "feeds": [
+            "EXTENSION_MANIFEST_PLAN.md"
+          ]
+        },
+        {
+          "id": "extension-unsupported",
+          "question": "What happens if someone runs it on an unsupported page?",
+          "why": "The extension needs a clear, safe response.",
+          "feeds": [
+            "EXTENSION_MANIFEST_PLAN.md"
+          ]
+        },
+        {
+          "id": "extension-reload",
+          "question": "If the browser reloads a page in the middle, what work should be restored?",
+          "why": "A refresh should not cause duplicate or lost work.",
+          "feeds": [
+            "EXTENSION_MANIFEST_PLAN.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Describe empty, denied-permission and unsupported-page behavior."
+      ],
+      "boosters": [],
+      "agents": [
+        "ux"
+      ]
+    }
+  },
+  "bundle_files": [
+    "EXTENSION_MANIFEST_PLAN.md",
+    "PRIVACY_POLICY_OUTLINE.md",
+    "STORE_LISTING.md"
+  ]
+}

@@ -5,6 +5,154 @@
   "flags": {
     "has_ui": true
   },
-  "sections": {},
-  "bundle_files": []
+  "sections": {
+    "S1": {
+      "questions": [
+        {
+          "id": "web-start",
+          "question": "Where will people get the link to the main page?",
+          "why": "Visitors may start from search, an invite, or a link you send.",
+          "feeds": [
+            "ROUTES_SITEMAP.md"
+          ]
+        },
+        {
+          "id": "web-public",
+          "question": "Which pages should someone see before signing in?",
+          "why": "This draws the line between public and private pages.",
+          "feeds": [
+            "ROUTES_SITEMAP.md"
+          ]
+        },
+        {
+          "id": "web-next",
+          "question": "Where should a person end up after finishing the main task?",
+          "why": "The site needs a clear next step.",
+          "feeds": [
+            "ROUTES_SITEMAP.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Name each primary page, its users, and its entry point."
+      ],
+      "boosters": [],
+      "agents": []
+    },
+    "S3": {
+      "questions": [
+        {
+          "id": "web-form",
+          "question": "What will a visitor type in or upload?",
+          "why": "The site only needs information it will actually use.",
+          "feeds": [
+            "SECURITY.md"
+          ]
+        },
+        {
+          "id": "web-shared",
+          "question": "Can several people share one account or view the same records?",
+          "why": "Shared access changes what each person may see.",
+          "feeds": [
+            "SECURITY.md"
+          ]
+        },
+        {
+          "id": "web-delete",
+          "question": "How should a person ask you to remove their information?",
+          "why": "The plan needs a way to act on a deletion request.",
+          "feeds": [
+            "SECURITY.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Record what public forms keep, who may see it, and when to delete it."
+      ],
+      "boosters": [
+        "threat-modeling"
+      ],
+      "agents": [
+        "security"
+      ]
+    },
+    "S4": {
+      "questions": [
+        {
+          "id": "web-device",
+          "question": "Which screen should work best first, a phone or a computer?",
+          "why": "This sets the order for design and checks.",
+          "feeds": [
+            "USER_FLOWS.md"
+          ]
+        },
+        {
+          "id": "web-empty",
+          "question": "What should the first visitor see when the site has no records?",
+          "why": "An empty page needs a useful next step.",
+          "feeds": [
+            "USER_FLOWS.md"
+          ]
+        },
+        {
+          "id": "web-retry",
+          "question": "What should happen if the connection drops while someone submits a form?",
+          "why": "A retry should keep the work and avoid duplicates.",
+          "feeds": [
+            "USER_FLOWS.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Describe mobile and desktop flows, empty states, and recovery from a broken connection."
+      ],
+      "boosters": [
+        "ui-ux-pro-max"
+      ],
+      "agents": [
+        "ux"
+      ]
+    },
+    "S6": {
+      "questions": [
+        {
+          "id": "web-host",
+          "question": "Do you already have somewhere to host the site or need help choosing?",
+          "why": "The plan should fit what you can maintain.",
+          "feeds": [
+            "HANDOVER.md"
+          ]
+        },
+        {
+          "id": "web-domain",
+          "question": "Will the site use a web address you already own?",
+          "why": "Someone needs control of the address and its renewal.",
+          "feeds": [
+            "HANDOVER.md"
+          ]
+        },
+        {
+          "id": "web-uptime",
+          "question": "Who should find out first if the site stops loading?",
+          "why": "The plan needs a responsible person and a way to reach them.",
+          "feeds": [
+            "HANDOVER.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Confirm host, site address and owner for uptime and renewal."
+      ],
+      "boosters": [
+        "architecture-designer",
+        "api-designer"
+      ],
+      "agents": [
+        "architect"
+      ]
+    }
+  },
+  "bundle_files": [
+    "ROUTES_SITEMAP.md"
+  ]
 }

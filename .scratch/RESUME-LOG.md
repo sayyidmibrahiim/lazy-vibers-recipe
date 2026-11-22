@@ -22,3 +22,6 @@
 2026-11-22T18:36:49Z | codex/gpt-6 | task 08 | profile contract drafted and confirmation protections started | next: implement deterministic profile planner and tests while bundle answer pending
 2026-11-22T18:43:16Z | codex/gpt-6 | task 08 | planner, confirmation and frozen additions implemented; retained 20 Markdown plus existing derived index | next: complete shared verification and close
 2026-11-22T18:44:57Z | codex/gpt-6 | task 08 | five profile tests, replay fixes and shared regressions verified; closed | next: ticket 09 ten profile definitions
+2026-11-22T18:45:19Z | codex/gpt-6 | task 09 | claimed and resolved candidate repositories | next: write ten profile definitions and verify their sources
+2026-11-22T18:50:34Z | codex/gpt-6 | task 09 | ten profiles and nine upstream sources implemented; launch checks pass | next: complete shared regression verification
+2026-11-22T18:51:29Z | codex/gpt-6 | task 09 | all ten profiles, 130 questions, 36 upstream sources and shared tests verified; closed | next: ticket 10 personal workflow files

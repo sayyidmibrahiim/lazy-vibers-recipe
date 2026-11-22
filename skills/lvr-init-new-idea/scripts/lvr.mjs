@@ -2736,6 +2736,7 @@ const PROFILE_FLAGS = ["stores_data", "has_ui", "has_llm"];
 const PROFILE_PLAN_PATH = ".lvr/profile-plan.json";
 const profileFilePath = (file) => boosterPath(file) && file.split("/").every((part) => !part.startsWith("."));
 const profileNames = (values) => Array.isArray(values) && values.every((name) => isStr(name) && PRODUCT_TYPE_RE.test(name));
+const profileReferences = (values) => Array.isArray(values) && values.every((name) => isStr(name) && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(name));
 
 function validateProfile(data, file) {
   const bad = (field) => {
@@ -2754,8 +2755,8 @@ function validateProfile(data, file) {
     if (!Array.isArray(questions) || !questions.every((q) => isObj(q) && isStr(q.id) && PRODUCT_TYPE_RE.test(q.id) && nonEmpty(q.question) && nonEmpty(q.why) && Array.isArray(q.feeds) && q.feeds.length && q.feeds.every(profileFilePath))) bad(`${id}.questions`);
     if (new Set(questions.map((q) => q.id)).size !== questions.length) bad(`${id}.questions.id`);
     if (entry.exit_criteria !== undefined && (!Array.isArray(entry.exit_criteria) || !entry.exit_criteria.every(nonEmpty))) bad(`${id}.exit_criteria`);
-    if (entry.boosters !== undefined && !profileNames(entry.boosters)) bad(`${id}.boosters`);
-    if (entry.agents !== undefined && !profileNames(entry.agents)) bad(`${id}.agents`);
+    if (entry.boosters !== undefined && !profileReferences(entry.boosters)) bad(`${id}.boosters`);
+    if (entry.agents !== undefined && !profileReferences(entry.agents)) bad(`${id}.agents`);
   }
   return data;
 }

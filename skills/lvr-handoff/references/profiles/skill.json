@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "id": "skill",
+  "label": "Agent skill or plugin",
+  "flags": {},
+  "sections": {
+    "S1": {
+      "questions": [
+        {
+          "id": "skill-trigger",
+          "question": "What are two phrases you would actually use to start this skill?",
+          "why": "Real phrases become positive trigger tests.",
+          "feeds": [
+            "TRIGGERS.md"
+          ]
+        },
+        {
+          "id": "skill-exclude",
+          "question": "What similar request should stay outside this skill?",
+          "why": "A clear boundary prevents accidental launches.",
+          "feeds": [
+            "TRIGGERS.md"
+          ]
+        },
+        {
+          "id": "skill-outcome",
+          "question": "What should the skill hand back at the end?",
+          "why": "A named result helps measure if it finished.",
+          "feeds": [
+            "TRIGGERS.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Record when the skill should start, stay inactive, and ask for confirmation."
+      ],
+      "boosters": [
+        "skill-creator",
+        "agent-spec"
+      ],
+      "agents": [
+        "pm"
+      ]
+    },
+    "S2": {
+      "questions": [
+        {
+          "id": "skill-host",
+          "question": "In which assistant should this first work?",
+          "why": "The host determines the skill packaging.",
+          "feeds": [
+            "INSTALL_MANIFESTS.md"
+          ]
+        },
+        {
+          "id": "skill-platform",
+          "question": "Which operating systems should we plan to test?",
+          "why": "Install paths and commands vary by system.",
+          "feeds": [
+            "INSTALL_MANIFESTS.md"
+          ]
+        },
+        {
+          "id": "skill-local",
+          "question": "Should the skill belong to one project or to your whole account?",
+          "why": "The scope determines who can invoke it.",
+          "feeds": [
+            "INSTALL_MANIFESTS.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Confirm supported hosts, systems and local installation boundaries."
+      ],
+      "boosters": [
+        "skill-creator"
+      ],
+      "agents": []
+    },
+    "S3": {
+      "questions": [
+        {
+          "id": "skill-data",
+          "question": "What should the skill remember between sessions?",
+          "why": "The profile only needs persistent values.",
+          "feeds": [
+            "PROFILE_SCHEMA.md"
+          ]
+        },
+        {
+          "id": "skill-private",
+          "question": "Which information must stay on your machine?",
+          "why": "This sets a boundary for tools and network requests.",
+          "feeds": [
+            "PROFILE_SCHEMA.md"
+          ]
+        },
+        {
+          "id": "skill-cleanup",
+          "question": "How should you correct or remove a remembered value?",
+          "why": "The user needs control of their stored information.",
+          "feeds": [
+            "PROFILE_SCHEMA.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Identify required profile data and explicit network and retention limits."
+      ],
+      "boosters": [
+        "agent-spec"
+      ],
+      "agents": [
+        "security"
+      ]
+    },
+    "S4": {
+      "questions": [
+        {
+          "id": "skill-steps",
+          "question": "What is the first part of the task that follows the same rule every time?",
+          "why": "This separates predictable work from decisions.",
+          "feeds": [
+            "TOOLS_LIST.md",
+            "SKILL_DRAFT.md"
+          ]
+        },
+        {
+          "id": "skill-tools",
+          "question": "Which tools can it use, and which tools should stay off limits?",
+          "why": "Access should match the actual job.",
+          "feeds": [
+            "TOOLS_LIST.md"
+          ]
+        },
+        {
+          "id": "skill-confirm",
+          "question": "Which action should always ask you before it runs?",
+          "why": "That keeps one-way changes under your control.",
+          "feeds": [
+            "TOOLS_LIST.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Specify user stops, tools and the visible result for each automatic step."
+      ],
+      "boosters": [
+        "agent-spec"
+      ],
+      "agents": [
+        "architect"
+      ]
+    },
+    "S8": {
+      "questions": [
+        {
+          "id": "skill-pass",
+          "question": "What real request should produce the expected final output?",
+          "why": "It becomes a positive test.",
+          "feeds": [
+            "EVALS.md"
+          ]
+        },
+        {
+          "id": "skill-refuse",
+          "question": "What request should it safely turn down?",
+          "why": "This checks the boundary of the skill.",
+          "feeds": [
+            "EVALS.md"
+          ]
+        },
+        {
+          "id": "skill-resume",
+          "question": "If the session stops halfway, what evidence should it use to pick up?",
+          "why": "Resume should avoid repeating completed work.",
+          "feeds": [
+            "EVALS.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Provide should-trigger, should-not-trigger, refusal and resume test cases."
+      ],
+      "boosters": [
+        "skill-creator"
+      ],
+      "agents": [
+        "qa"
+      ]
+    }
+  },
+  "bundle_files": [
+    "SKILL_DRAFT.md",
+    "TRIGGERS.md",
+    "PROFILE_SCHEMA.md",
+    "TOOLS_LIST.md",
+    "EVALS.md",
+    "INSTALL_MANIFESTS.md"
+  ]
+}

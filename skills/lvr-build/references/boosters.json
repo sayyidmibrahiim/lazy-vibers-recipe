@@ -749,6 +749,342 @@
       }
     },
     {
+      "id": "mobile-design",
+      "name": "mobile-design",
+      "kind": "skill",
+      "repo": "vudovn/antigravity-kit",
+      "sha": "549ba3dc2eb1d40fccb5b6d792eba4101c80cd69",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S2",
+        "S3"
+      ],
+      "triggers": {
+        "product_type": [
+          "mobile"
+        ]
+      },
+      "source_paths": [
+        ".agents/skills/mobile-design/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "mobile-design"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "mobile-design"
+        ]
+      },
+      "note": "Use its planning questions for the target devices and permissions."
+    },
+    {
+      "id": "rag-architect",
+      "name": "rag-architect",
+      "kind": "skill",
+      "repo": "jeffallan/claude-skills",
+      "sha": "4b94d98605baf742b751bb82832ace5caf942271",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S1",
+        "S3",
+        "S4",
+        "S6"
+      ],
+      "triggers": {
+        "product_type": [
+          "rag"
+        ]
+      },
+      "source_paths": [
+        "skills/rag-architect/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "rag-architect"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "rag-architect"
+        ]
+      }
+    },
+    {
+      "id": "evaluate-rag",
+      "name": "evaluate-rag",
+      "kind": "skill",
+      "repo": "hamelsmu/evals-skills",
+      "sha": "22418da2bfb159f28a1b0dcf64e969e14ae56c99",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S8"
+      ],
+      "triggers": {
+        "product_type": [
+          "rag"
+        ]
+      },
+      "source_paths": [
+        "skills/evaluate-rag/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "evaluate-rag"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "evaluate-rag"
+        ]
+      }
+    },
+    {
+      "id": "mcp-builder",
+      "name": "mcp-builder",
+      "kind": "skill",
+      "repo": "anthropics/skills",
+      "sha": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "license": "Apache-2.0",
+      "license_file": "skills/mcp-builder/LICENSE.txt",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S1",
+        "S2",
+        "S4",
+        "S8"
+      ],
+      "triggers": {
+        "product_type": [
+          "mcp-server"
+        ]
+      },
+      "source_paths": [
+        "skills/mcp-builder/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "mcp-builder"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "mcp-builder"
+        ]
+      },
+      "note": "Use research, planning and read-only evaluation design."
+    },
+    {
+      "id": "n8n-credentials-and-security-official",
+      "name": "n8n-credentials-and-security-official",
+      "kind": "skill",
+      "repo": "n8n-io/skills",
+      "sha": "626f50fdf2934116eea2c5469339e03d2d524e83",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S3"
+      ],
+      "triggers": {
+        "product_type": [
+          "n8n"
+        ]
+      },
+      "source_paths": [
+        "skills/n8n-credentials-and-security-official/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "n8n-credentials-and-security-official"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "n8n-credentials-and-security-official"
+        ]
+      }
+    },
+    {
+      "id": "n8n-workflow-lifecycle-official",
+      "name": "n8n-workflow-lifecycle-official",
+      "kind": "skill",
+      "repo": "n8n-io/skills",
+      "sha": "626f50fdf2934116eea2c5469339e03d2d524e83",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S1",
+        "S4",
+        "S8"
+      ],
+      "triggers": {
+        "product_type": [
+          "n8n"
+        ]
+      },
+      "source_paths": [
+        "skills/n8n-workflow-lifecycle-official/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "n8n-workflow-lifecycle-official"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "n8n-workflow-lifecycle-official"
+        ]
+      }
+    },
+    {
+      "id": "n8n-agents-official",
+      "name": "n8n-agents-official",
+      "kind": "skill",
+      "repo": "n8n-io/skills",
+      "sha": "626f50fdf2934116eea2c5469339e03d2d524e83",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S4"
+      ],
+      "triggers": {
+        "product_type": [
+          "n8n"
+        ],
+        "flags": {
+          "has_llm": true
+        }
+      },
+      "source_paths": [
+        "skills/n8n-agents-official/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "n8n-agents-official"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "n8n-agents-official"
+        ]
+      }
+    },
+    {
+      "id": "create-cli",
+      "name": "create-cli",
+      "kind": "skill",
+      "repo": "steipete/agent-scripts",
+      "sha": "35c46c647a6448face3dae580e0502816b164e54",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S1",
+        "S2",
+        "S4",
+        "S6"
+      ],
+      "triggers": {
+        "product_type": [
+          "cli"
+        ]
+      },
+      "source_paths": [
+        "skills/create-cli/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "create-cli"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "create-cli"
+        ]
+      },
+      "note": "Use the planning checklist. Consult any separately attributed guidance at its source under its own license."
+    },
+    {
+      "id": "agent-designer",
+      "name": "agent-designer",
+      "kind": "skill",
+      "repo": "alirezarezvani/claude-skills",
+      "sha": "5909a72e62b5fbb809935fb6a55b58bdbe175074",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S1",
+        "S3",
+        "S6"
+      ],
+      "triggers": {
+        "product_type": [
+          "agent"
+        ]
+      },
+      "source_paths": [
+        "engineering/skills/agent-designer/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "agent-designer"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "agent-designer"
+        ]
+      },
+      "note": "Use pattern selection and tool boundary planning."
+    },
+    {
       "id": "define-jtbd-canvas",
       "name": "define-jtbd-canvas",
       "kind": "skill",

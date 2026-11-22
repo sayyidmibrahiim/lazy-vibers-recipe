@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "id": "cli",
+  "label": "Command-line tool",
+  "flags": {},
+  "sections": {
+    "S1": {
+      "questions": [
+        {
+          "id": "cli-user",
+          "question": "Will people run this by hand, from scripts, or both?",
+          "why": "The tool should work for its real callers.",
+          "feeds": [
+            "CLI_SPEC.md"
+          ]
+        },
+        {
+          "id": "cli-main",
+          "question": "What would the shortest useful command do?",
+          "why": "A concrete example anchors the interface.",
+          "feeds": [
+            "CLI_SPEC.md"
+          ]
+        },
+        {
+          "id": "cli-change",
+          "question": "Which commands make a change that users may want to preview?",
+          "why": "A preview helps people check a risky action.",
+          "feeds": [
+            "CLI_SPEC.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Name the main command, target users and common scripted use."
+      ],
+      "boosters": [
+        "create-cli"
+      ],
+      "agents": []
+    },
+    "S2": {
+      "questions": [
+        {
+          "id": "cli-os",
+          "question": "Which operating systems must it support first?",
+          "why": "Packaging and tests depend on that choice.",
+          "feeds": [
+            "INSTALL_RELEASE.md"
+          ]
+        },
+        {
+          "id": "cli-runtime",
+          "question": "Can users install a runtime, or should the command run by itself?",
+          "why": "The answer affects how easy installation is.",
+          "feeds": [
+            "INSTALL_RELEASE.md"
+          ]
+        },
+        {
+          "id": "cli-upgrade",
+          "question": "How should users get updates and return to an older version if needed?",
+          "why": "Releases need a recovery path.",
+          "feeds": [
+            "INSTALL_RELEASE.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Confirm supported systems, runtime and install or upgrade ownership."
+      ],
+      "boosters": [
+        "create-cli"
+      ],
+      "agents": []
+    },
+    "S4": {
+      "questions": [
+        {
+          "id": "cli-input",
+          "question": "Will the command read arguments, a file, or input piped into it?",
+          "why": "A clear input contract works for people and scripts.",
+          "feeds": [
+            "OUTPUT_ERRORS.md"
+          ]
+        },
+        {
+          "id": "cli-output",
+          "question": "Which results should a script be able to read as JSON?",
+          "why": "Machine-visible output needs a stable shape.",
+          "feeds": [
+            "OUTPUT_ERRORS.md"
+          ]
+        },
+        {
+          "id": "cli-errors",
+          "question": "What result should tell a script that input was wrong or no change was made?",
+          "why": "Exit codes make automatic handling reliable.",
+          "feeds": [
+            "OUTPUT_ERRORS.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Record inputs, text or JSON outputs, error exit codes and safe preview behavior."
+      ],
+      "boosters": [
+        "create-cli"
+      ],
+      "agents": [
+        "qa"
+      ]
+    },
+    "S6": {
+      "questions": [
+        {
+          "id": "cli-config",
+          "question": "Where should the command read preferences?",
+          "why": "Users need to know where to make a change.",
+          "feeds": [
+            "CONFIG.md"
+          ]
+        },
+        {
+          "id": "cli-order",
+          "question": "When a flag and file disagree, which result do you expect?",
+          "why": "Precedence prevents surprises.",
+          "feeds": [
+            "CONFIG.md"
+          ]
+        },
+        {
+          "id": "cli-secret",
+          "question": "Does any setting need private storage or redaction in error messages?",
+          "why": "It should be possible to debug without exposing secrets.",
+          "feeds": [
+            "CONFIG.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Set the order for command flags, environment and file settings, with a safe default."
+      ],
+      "boosters": [
+        "create-cli"
+      ],
+      "agents": [
+        "security"
+      ]
+    }
+  },
+  "bundle_files": [
+    "CLI_SPEC.md",
+    "OUTPUT_ERRORS.md",
+    "CONFIG.md",
+    "INSTALL_RELEASE.md"
+  ]
+}

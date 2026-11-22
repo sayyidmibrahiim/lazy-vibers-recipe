@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "id": "rag",
+  "label": "Answers from your own documents",
+  "flags": {
+    "has_llm": true
+  },
+  "sections": {
+    "S1": {
+      "questions": [
+        {
+          "id": "rag-users",
+          "question": "Who will ask questions, and which answers would save them time?",
+          "why": "The test list should represent real work.",
+          "feeds": [
+            "RAG_EVAL_PLAN.md"
+          ]
+        },
+        {
+          "id": "rag-examples",
+          "question": "Can you give examples of a simple question and one that needs several documents?",
+          "why": "This checks both lookup and combined answers.",
+          "feeds": [
+            "RAG_EVAL_PLAN.md"
+          ]
+        },
+        {
+          "id": "rag-outside",
+          "question": "What must it say when the documents cannot answer a question?",
+          "why": "A clear boundary reduces confident guessing.",
+          "feeds": [
+            "RAG_EVAL_PLAN.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Capture real questions, expected evidence and at least one out-of-scope example."
+      ],
+      "boosters": [
+        "rag-architect"
+      ],
+      "agents": [
+        "rag-designer"
+      ]
+    },
+    "S3": {
+      "questions": [
+        {
+          "id": "rag-sources",
+          "question": "Where are the documents now, and how often do they change?",
+          "why": "Search results depend on the copies being current.",
+          "feeds": [
+            "CORPUS.md"
+          ]
+        },
+        {
+          "id": "rag-access",
+          "question": "Which documents may only be seen by certain people?",
+          "why": "Answers must respect the same access limits.",
+          "feeds": [
+            "CORPUS.md"
+          ]
+        },
+        {
+          "id": "rag-removal",
+          "question": "What should happen to old versions or withdrawn documents?",
+          "why": "Removed text should stop appearing in answers.",
+          "feeds": [
+            "CORPUS.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Inventory sources, their owners, access limits and refresh cadence."
+      ],
+      "boosters": [
+        "rag-architect"
+      ],
+      "agents": [
+        "security"
+      ]
+    },
+    "S4": {
+      "questions": [
+        {
+          "id": "rag-cites",
+          "question": "What should a source link show so someone can check an answer?",
+          "why": "Users need enough detail to verify it.",
+          "feeds": [
+            "RETRIEVAL_DESIGN.md"
+          ]
+        },
+        {
+          "id": "rag-conflict",
+          "question": "When two documents disagree, what should the person see?",
+          "why": "A conflict can be reported without choosing silently.",
+          "feeds": [
+            "RETRIEVAL_DESIGN.md"
+          ]
+        },
+        {
+          "id": "rag-speed",
+          "question": "How much waiting is acceptable for a typical answer?",
+          "why": "The design needs a testable response-time target.",
+          "feeds": [
+            "RETRIEVAL_DESIGN.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Record how users see sources, conflicting documents and missing answers."
+      ],
+      "boosters": [
+        "rag-architect"
+      ],
+      "agents": [
+        "rag-designer"
+      ]
+    },
+    "S6": {
+      "questions": [
+        {
+          "id": "rag-section-size",
+          "question": "Which parts of a document should stay together so an answer keeps its context?",
+          "why": "This gives the retrieval design a useful unit to test.",
+          "feeds": [
+            "CHUNKING_EMBEDDING.md"
+          ]
+        },
+        {
+          "id": "rag-index-time",
+          "question": "How soon after an edit should a changed document become searchable?",
+          "why": "The update target sets how much indexing work needs to happen at once.",
+          "feeds": [
+            "CHUNKING_EMBEDDING.md"
+          ]
+        },
+        {
+          "id": "rag-index-cost",
+          "question": "How much can you spend on making the documents searchable and keeping them current?",
+          "why": "A budget bounds the index size and refresh choices.",
+          "feeds": [
+            "CHUNKING_EMBEDDING.md",
+            "RETRIEVAL_DESIGN.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Record testable document boundaries, update delay and an indexing budget."
+      ],
+      "boosters": [
+        "rag-architect"
+      ],
+      "agents": [
+        "rag-designer"
+      ]
+    },
+    "S8": {
+      "questions": [
+        {
+          "id": "rag-test-trust",
+          "question": "Who can judge whether an answer follows the documents?",
+          "why": "The evaluation needs a reliable reviewer.",
+          "feeds": [
+            "RAG_EVAL_PLAN.md"
+          ]
+        },
+        {
+          "id": "rag-test-gap",
+          "question": "Which mistakes should cause a release to stop?",
+          "why": "Critical failures need a clear threshold.",
+          "feeds": [
+            "RAG_EVAL_PLAN.md"
+          ]
+        },
+        {
+          "id": "rag-test-refresh",
+          "question": "How do we check that changed documents show up in new answers?",
+          "why": "This proves the refresh path works.",
+          "feeds": [
+            "RAG_EVAL_PLAN.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Confirm tests for retrieval, grounded answers, access and failure."
+      ],
+      "boosters": [
+        "evaluate-rag"
+      ],
+      "agents": [
+        "qa"
+      ]
+    }
+  },
+  "bundle_files": [
+    "CORPUS.md",
+    "CHUNKING_EMBEDDING.md",
+    "RETRIEVAL_DESIGN.md",
+    "RAG_EVAL_PLAN.md"
+  ]
+}

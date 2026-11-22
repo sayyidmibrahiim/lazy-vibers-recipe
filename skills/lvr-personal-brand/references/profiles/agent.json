@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "id": "agent",
+  "label": "Chatbot or AI agent",
+  "flags": {
+    "has_llm": true
+  },
+  "sections": {
+    "S1": {
+      "questions": [
+        {
+          "id": "agent-caller",
+          "question": "Who talks to the agent and what do they want it to accomplish?",
+          "why": "Real users and tasks anchor the design.",
+          "feeds": [
+            "AGENT_SPEC.md"
+          ]
+        },
+        {
+          "id": "agent-boundary",
+          "question": "Which requests are outside its job even if it could answer?",
+          "why": "Scope limits stop it from promising the wrong help.",
+          "feeds": [
+            "AGENT_SPEC.md"
+          ]
+        },
+        {
+          "id": "agent-human",
+          "question": "When should it hand the conversation to a person?",
+          "why": "Some situations need a human decision.",
+          "feeds": [
+            "AGENT_SPEC.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "State the users, supported work and cases that need a human."
+      ],
+      "boosters": [
+        "agent-designer"
+      ],
+      "agents": [
+        "ai-designer"
+      ]
+    },
+    "S3": {
+      "questions": [
+        {
+          "id": "agent-data",
+          "question": "Which information may the agent use to answer?",
+          "why": "Explicit sources help limit exposure and guessing.",
+          "feeds": [
+            "GUARDRAILS.md"
+          ]
+        },
+        {
+          "id": "agent-actions",
+          "question": "What actions can change something, and who approves each one?",
+          "why": "A user needs control over consequential actions.",
+          "feeds": [
+            "GUARDRAILS.md"
+          ]
+        },
+        {
+          "id": "agent-memory",
+          "question": "What should it remember across chats, and for how long?",
+          "why": "Retention affects convenience and privacy.",
+          "feeds": [
+            "GUARDRAILS.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Record access to knowledge, permission for each tool, and retention choices."
+      ],
+      "boosters": [
+        "agent-designer",
+        "threat-modeling"
+      ],
+      "agents": [
+        "security"
+      ]
+    },
+    "S4": {
+      "questions": [
+        {
+          "id": "agent-tone",
+          "question": "What should its tone sound like to someone asking for help?",
+          "why": "Examples are easier to test than adjectives.",
+          "feeds": [
+            "CONVERSATION_FLOWS.md"
+          ]
+        },
+        {
+          "id": "agent-unknown",
+          "question": "What should it say when it cannot verify an answer?",
+          "why": "A useful uncertain response can prevent guesswork.",
+          "feeds": [
+            "CONVERSATION_FLOWS.md"
+          ]
+        },
+        {
+          "id": "agent-frustration",
+          "question": "What happens after repeated failures or when someone asks for a person?",
+          "why": "The conversation needs a clear way to recover.",
+          "feeds": [
+            "CONVERSATION_FLOWS.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Record a normal flow, uncertainty handling and handoff conversation."
+      ],
+      "boosters": [
+        "prompt-engineer"
+      ],
+      "agents": [
+        "ux"
+      ]
+    },
+    "S6": {
+      "questions": [
+        {
+          "id": "agent-channel",
+          "question": "Which channel should we support first?",
+          "why": "The channel sets how people interact and what the system can show.",
+          "feeds": [
+            "PROMPT_SPEC.md"
+          ]
+        },
+        {
+          "id": "agent-budget",
+          "question": "How much cost and waiting time per conversation is acceptable?",
+          "why": "Clear limits help choose a model and fallback.",
+          "feeds": [
+            "PROMPT_SPEC.md"
+          ]
+        },
+        {
+          "id": "agent-outage",
+          "question": "What should a user see if the model or a tool is unavailable?",
+          "why": "The agent should explain where it stopped.",
+          "feeds": [
+            "PROMPT_SPEC.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Confirm channel, response-time and spend limits and a safe fallback."
+      ],
+      "boosters": [
+        "agent-designer",
+        "prompt-engineer"
+      ],
+      "agents": [
+        "ai-designer"
+      ]
+    },
+    "S8": {
+      "questions": [
+        {
+          "id": "agent-golden",
+          "question": "Which real conversations should become repeatable tests?",
+          "why": "Good answers can be compared to agreed examples.",
+          "feeds": [
+            "CHAT_EVAL.md"
+          ]
+        },
+        {
+          "id": "agent-edge",
+          "question": "Which unsafe or out-of-scope requests must get a clear refusal?",
+          "why": "Safety limits need realistic checks.",
+          "feeds": [
+            "CHAT_EVAL.md"
+          ]
+        },
+        {
+          "id": "agent-grade",
+          "question": "Who can decide whether the responses are accurate and helpful?",
+          "why": "Release criteria need a person who can judge them.",
+          "feeds": [
+            "CHAT_EVAL.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Provide examples for good answers, refusals, tool permission checks and human handoffs."
+      ],
+      "boosters": [
+        "prompt-engineer"
+      ],
+      "agents": [
+        "qa"
+      ]
+    }
+  },
+  "bundle_files": [
+    "AGENT_SPEC.md",
+    "CONVERSATION_FLOWS.md",
+    "PROMPT_SPEC.md",
+    "GUARDRAILS.md",
+    "CHAT_EVAL.md"
+  ]
+}

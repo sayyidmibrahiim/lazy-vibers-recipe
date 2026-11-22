@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "id": "game",
+  "label": "Game",
+  "flags": {
+    "has_ui": true
+  },
+  "sections": {
+    "S1": {
+      "questions": [
+        {
+          "id": "game-pitch",
+          "question": "What should a player be able to say about this game in one sentence?",
+          "why": "A short pitch keeps the plan focused.",
+          "feeds": [
+            "GDD.md"
+          ]
+        },
+        {
+          "id": "game-start",
+          "question": "What does a player do during their first thirty seconds?",
+          "why": "The first action teaches the main loop.",
+          "feeds": [
+            "GDD.md"
+          ]
+        },
+        {
+          "id": "game-audience",
+          "question": "Who would choose to play this, and for how long at a time?",
+          "why": "This helps choose session length and difficulty.",
+          "feeds": [
+            "GDD.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Write the pitch, audience and what makes play worth repeating."
+      ],
+      "boosters": [],
+      "agents": [
+        "game-designer"
+      ]
+    },
+    "S4": {
+      "questions": [
+        {
+          "id": "game-loop",
+          "question": "What action does the player repeat, and what changes after each attempt?",
+          "why": "It defines what the player learns.",
+          "feeds": [
+            "CORE_LOOP.md"
+          ]
+        },
+        {
+          "id": "game-failure",
+          "question": "How does a round end, and what happens when the player loses?",
+          "why": "A clear restart makes failure understandable.",
+          "feeds": [
+            "CORE_LOOP.md"
+          ]
+        },
+        {
+          "id": "game-growth",
+          "question": "What unlocks or gets harder as the player improves?",
+          "why": "Progress should have a visible signal.",
+          "feeds": [
+            "CORE_LOOP.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Describe a complete loop from player action to feedback, reward and next action."
+      ],
+      "boosters": [],
+      "agents": [
+        "game-designer"
+      ]
+    },
+    "S6": {
+      "questions": [
+        {
+          "id": "game-assets",
+          "question": "Which art and sounds do you already own or have permission to use?",
+          "why": "The team needs a lawful source for each asset.",
+          "feeds": [
+            "ASSET_LIST.md"
+          ]
+        },
+        {
+          "id": "game-platform",
+          "question": "What is the oldest device you want the game to run well on?",
+          "why": "Performance targets need a device to test.",
+          "feeds": [
+            "ASSET_LIST.md"
+          ]
+        },
+        {
+          "id": "game-saves",
+          "question": "What should survive when the player closes the game or changes devices?",
+          "why": "That decides what to describe in SAVE_DATA.",
+          "feeds": [
+            "ASSET_LIST.md",
+            "SAVE_DATA.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Identify asset sources, target devices and a usable substitute for anything missing."
+      ],
+      "boosters": [],
+      "agents": []
+    },
+    "S8": {
+      "questions": [
+        {
+          "id": "game-slice",
+          "question": "What is the smallest complete match or level you could test?",
+          "why": "A short slice proves the loop early.",
+          "feeds": [
+            "BALANCING.md"
+          ]
+        },
+        {
+          "id": "game-metrics",
+          "question": "How will you tell that a round is too hard or slow?",
+          "why": "A measure makes the first balance pass repeatable.",
+          "feeds": [
+            "BALANCING.md"
+          ]
+        },
+        {
+          "id": "game-tuning",
+          "question": "Which three numbers should you be able to change between playtests?",
+          "why": "Named controls make balance adjustments safe.",
+          "feeds": [
+            "BALANCING.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "List tunable values, playtest measures and one smallest playable slice."
+      ],
+      "boosters": [],
+      "agents": [
+        "game-designer"
+      ]
+    }
+  },
+  "bundle_files": [
+    "GDD.md",
+    "CORE_LOOP.md",
+    "BALANCING.md",
+    "SAVE_DATA.md",
+    "ASSET_LIST.md"
+  ]
+}

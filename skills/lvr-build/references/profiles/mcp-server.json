@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "id": "mcp-server",
+  "label": "Tool server for an AI assistant",
+  "flags": {},
+  "sections": {
+    "S1": {
+      "questions": [
+        {
+          "id": "mcp-jobs",
+          "question": "Which jobs should an assistant be able to do through the server?",
+          "why": "A few concrete jobs keep the first tool list small.",
+          "feeds": [
+            "MCP_TOOLS.md"
+          ]
+        },
+        {
+          "id": "mcp-callers",
+          "question": "Who should be allowed to connect to it?",
+          "why": "Caller identity affects access and setup.",
+          "feeds": [
+            "MCP_TOOLS.md"
+          ]
+        },
+        {
+          "id": "mcp-permission",
+          "question": "Which jobs can only read, and which actually change something?",
+          "why": "Changes may need user approval.",
+          "feeds": [
+            "MCP_TOOLS.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Name the first three jobs, callers and permitted effects."
+      ],
+      "boosters": [
+        "mcp-builder"
+      ],
+      "agents": [
+        "architect"
+      ]
+    },
+    "S2": {
+      "questions": [
+        {
+          "id": "mcp-transport",
+          "question": "Will the assistant connect on your computer or over the network?",
+          "why": "Local and hosted connections have different setup.",
+          "feeds": [
+            "TRANSPORT_AUTH.md"
+          ]
+        },
+        {
+          "id": "mcp-account",
+          "question": "Whose account does the server use for the service?",
+          "why": "That person controls access and costs.",
+          "feeds": [
+            "TRANSPORT_AUTH.md"
+          ]
+        },
+        {
+          "id": "mcp-revoke",
+          "question": "How should you cut off a connection when it is no longer needed?",
+          "why": "Revocation is part of the access plan.",
+          "feeds": [
+            "TRANSPORT_AUTH.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Confirm local or hosted connection, ownership and how access can be revoked."
+      ],
+      "boosters": [
+        "mcp-builder"
+      ],
+      "agents": [
+        "security"
+      ]
+    },
+    "S4": {
+      "questions": [
+        {
+          "id": "mcp-input",
+          "question": "What information must the assistant supply for each job?",
+          "why": "Required inputs prevent actions on the wrong item.",
+          "feeds": [
+            "MCP_TOOLS.md"
+          ]
+        },
+        {
+          "id": "mcp-output",
+          "question": "What does success return so the assistant can tell the user what happened?",
+          "why": "A visible result supports a reliable confirmation.",
+          "feeds": [
+            "MCP_TOOLS.md"
+          ]
+        },
+        {
+          "id": "mcp-errors",
+          "question": "What should the caller do if the service is busy, unavailable or refuses access?",
+          "why": "The failure response needs a useful next step.",
+          "feeds": [
+            "MCP_TOOLS.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Specify required inputs, visible outcomes and error behavior for each selected tool."
+      ],
+      "boosters": [
+        "mcp-builder"
+      ],
+      "agents": [
+        "api"
+      ]
+    },
+    "S8": {
+      "questions": [
+        {
+          "id": "mcp-test-read",
+          "question": "Which harmless sample jobs can prove each read tool works?",
+          "why": "Safe sample outputs can be checked repeatedly.",
+          "feeds": [
+            "MCP_EVAL.md"
+          ]
+        },
+        {
+          "id": "mcp-test-scope",
+          "question": "How can you show one caller cannot read another caller's records?",
+          "why": "This checks the access boundary.",
+          "feeds": [
+            "MCP_EVAL.md"
+          ]
+        },
+        {
+          "id": "mcp-test-install",
+          "question": "Which assistant should try a clean installation first?",
+          "why": "The install guide needs a real client check.",
+          "feeds": [
+            "MCP_EVAL.md",
+            "INSTALL_MANIFEST.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Write verifiable read-only test cases plus a permissions and install check."
+      ],
+      "boosters": [
+        "mcp-builder"
+      ],
+      "agents": [
+        "qa"
+      ]
+    }
+  },
+  "bundle_files": [
+    "MCP_TOOLS.md",
+    "TRANSPORT_AUTH.md",
+    "MCP_EVAL.md",
+    "INSTALL_MANIFEST.md"
+  ]
+}

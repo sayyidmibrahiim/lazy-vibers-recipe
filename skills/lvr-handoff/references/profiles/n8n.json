@@ -1,0 +1,172 @@
+{
+  "schema_version": 1,
+  "id": "n8n",
+  "label": "n8n or automation workflow",
+  "flags": {},
+  "sections": {
+    "S1": {
+      "questions": [
+        {
+          "id": "n8n-trigger",
+          "question": "What starts the workflow, and which starting events should it ignore?",
+          "why": "The trigger controls where the workflow runs.",
+          "feeds": [
+            "WORKFLOW_SPEC.md"
+          ]
+        },
+        {
+          "id": "n8n-result",
+          "question": "What should exist or change when it finishes?",
+          "why": "A visible result is easier to test.",
+          "feeds": [
+            "WORKFLOW_SPEC.md"
+          ]
+        },
+        {
+          "id": "n8n-stop",
+          "question": "At what point do you want the workflow to ask or stop?",
+          "why": "Some actions need a person to confirm them.",
+          "feeds": [
+            "WORKFLOW_SPEC.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Identify the trigger, finished result and a condition that should stop the workflow."
+      ],
+      "boosters": [
+        "n8n-workflow-lifecycle-official"
+      ],
+      "agents": [
+        "automation-designer"
+      ]
+    },
+    "S3": {
+      "questions": [
+        {
+          "id": "n8n-apps",
+          "question": "Which accounts and apps does the workflow touch?",
+          "why": "Each connection needs a clear owner.",
+          "feeds": [
+            "CREDENTIALS_CHECKLIST.md"
+          ]
+        },
+        {
+          "id": "n8n-access",
+          "question": "What is the least access each connection needs?",
+          "why": "The workflow should have enough access for its job.",
+          "feeds": [
+            "CREDENTIALS_CHECKLIST.md"
+          ]
+        },
+        {
+          "id": "n8n-expiry",
+          "question": "Who can replace a connection when access expires?",
+          "why": "Automation should have a named recovery path.",
+          "feeds": [
+            "CREDENTIALS_CHECKLIST.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Give each connected service an owner, minimum access and safe credential storage."
+      ],
+      "boosters": [
+        "n8n-credentials-and-security-official"
+      ],
+      "agents": [
+        "security"
+      ]
+    },
+    "S4": {
+      "questions": [
+        {
+          "id": "n8n-steps",
+          "question": "Can you walk from one example input to its final output?",
+          "why": "A real example exposes branching conditions.",
+          "feeds": [
+            "ERROR_HANDLING.md"
+          ]
+        },
+        {
+          "id": "n8n-repeat",
+          "question": "What should happen when the same event arrives twice?",
+          "why": "Retries and duplicate events should not double the result.",
+          "feeds": [
+            "ERROR_HANDLING.md"
+          ]
+        },
+        {
+          "id": "n8n-failure",
+          "question": "Who needs an alert if only part of the workflow succeeded?",
+          "why": "Partial work should be visible and recoverable.",
+          "feeds": [
+            "ERROR_HANDLING.md"
+          ]
+        },
+        {
+          "id": "n8n-ai",
+          "question": "Will an AI make any decision in this workflow, and when should a person take over?",
+          "why": "Automatic decisions need an agreed limit and a fallback.",
+          "feeds": [
+            "WORKFLOW_SPEC.md",
+            "ERROR_HANDLING.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Record retries, duplicate prevention and alerts for failure."
+      ],
+      "boosters": [
+        "n8n-workflow-lifecycle-official",
+        "n8n-agents-official"
+      ],
+      "agents": [
+        "automation-designer"
+      ]
+    },
+    "S8": {
+      "questions": [
+        {
+          "id": "n8n-sample",
+          "question": "Which sample inputs can be tested without contacting real customers?",
+          "why": "The team can verify the flow safely.",
+          "feeds": [
+            "TEST_DATA.md"
+          ]
+        },
+        {
+          "id": "n8n-replay",
+          "question": "Which step should we replay to prove that a retry is safe?",
+          "why": "This catches unexpected repeated actions.",
+          "feeds": [
+            "TEST_DATA.md"
+          ]
+        },
+        {
+          "id": "n8n-first-run",
+          "question": "Who checks the first real run after the test passes?",
+          "why": "Someone needs to notice a problem early.",
+          "feeds": [
+            "TEST_DATA.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Cover success, duplicate, failure and no-action cases with safe samples."
+      ],
+      "boosters": [
+        "n8n-workflow-lifecycle-official"
+      ],
+      "agents": [
+        "qa"
+      ]
+    }
+  },
+  "bundle_files": [
+    "WORKFLOW_SPEC.md",
+    "CREDENTIALS_CHECKLIST.md",
+    "ERROR_HANDLING.md",
+    "TEST_DATA.md"
+  ]
+}
