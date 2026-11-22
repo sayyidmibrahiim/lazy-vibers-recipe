@@ -10,3 +10,6 @@
 2026-11-22T18:00:27Z | codex/gpt-6 | task 38 | owner approved fix round 4 | next: align match behavior, docs, packaged copies and regression tests
 2026-11-22T18:02:44Z | codex/gpt-6 | task 38 | fix round 4 implemented and skill copies synced | next: same-context re-verify ticket requirements and existing regression suites
 2026-11-22T18:05:32Z | codex/gpt-6 | task 38 | round 4 verified PASS (225 checks); regression, sync, lint, typecheck and build pass; closed | next: ticket 05 booster registry
+2026-11-22T18:06:32Z | codex/gpt-6 | task 05 | claimed and confirmed upstream repository pins | next: verify licenses and skill paths, then implement registry and checker
+2026-11-22T18:12:26Z | codex/gpt-6 | task 05 | registry, planner, copied skills and source checker implemented | next: same-context schema, online and shared regression verification
+2026-11-22T18:15:01Z | codex/gpt-6 | task 05 | verified 5 schema and behavior tests; 27 upstream entries; regressions pass; closed | next: ticket 06 project-local install and cleanup

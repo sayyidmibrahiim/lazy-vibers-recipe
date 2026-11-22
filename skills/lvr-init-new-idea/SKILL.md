@@ -114,38 +114,34 @@ Goal: every core Booster installed, or its absence explicitly chosen by the user
 
 ### Core boosters
 
-| Booster | Repo | License | Used at | Install (preferred) |
-|---|---|---|---|---|
-| pm-skills interview patterns | `product-on-purpose/pm-skills` | Apache-2.0 | S1, S4 | `npx skills add product-on-purpose/pm-skills` |
-| OpenSpec pattern (structure reference) | `Fission-AI/OpenSpec` | MIT | S9 | `npx skills add Fission-AI/OpenSpec` |
-| SimpleEnglish (document-rule subset) | `AminBlg/SimpleEnglish` | MIT | S9 (+ OVERVIEW, strictest) | `npx skills add AminBlg/SimpleEnglish` |
-| humanizer (de-slop pass) | `blader/humanizer` | MIT | S9 | `npx skills add blader/humanizer` |
-| karpathy-guidelines | `multica-ai/andrej-karpathy-skills` | MIT | S9 (CODE_STYLE), S10 | `npx skills add multica-ai/andrej-karpathy-skills` |
-| ponytail | `DietrichGebert/ponytail` | MIT | S9 (CODE_STYLE), S10 | `npx skills add DietrichGebert/ponytail` |
-| competitor-analysis (research depth) | `browserbase/skills` or Firecrawl MCP | MIT | S5 | `npx skills add browserbase/skills`, or configure the Firecrawl MCP server |
-| Playwright MCP | `microsoft/playwright-mcp` | MIT | S10 verification (when a build runs) | configure the Playwright MCP server |
-| agents.md spec | `agentsmd/agents.md` | spec text, permissive | S9 | `npx skills add agentsmd/agents.md`, or fetch the spec text at use time |
+| Core booster | Pinned source in `references/boosters.json` | License | Used at |
+|---|---|---|---|
+| pm-skills interview patterns | `product-on-purpose/pm-skills` | Apache-2.0 | S1, S4, S5, S7, S9 |
+| grilling | `mattpocock/skills` | MIT | S0–S4 |
+| planning-and-task-breakdown | `addyosmani/agent-skills` | MIT | S8 |
+| ponytail | `DietrichGebert/ponytail` | MIT | S9, S10 |
+| anti-slop | `elithrar/dotfiles` | MIT | S9 |
+| SimpleEnglish (document-rule subset) | `AminBlg/SimpleEnglish` | MIT | S9 |
 
-Web research itself is not in this table: it is a required capability, checked in Step 1, with no "continue degraded" choice. The competitor-analysis booster only adds depth on top of it.
+Read `references/boosters.json` for each booster's commit, selected skill names, and supported harnesses. Use `LVR booster plan --section S9 --harness codex` for an example of the section plan. Each command uses a local checkout of the listed repository at the exact recorded commit. Substitute that checkout for `./<pinned-checkout>` and run from the project root. The command installs only the specified skills into the selected harness's project-local skill locations. A file found on disk still needs a loadability check in that harness.
 
-Alternative mechanisms, tried in order when the preferred one fails: Claude Code plugin (`claude plugin marketplace add <repo>`, then install) → manual copy of the booster's skill folder into this harness's skills directory.
+A **conditional** booster applies when its section and product conditions match. Unknown conditions stay pending. A **reference** entry names material to consult and credit. It has no install command. Web access remains a required capability from Step 1.
 
 ### Procedure
 
-Script: `LVR booster check --journal` checks every core booster in the registry and journals one `booster_check` each. If it returns `"code":"REGISTRY_MISSING"`, run the loop below by hand and journal each result with `LVR journal append --type booster_check --payload '{"name":"<name>","repo":"<repo>","result":"present"}'` (same for `booster_install_ok|failed`, `booster_choice`).
+Script: `LVR booster check --journal` checks every core booster in the registry and journals one `booster_check` each. If it returns `"code":"REGISTRY_MISSING"`, check the six names by hand. Recover the pinned registry from the same release before installing any missing skill. Journal each result with `LVR journal append --type booster_check --payload '{"name":"<name>","repo":"<repo>","result":"present"}'` (same for `booster_install_ok|failed`, `booster_choice`).
 
 Run this loop once per core booster, in the table order above, then move to the next booster:
 
 1. **Presence check** — the harness's skill/plugin list, or its known skills directories (e.g. `~/.claude/skills/`, `<cwd>/.claude/skills/`, `~/.agents/skills/`). Journal `booster_check` for this booster (payload: name, result `present|missing`). Presence maps to status `installed` only if the skill is actually loadable in this harness (listed/importable); present-but-unloadable → status `degraded` with a note (degraded surfacing rules apply).
-2. **MCP-type boosters** (Firecrawl, Playwright) are MCP servers, not skill folders: presence = the server is configured in this harness's MCP settings, plus (for Firecrawl) the API key is present. Missing server or key counts as missing; the install attempt adds the server config; the same failure choice applies.
-3. Result `present` → next booster. Result `missing` → install with the first mechanism that works. Success → journal `booster_install_ok`, status `installed`, next booster. Failure → journal `booster_install_failed`, then the interactive choice (step 4).
-4. **Interactive failure choice** — core boosters are output-quality dependencies, so failure is never silent. Say (English source): "Core booster '\<name\>' could not be installed (\<reason\>). Output quality depends on it. Choose: 1. Help me install it fully — I'll walk through this harness's install steps with you. 2. Continue degraded — output quality drops; the project is marked 'degraded' in state, journal, and the final OVERVIEW. 3. Stop here — nothing is lost; you can resume later with /lvr-continue."
+2. Result `present` → next booster. Result `missing` → install with the first mechanism that works. Success → journal `booster_install_ok`, status `installed`, next booster. Failure → journal `booster_install_failed`, then the interactive choice below.
+3. **Interactive failure choice** — core boosters are output-quality dependencies, so failure is never silent. Say (English source): "Core booster '\<name\>' could not be installed (\<reason\>). Output quality depends on it. Choose: 1. Help me install it fully — I'll walk through this harness's install steps with you. 2. Continue degraded — output quality drops; the project is marked 'degraded' in state, journal, and the final OVERVIEW. 3. Stop here — nothing is lost; you can resume later with /lvr-continue."
 
    Journal `booster_choice` (payload: booster, choice) and set the status:
    - Choice 1 → work through the real install steps with the user; success → status `installed` (+ journal `booster_install_ok`); still failing → present the choice again.
    - Choice 2 → status `degraded`; carry a note that S9 must surface it in OVERVIEW.md. Next booster.
    - Choice 3 → status `failed`; say: "Stopping here. Nothing is lost — run `/lvr-continue` once the booster situation is sorted." Stop the skill.
-5. After the last booster: hold all statuses in memory; Step 4 writes them into `state.json`.
+4. After the last booster: hold all statuses in memory; Step 4 writes them into `state.json`.
 
 ## Step 4 — S0 intake
 
@@ -156,7 +152,7 @@ Purpose: capture the raw idea fully; detect User Language; propose slug + displa
    - `project`: slug = the confirmed or provisional slug ("" if none yet), name "", idea_raw "" (filled in step 3), user_language "" (filled in step 4), created_at = the `section_start` S0 timestamp (ISO-8601 UTC), status "interview"
    - `pipeline`: current_section "S0", sections `{ "S0": { "status": "in_progress", "started_at": <now> } }`, loop_backs `[]`
    - `decisions`: `[]`
-   - `boosters`: core = the nine entries above with their Step-3 statuses (`installed | missing | failed | degraded`), enhancer `[]`
+   - `boosters`: core = the six entries above with their Step-3 statuses (`installed | missing | failed | degraded`), enhancer `[]`
    - `model_profile`: `{ "tier": <T1|T2|T3>, "probe": "passed"|"skipped", "declared_at": <the tier_declared journal timestamp> }`
    - `milestones`: `[]`, `deployment`: null, `handoff`: null
 

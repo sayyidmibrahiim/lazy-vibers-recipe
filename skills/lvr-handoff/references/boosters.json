@@ -1,0 +1,937 @@
+{
+  "schema_version": 1,
+  "harnesses": [
+    "antigravity",
+    "antigravity-cli",
+    "claude-code",
+    "cline",
+    "codex",
+    "cursor",
+    "gemini-cli",
+    "github-copilot",
+    "kilo",
+    "kimi-code-cli",
+    "opencode",
+    "pi",
+    "qwen-code",
+    "roo",
+    "windsurf",
+    "zcode"
+  ],
+  "boosters": [
+    {
+      "id": "pm-skills",
+      "name": "pm-skills interview patterns",
+      "kind": "skill",
+      "repo": "product-on-purpose/pm-skills",
+      "sha": "3456e5e309f38ac2a66943f20d4aaf8031268dfb",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "core",
+      "sections": [
+        "S1",
+        "S4",
+        "S5",
+        "S7",
+        "S9"
+      ],
+      "triggers": {},
+      "source_paths": [
+        "skills/define-problem-statement/SKILL.md",
+        "skills/deliver-edge-cases/SKILL.md",
+        "skills/deliver-acceptance-criteria/SKILL.md",
+        "skills/discover-competitive-analysis/SKILL.md",
+        "skills/define-prioritization-framework/SKILL.md",
+        "skills/deliver-prd/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "define-problem-statement",
+          "deliver-edge-cases",
+          "deliver-acceptance-criteria",
+          "discover-competitive-analysis",
+          "define-prioritization-framework",
+          "deliver-prd"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "define-problem-statement",
+          "deliver-edge-cases",
+          "deliver-acceptance-criteria",
+          "discover-competitive-analysis",
+          "define-prioritization-framework",
+          "deliver-prd"
+        ]
+      }
+    },
+    {
+      "id": "grilling",
+      "name": "grilling",
+      "kind": "skill",
+      "repo": "mattpocock/skills",
+      "sha": "abeeaf95660ba9e8b7c753eb38f441ca707a8823",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "core",
+      "sections": [
+        "S0",
+        "S1",
+        "S2",
+        "S3",
+        "S4"
+      ],
+      "triggers": {},
+      "source_paths": [
+        "skills/productivity/grilling/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "grilling"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "grilling"
+        ]
+      }
+    },
+    {
+      "id": "planning-and-task-breakdown",
+      "name": "planning-and-task-breakdown",
+      "kind": "skill",
+      "repo": "addyosmani/agent-skills",
+      "sha": "8c99fa36d90068c82d547f7c12a9d67a3e95f4ee",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "core",
+      "sections": [
+        "S8"
+      ],
+      "triggers": {},
+      "source_paths": [
+        "skills/planning-and-task-breakdown/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "planning-and-task-breakdown"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "planning-and-task-breakdown"
+        ]
+      }
+    },
+    {
+      "id": "ponytail",
+      "name": "ponytail",
+      "kind": "skill",
+      "repo": "DietrichGebert/ponytail",
+      "sha": "ebd8654c2c627f721eb8f9c0d1bd4090a29f9e10",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "core",
+      "sections": [
+        "S9",
+        "S10"
+      ],
+      "triggers": {},
+      "source_paths": [
+        "skills/ponytail/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "ponytail"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "ponytail"
+        ]
+      }
+    },
+    {
+      "id": "anti-slop",
+      "name": "anti-slop",
+      "kind": "skill",
+      "repo": "elithrar/dotfiles",
+      "sha": "eb4f994e0c1ebe1199f032f4e5fe1633d1b8067c",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "core",
+      "sections": [
+        "S9"
+      ],
+      "triggers": {},
+      "source_paths": [
+        ".agents/skills/anti-slop/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "anti-slop"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "anti-slop"
+        ]
+      }
+    },
+    {
+      "id": "simple-english",
+      "name": "SimpleEnglish (document-rule subset)",
+      "kind": "skill",
+      "repo": "AminBlg/SimpleEnglish",
+      "sha": "300432a9e4c473229a7049ab61b8ca2522d9214c",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "core",
+      "sections": [
+        "S9"
+      ],
+      "triggers": {},
+      "source_paths": [
+        "skills/simple-english/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "simple-english"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "simple-english"
+        ]
+      }
+    },
+    {
+      "id": "mom-test",
+      "name": "mom-test",
+      "kind": "skill",
+      "repo": "wondelai/skills",
+      "sha": "c37678106e63ef1c5472d848fb3d8b8c5b33fafe",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S1",
+        "S4"
+      ],
+      "triggers": {},
+      "source_paths": [
+        "mom-test/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "mom-test"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "mom-test"
+        ]
+      }
+    },
+    {
+      "id": "user-stories",
+      "name": "user-stories",
+      "kind": "skill",
+      "repo": "phuryn/pm-skills",
+      "sha": "9af7bfd0bc47fdad43c2eaa7a43cd13918e7aaef",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S4",
+        "S9"
+      ],
+      "triggers": {},
+      "source_paths": [
+        "pm-execution/skills/user-stories/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "user-stories"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "user-stories"
+        ]
+      }
+    },
+    {
+      "id": "architecture-designer",
+      "name": "architecture-designer",
+      "kind": "skill",
+      "repo": "jeffallan/claude-skills",
+      "sha": "4b94d98605baf742b751bb82832ace5caf942271",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S6"
+      ],
+      "triggers": {
+        "product_type": [
+          "web",
+          "mobile",
+          "game",
+          "rag",
+          "mcp",
+          "mcp-server",
+          "api",
+          "desktop",
+          "cli"
+        ]
+      },
+      "source_paths": [
+        "skills/architecture-designer/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "architecture-designer"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "architecture-designer"
+        ]
+      }
+    },
+    {
+      "id": "threat-modeling",
+      "name": "threat-modeling",
+      "kind": "skill",
+      "repo": "briiirussell/cybersecurity-skills",
+      "sha": "b19875422c1388db8c14d91ba7c1f8343e98c48b",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S6",
+        "S9"
+      ],
+      "triggers": {
+        "any": [
+          {
+            "flags": {
+              "stores_data": true
+            }
+          },
+          {
+            "flags": {
+              "regulated_domain": true
+            }
+          }
+        ]
+      },
+      "source_paths": [
+        "skills/threat-modeling/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "threat-modeling"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "threat-modeling"
+        ]
+      }
+    },
+    {
+      "id": "api-designer",
+      "name": "api-designer",
+      "kind": "skill",
+      "repo": "jeffallan/claude-skills",
+      "sha": "4b94d98605baf742b751bb82832ace5caf942271",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S9"
+      ],
+      "triggers": {
+        "product_type": [
+          "web",
+          "mobile",
+          "mcp",
+          "mcp-server",
+          "api",
+          "rag"
+        ]
+      },
+      "source_paths": [
+        "skills/api-designer/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "api-designer"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "api-designer"
+        ]
+      }
+    },
+    {
+      "id": "prompt-engineer",
+      "name": "prompt-engineer",
+      "kind": "skill",
+      "repo": "jeffallan/claude-skills",
+      "sha": "4b94d98605baf742b751bb82832ace5caf942271",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S9"
+      ],
+      "triggers": {
+        "flags": {
+          "has_llm": true
+        }
+      },
+      "source_paths": [
+        "skills/prompt-engineer/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "prompt-engineer"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "prompt-engineer"
+        ]
+      }
+    },
+    {
+      "id": "ui-ux-pro-max",
+      "name": "ui-ux-pro-max",
+      "kind": "skill",
+      "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sha": "6ec2bb58334ca3014573c4cbd4834ee3a40afd9d",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S9"
+      ],
+      "triggers": {
+        "flags": {
+          "has_ui": true
+        }
+      },
+      "source_paths": [
+        ".claude/skills/ui-ux-pro-max/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "ui-ux-pro-max"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "ui-ux-pro-max"
+        ]
+      }
+    },
+    {
+      "id": "agent-spec",
+      "name": "agent-spec",
+      "kind": "skill",
+      "repo": "mohitagw15856/pm-claude-skills",
+      "sha": "c4679f94f2566c675e63b1ecece104190943d842",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S9"
+      ],
+      "triggers": {
+        "product_type": [
+          "agent",
+          "workflow",
+          "skill",
+          "plugin",
+          "n8n"
+        ]
+      },
+      "source_paths": [
+        "skills/agent-spec/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "agent-spec"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "agent-spec"
+        ]
+      }
+    },
+    {
+      "id": "skill-creator",
+      "name": "skill-creator",
+      "kind": "skill",
+      "repo": "anthropics/skills",
+      "sha": "e4bb5d960d87126ff3b3a8af1a104b7db67560ba",
+      "license": "Apache-2.0",
+      "license_file": "skills/skill-creator/LICENSE.txt",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S9"
+      ],
+      "triggers": {
+        "product_type": [
+          "agent",
+          "workflow",
+          "skill",
+          "plugin",
+          "n8n"
+        ]
+      },
+      "source_paths": [
+        "skills/skill-creator/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "skill-creator"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "skill-creator"
+        ]
+      }
+    },
+    {
+      "id": "impeccable",
+      "name": "impeccable",
+      "kind": "skill",
+      "repo": "pbakaus/impeccable",
+      "sha": "b49177d32788f2dc585c42831d845dacf1ebed2c",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S4",
+        "S9"
+      ],
+      "triggers": {
+        "flags": {
+          "has_ui": true
+        }
+      },
+      "source_paths": [
+        ".agents/skills/impeccable/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "impeccable"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "impeccable"
+        ]
+      }
+    },
+    {
+      "id": "emil-design-eng",
+      "name": "emil-design-eng",
+      "kind": "skill",
+      "repo": "emilkowalski/skill",
+      "sha": "64eb3deb9a5fbfa041faf783e0bc3fd635872e9c",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S4",
+        "S9"
+      ],
+      "triggers": {
+        "flags": {
+          "has_ui": true
+        }
+      },
+      "source_paths": [
+        "skills/emil-design-eng/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "emil-design-eng"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "emil-design-eng"
+        ]
+      }
+    },
+    {
+      "id": "ux-copy",
+      "name": "ux-copy",
+      "kind": "skill",
+      "repo": "anthropics/knowledge-work-plugins",
+      "sha": "0e0fcacddcc892eb92a1b7873ff9d68159c47571",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S9"
+      ],
+      "triggers": {
+        "flags": {
+          "has_ui": true
+        }
+      },
+      "source_paths": [
+        "design/skills/ux-copy/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "ux-copy"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "ux-copy"
+        ]
+      }
+    },
+    {
+      "id": "antislop-human",
+      "name": "antislop-human",
+      "kind": "skill",
+      "repo": "miqdadbadjuber/anti-slop",
+      "sha": "7f6a03df2931c12cb244dc4ab14ee4866b0ac2ba",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S4",
+        "S9"
+      ],
+      "triggers": {
+        "flags": {
+          "has_ui": true
+        }
+      },
+      "source_paths": [
+        "skills/antislop-human/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "antislop-human"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "antislop-human"
+        ]
+      }
+    },
+    {
+      "id": "antislop-layoutmobile",
+      "name": "antislop-layoutmobile",
+      "kind": "skill",
+      "repo": "miqdadbadjuber/anti-slop",
+      "sha": "7f6a03df2931c12cb244dc4ab14ee4866b0ac2ba",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "conditional",
+      "sections": [
+        "S4",
+        "S9"
+      ],
+      "triggers": {
+        "flags": {
+          "has_ui": true
+        }
+      },
+      "source_paths": [
+        "skills/antislop-layoutmobile/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [
+          "antislop-layoutmobile"
+        ],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": {
+        "method": "skills-cli",
+        "skills": [
+          "antislop-layoutmobile"
+        ]
+      }
+    },
+    {
+      "id": "define-jtbd-canvas",
+      "name": "define-jtbd-canvas",
+      "kind": "skill",
+      "repo": "product-on-purpose/pm-skills",
+      "sha": "3456e5e309f38ac2a66943f20d4aaf8031268dfb",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "reference",
+      "sections": [
+        "S1"
+      ],
+      "triggers": {},
+      "source_paths": [
+        "skills/define-jtbd-canvas/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": null
+    },
+    {
+      "id": "develop-adr",
+      "name": "develop-adr",
+      "kind": "skill",
+      "repo": "product-on-purpose/pm-skills",
+      "sha": "3456e5e309f38ac2a66943f20d4aaf8031268dfb",
+      "license": "Apache-2.0",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "reference",
+      "sections": [
+        "S9"
+      ],
+      "triggers": {},
+      "source_paths": [
+        "skills/develop-adr/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": null
+    },
+    {
+      "id": "cost-estimator",
+      "name": "cost-estimator",
+      "kind": "skill",
+      "repo": "alirezarezvani/claude-cto-team",
+      "sha": "a5bbb788bab6009269f68ae19ff11eeb0e914a26",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "reference",
+      "sections": [
+        "S6",
+        "S9"
+      ],
+      "triggers": {},
+      "source_paths": [
+        "skills/cost-estimator/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": null,
+      "note": "Use the cost model and verify every price with current sources."
+    },
+    {
+      "id": "verification-before-completion",
+      "name": "verification-before-completion",
+      "kind": "skill",
+      "repo": "obra/superpowers",
+      "sha": "22f0b463e7a5e579904dd6211a520321035526f7",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "reference",
+      "sections": [
+        "S9",
+        "S10"
+      ],
+      "triggers": {},
+      "source_paths": [
+        "skills/verification-before-completion/SKILL.md"
+      ],
+      "detect": {
+        "skill_dirs": [],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": null
+    },
+    {
+      "id": "spec-kit-templates",
+      "name": "Spec Kit templates",
+      "kind": "skill",
+      "repo": "github/spec-kit",
+      "sha": "a4d571229e164e440f8950cac034607bae7b7518",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "reference",
+      "sections": [
+        "S9"
+      ],
+      "triggers": {
+        "flags": {
+          "stores_data": true
+        }
+      },
+      "source_paths": [
+        "templates/spec-template.md",
+        "templates/plan-template.md"
+      ],
+      "detect": {
+        "skill_dirs": [],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": null
+    },
+    {
+      "id": "review-animations-standards",
+      "name": "Motion standards",
+      "kind": "skill",
+      "repo": "emilkowalski/skill",
+      "sha": "64eb3deb9a5fbfa041faf783e0bc3fd635872e9c",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "reference",
+      "sections": [
+        "S9"
+      ],
+      "triggers": {
+        "flags": {
+          "has_ui": true
+        }
+      },
+      "source_paths": [
+        "skills/review-animations/STANDARDS.md"
+      ],
+      "detect": {
+        "skill_dirs": [],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": null
+    },
+    {
+      "id": "web-interface-guidelines",
+      "name": "Web Interface Guidelines",
+      "kind": "skill",
+      "repo": "vercel-labs/web-interface-guidelines",
+      "sha": "434b7f91364665f2f733b310ec54809bf8f37937",
+      "license": "MIT",
+      "license_file": "LICENSE",
+      "license_verified": "2026-11-23",
+      "tier": "reference",
+      "sections": [
+        "S9",
+        "S10"
+      ],
+      "triggers": {
+        "flags": {
+          "has_ui": true
+        }
+      },
+      "source_paths": [
+        "command.md"
+      ],
+      "detect": {
+        "skill_dirs": [],
+        "mcp_servers": [],
+        "env": []
+      },
+      "install": null
+    }
+  ]
+}

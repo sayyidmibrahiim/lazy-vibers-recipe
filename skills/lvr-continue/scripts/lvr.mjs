@@ -1845,6 +1845,38 @@ function registryCandidates(explicit) {
   c.push(path.join(SCRIPT_DIR, "..", "skills", "lvr-boosters.json"));
   return c;
 }
+
+const BOOSTER_LICENSES = new Set(["0BSD", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "MIT"]);
+const boosterPath = (value) => isStr(value) && value.split("/").every((part) => /^[.\w-]+$/.test(part) && part !== "." && part !== "..");
+
+function validBoosterTrigger(trigger, allowAny = true) {
+  if (!isObj(trigger)) return false;
+  return Object.entries(trigger).every(([key, value]) => {
+    if (key === "product_type") return Array.isArray(value) && value.length > 0 && value.every(nonEmpty);
+    if (key === "flags") return isObj(value) && Object.entries(value).length > 0 && Object.entries(value).every(([flag, expected]) => /^[a-z][a-z_0-9]*$/.test(flag) && typeof expected === "boolean");
+    return key === "any" && allowAny && Array.isArray(value) && value.length > 0 && value.every((term) => validBoosterTrigger(term, false) && Object.keys(term).length > 0);
+  });
+}
+
+function validateBoosterPlanEntry(booster, at, errors) {
+  const report = (key, message) => errors.push({ pointer: `${at}/${key}`, message });
+  if (!boosterPath(booster.repo) || booster.repo.split("/").length !== 2) report("repo", "Expected a GitHub owner/repository.");
+  if (!/^[a-f0-9]{40}$/.test(booster.sha ?? "")) report("sha", "Expected a full Git commit SHA.");
+  if (!BOOSTER_LICENSES.has(booster.license) || !boosterPath(booster.license_file) || !/^\d{4}-\d{2}-\d{2}$/.test(booster.license_verified ?? "") || !parseDay(booster.license_verified)?.ok) report("license", "Expected a permissive license, its source path and its verification date.");
+  if (!Array.isArray(booster.sections) || !booster.sections.length || !booster.sections.every((section) => SECTIONS.includes(section))) report("sections", "Expected sections S0 through S10.");
+  if (!validBoosterTrigger(booster.triggers)) report("triggers", "Expected product_type, flags, or an any list of conditions.");
+  if (!Array.isArray(booster.source_paths) || !booster.source_paths.length || !booster.source_paths.every(boosterPath)) report("source_paths", "Expected paths inside the pinned checkout.");
+  const install = booster.install;
+  if (booster.tier === "reference") {
+    if (install !== null) report("install", "Reference files have no install command.");
+    return;
+  }
+  const names = booster.detect?.skill_dirs;
+  if (booster.kind !== "skill" || !Array.isArray(names) || !isObj(install) || install.method !== "skills-cli" || !Array.isArray(install.skills) || !install.skills.length || !install.skills.every((name) => isStr(name) && /^[a-z0-9][a-z0-9_-]*$/.test(name) && names.includes(name))) {
+    report("install", "Expected a skills-cli install with named skills that can be detected.");
+  }
+}
+
 function loadRegistryFile(explicit) {
   const searched = registryCandidates(explicit);
   const found = searched.find((p) => { try { return fs.statSync(p).isFile(); } catch { return false; } });
@@ -1854,6 +1886,8 @@ function loadRegistryFile(explicit) {
   const errors = [];
   if (!isObj(data) || data.schema_version !== 1 || !Array.isArray(data.boosters)) errors.push({ message: "Registry needs schema_version 1 and a boosters array." });
   else {
+    const hasPlan = data.harnesses !== undefined;
+    if (hasPlan && (!Array.isArray(data.harnesses) || !data.harnesses.length || !data.harnesses.every((harness) => isStr(harness) && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(harness)) || new Set(data.harnesses).size !== data.harnesses.length)) errors.push({ pointer: "harnesses", message: "Expected distinct Skills CLI agent names." });
     const ids = new Set();
     data.boosters.forEach((b, i) => {
       const at = `boosters[${i}]`;
@@ -1865,7 +1899,9 @@ function loadRegistryFile(explicit) {
       if (!["skill", "mcp"].includes(b.kind)) errors.push({ pointer: `${at}/kind`, message: "kind must be skill|mcp." });
       if (!["core", "conditional", "reference"].includes(b.tier)) errors.push({ pointer: `${at}/tier`, message: "tier must be core|conditional|reference." });
       if (!isObj(b.detect) || !["skill_dirs", "mcp_servers", "env"].every((k) => Array.isArray(b.detect[k]) && b.detect[k].every(isStr))) errors.push({ pointer: `${at}/detect`, message: "detect needs skill_dirs, mcp_servers and env string arrays." });
+      if (hasPlan) validateBoosterPlanEntry(b, at, errors);
     });
+    if (hasPlan && data.boosters.filter((b) => b?.tier === "core").length > 6) errors.push({ pointer: "boosters", message: "At most six core boosters are allowed." });
   }
   return { searched, path: found, data, errors };
 }
@@ -2357,6 +2393,70 @@ const GLOBAL_EXTRA_ROOTS = [".config/opencode/skills", ".codeium/windsurf/skills
 const MCP_FILES_PROJECT = [".mcp.json", ".cursor/mcp.json", ".vscode/mcp.json", ".gemini/settings.json", "opencode.json"];
 const MCP_FILES_HOME = [".claude.json", ".cursor/mcp.json", ".gemini/settings.json", ".config/opencode/opencode.json"];
 
+function boosterRegistry(dir, file, requirePlan = false) {
+  const registry = loadRegistryFile(file);
+  if (!registry.path) {
+    throw fail("REGISTRY_MISSING", "Booster registry not found; use the skill's manual booster procedure.", { searched: registry.searched.map((p) => showPath(dir, p)) });
+  }
+  const errors = registry.errors ?? [];
+  if (requirePlan && !registry.data?.harnesses && !errors.length) errors.push({ pointer: "harnesses", message: "Section planning requires a registry with harnesses and planning fields." });
+  if (errors.length) throw fail("REGISTRY_INVALID", "The booster registry is not valid.", { errors, path: showPath(dir, registry.path) });
+  return registry;
+}
+
+function boosterApplicability(trigger, product) {
+  const conditions = [];
+  if (trigger.product_type) {
+    conditions.push(product?.status === "decided" && Array.isArray(product.types) ? product.types.some((type) => trigger.product_type.includes(type)) : null);
+  }
+  for (const [flag, expected] of Object.entries(trigger.flags ?? {})) {
+    const actual = product?.flags?.[flag];
+    conditions.push(typeof actual === "boolean" ? actual === expected : null);
+  }
+  if (trigger.any) {
+    const alternatives = trigger.any.map((term) => boosterApplicability(term, product));
+    conditions.push(alternatives.includes(true) ? true : alternatives.includes(null) ? null : false);
+  }
+  if (conditions.includes(false)) return false;
+  return conditions.includes(null) ? null : true;
+}
+
+function sectionBoosters(dir, registry, requested) {
+  const loaded = loadState(dir);
+  if (!["valid", "absent"].includes(loaded.kind)) throw fail("STATE_INVALID", "Section planning requires readable, valid project state.", { state: loaded.kind });
+  const section = requested ?? loaded.state?.pipeline?.current_section ?? "S0";
+  if (!SECTIONS.includes(section)) throw invalid("section", "S0..S10");
+  const boosters = [];
+  const pending = [];
+  for (const entry of registry.boosters) {
+    if (!entry.sections.includes(section)) continue;
+    const applies = boosterApplicability(entry.triggers, loaded.state?.product);
+    if (applies) boosters.push(entry);
+    if (applies === null) pending.push(entry);
+  }
+  return { section, boosters, pending };
+}
+
+function boosterPlan(dir, flags) {
+  const registry = boosterRegistry(dir, flags.registry, true);
+  const { section, boosters, pending } = sectionBoosters(dir, registry.data, flags.section);
+  if (flags.harness !== undefined && !registry.data.harnesses.includes(flags.harness)) throw invalid("harness", registry.data.harnesses.join("|"));
+  const harnesses = flags.harness === undefined ? registry.data.harnesses : [flags.harness];
+  const present = new Map(detectBoosters(dir, boosters.filter((entry) => entry.install !== null)).map((entry) => [entry.id, entry.present]));
+  return {
+    registry: showPath(dir, registry.path),
+    section,
+    boosters: boosters.map(({ install, ...entry }) => ({
+      ...entry,
+      present: present.get(entry.id) ?? null,
+      install: install === null ? null : Object.fromEntries(harnesses.map((harness) => [
+        harness, ["npx", "skills", "add", "./<pinned-checkout>", "--agent", harness, "--skill", ...install.skills, "--copy", "-y"],
+      ])),
+    })),
+    pending: pending.map(({ id, triggers }) => ({ id, triggers })),
+  };
+}
+
 function collectMcpServers(obj, found, depth = 0) {
   if (!isObj(obj) || depth > 4) return;
   for (const [k, v] of Object.entries(obj)) {
@@ -2395,14 +2495,15 @@ function detectBoosters(dir, boosters) {
   const homeRoot = (r) => path.join(home, r);
   return boosters.map((b) => {
     const where = [];
+    const found = new Set();
     for (const sd of b.detect.skill_dirs) {
       for (const r of SKILL_ROOTS) {
         const p = path.join(dir, r, sd, "SKILL.md");
-        if (fs.existsSync(p)) where.push({ scope: "project", path: relPath(dir, p) });
+        if (fs.existsSync(p)) { where.push({ scope: "project", path: relPath(dir, p) }); found.add(sd); }
       }
       for (const r of [...SKILL_ROOTS, ...GLOBAL_EXTRA_ROOTS]) {
         const p = path.join(homeRoot(r), sd, "SKILL.md");
-        if (fs.existsSync(p)) where.push({ scope: "global", path: "~/" + relPath(home, p) });
+        if (fs.existsSync(p)) { where.push({ scope: "global", path: "~/" + relPath(home, p) }); found.add(sd); }
       }
     }
     let mcpConfigured = null, keysPresent = null;
@@ -2414,7 +2515,7 @@ function detectBoosters(dir, boosters) {
         keysPresent = b.detect.env.every((k) => (process.env[k] ?? "") !== "" || cfgKeys.has(k));
       }
     }
-    const present = b.kind === "mcp" ? !!mcpConfigured && keysPresent !== false : where.length > 0;
+    const present = b.kind === "mcp" ? !!mcpConfigured && keysPresent !== false : b.install?.skills ? b.install.skills.every((name) => found.has(name)) : where.length > 0;
     return {
       id: b.id, name: b.name, tier: b.tier, kind: b.kind, present, where, mcp_configured: mcpConfigured,
       keys_present: keysPresent, loadable: "unknown", suggested_status: present ? "installed" : "missing",
@@ -7019,16 +7120,16 @@ const COMMANDS = {
   "handoff prompt": { help: "Write HANDOFF-PROMPT.md from the fixed template (only when the bytes change); returns the kickoff commands.", flags: [], run: async (c) => cmdHandoffPrompt(c) },
   "handoff install-lines": { help: "Print the booster install lines from CAPABILITIES.md (read-only).", flags: [], run: async (c) => cmdInstallLines(c) },
   "booster check": {
-    help: "Check core boosters against the registry. [--name id] [--registry PATH] [--journal]", flags: ["name", "registry", "journal"],
+    help: "Check core boosters, a named booster, or applicable installs for a section. [--name id | --section S] [--registry PATH] [--journal]", flags: ["name", "section", "registry", "journal"],
     run: async ({ dir, flags }) => {
-      const reg = loadRegistryFile(flags.registry);
-      const searched = reg.searched.map((p) => showPath(dir, p));
-      if (!reg.path) throw fail("REGISTRY_MISSING", "Booster registry not found; use the skill's manual booster procedure.", { searched });
-      if (reg.errors?.length) throw fail("REGISTRY_INVALID", "The booster registry is not valid.", { errors: reg.errors, path: showPath(dir, reg.path) });
+      if (flags.name !== undefined && flags.section !== undefined) throw invalid("section", "either --section or --name, not both");
+      const reg = boosterRegistry(dir, flags.registry, flags.section !== undefined);
       let list = reg.data.boosters;
       if (flags.name !== undefined) {
         list = list.filter((b) => b.id === flags.name || b.name === flags.name);
         if (!list.length) throw invalid("name", "a booster id or name from the registry");
+      } else if (flags.section !== undefined) {
+        list = sectionBoosters(dir, reg.data, flags.section).boosters.filter((booster) => booster.install !== null);
       } else list = list.filter((b) => b.tier === "core");
       const boosters = detectBoosters(dir, list);
       const out = { registry: showPath(dir, reg.path), boosters };
@@ -7045,6 +7146,11 @@ const COMMANDS = {
       }
       return out;
     },
+  },
+  "booster plan": {
+    help: "List applicable boosters and pending conditions for a section without installing anything. [--section S] [--harness NAME] [--registry PATH]",
+    flags: ["section", "harness", "registry"],
+    run: async ({ dir, flags }) => boosterPlan(dir, flags),
   },
 };
 
