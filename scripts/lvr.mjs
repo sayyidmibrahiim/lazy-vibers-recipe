@@ -5703,10 +5703,8 @@ async function computeDiff(ctx, inp) {
   // B2/B6/B7: which earlier finding a draft is (contract §10, "Identity"). The locating quote is the first evidence quote from
   // the locator's file (else the first quote). A draft and an earlier finding of the same lens, check and locator file are
   //   same   their locating quotes overlap in today's text (absence-only on both sides: the same locator and a shared searched term);
-  //   maybe  no shared evidence, but the same unit: the same anchor (the smallest unit, an id unit or table row before a heading,
-  //          holding the first line of the locating quote) or the same locator. The same gap re-quoted from another part of a row
-  //          and a different gap in that row look alike, so the reviewer answers; a `fixed` finding is matched only by `same`;
-  //   other  a different unit.
+  //   maybe  disjoint quotes share a line, or one quote is unavailable and the anchor or locator still agrees;
+  //   other  both quotes still stand on separate lines, or there is no common anchor for unavailable evidence.
   // Exactly one `same` (claimed by no other draft) is automatic. A `maybe` or a shared `same` with an unmatched earlier finding is a
   // `match` question: location alone never reuses an id, and nothing is merged silently. A draft whose computed id is taken by an
   // earlier finding it is not gets a split id `<id>-<n>`.
@@ -5731,6 +5729,14 @@ async function computeDiff(ctx, inp) {
     if (xq && yq) {
       const yo = occ(yq), xo = occ(xq);
       if (xo.some((u) => yo.some((v) => u.col === v.col && u.a < v.b && v.a < u.b))) return { rel: "same", how: "quote", at: xa };
+      if (xo.length && yo.length) {
+        const xc = ctx.colByPath(xq.file), yc = ctx.colByPath(yq.file);
+        if (xc.col !== yc.col) return { rel: "other" };
+        const priorLines = new Set(quoteLines(ctx, yc, yq.quote).map((line) => line.ln));
+        if (!quoteLines(ctx, xc, xq.quote).some((line) => priorLines.has(line.ln))) return { rel: "other" };
+        if (f.status === "fixed" && !famOf(p.id, f.id)) return { rel: "other" };
+        return { rel: "maybe", how: "line", at: xa };
+      }
     } else if (!xq && !yq && p.loc.norm === f.locator) {
       const ty = termsOf(f.absence);
       if ([...termsOf(p.d.absence)].some((t) => ty.has(t))) return { rel: "same", how: "absence", at: p.loc.norm };
@@ -5894,7 +5900,12 @@ async function computeDiff(ctx, inp) {
   const findingLines = [];
   const statusLines = [];
   const apologyLines = [];
-  const rkHow = (p) => (p.rk.how === "quote" ? `same lens and check, and its evidence overlaps ${p.id}'s in today's text` : p.rk.how === "absence" ? `same lens, check and locator, and a searched term in common with ${p.id}` : `same lens, check and unit ${p.rk.at}, no shared evidence`);
+  const rkHow = (p) => {
+    if (p.rk.how === "quote") return `same lens and check, and its evidence overlaps ${p.id}'s in today's text`;
+    if (p.rk.how === "absence") return `same lens, check and locator, and a searched term in common with ${p.id}`;
+    if (p.rk.how === "line") return `same lens and check, with separate quotes on one line in ${p.rk.at}`;
+    return `same lens, check and unit ${p.rk.at}, no shared evidence`;
+  };
   const rkReason = (p) => {
     if (p.rk.kind === "split") return `split: drafted as ${p.drafted}, the id of an earlier, different gap; this gap gets its own id ${p.id}${p.rk.auto ? "" : " (distinct in reconcile.json)"}`;
     const tag = p.rk.kind === "family" ? "split" : "same_as";

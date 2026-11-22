@@ -4781,7 +4781,6 @@ function quoteLines(ctx, c, quote) {
   if (at < 0 || nq === "") return [];
   return spans.filter((s) => s.a < at + nq.length && s.b > at).map((s) => ({ ln: s.ln, h: s.h }));
 }
-const quoteLineHashes = (ctx, c, quote) => quoteLines(ctx, c, quote).map((x) => x.h);
 /**
  * The anchor of a finding (B2, contract §10): the smallest unit of the locator's file that holds the first line of the
  * first evidence quote from that file, as `FILE#<unit key>`. Without such a quote (absence evidence, a quote that is
@@ -4834,6 +4833,17 @@ function predProblem(p, depth = 0) {
   }
 }
 const predKind = (p) => (isObj(p) ? Object.keys(p)[0] ?? "manual" : "manual");
+/** The files a verify predicate reads; "*" for a leaf that reads the whole bundle (lint without file, crosscheck, blueprint_in_sync). */
+function predFiles(p, out = []) {
+  if (!isObj(p)) return out;
+  const k = predKind(p), v = p[k];
+  if (["contains", "absent", "matches", "count", "cite_clean"].includes(k)) { if (isObj(v) && isStr(v.file)) out.push(v.file); }
+  else if (k === "lint") out.push(isObj(v) && isStr(v.file) ? v.file : "*");
+  else if (k === "crosscheck" || k === "blueprint_in_sync") out.push("*");
+  else if (k === "not") predFiles(v, out);
+  else if ((k === "all" || k === "any") && Array.isArray(v)) for (const x of v) predFiles(x, out);
+  return out;
+}
 
 /** A cite group string (`fact`): [] when valid, else the problems. */
 function factProblems(ctx, fact) {
@@ -4937,7 +4947,7 @@ function prepareDrafts(ctx, rawList, env) {
       id = `${p.id}-${n}`;
     }
     if (id !== p.id) { collisions.push({ index: p.index, id: p.id, assigned: id }); p.baseId = p.id; p.id = id; }
-    if (seen.has(p.id)) { dups.push({ id: p.id, indexes: [seen.get(p.id), p.index] }); p.errors.push({ code: "DUPLICATE_FINDING", message: `${p.id} appears twice in this run: merge the drafts.` }); } else seen.set(p.id, p.index);
+    if (seen.has(p.id)) { dups.push({ id: p.id, indexes: [seen.get(p.id), p.index] }); p.errors.push({ code: "DUPLICATE_FINDING", message: `${p.id} appears twice in this run: if both drafts are the same gap, merge them; if they are separate gaps, give each its own claim_key (<subject>:<aspect>, contract §5).` }); } else seen.set(p.id, p.index);
   }
   return { prepared, dups, collisions };
 }
@@ -5541,7 +5551,7 @@ function cmdReviewCoverage({ dir, flags }) {
   const ctx = reviewCtx(dir, flags);
   const inp = runInputs(ctx);
   const r = coverageCheck(ctx, inp);
-  for (const d of inp.dups) if (!r.errors.some((e) => e.code === "DUPLICATE_FINDING" && e.id === d.id)) r.errors.push({ code: "DUPLICATE_FINDING", lens: null, col: null, id: d.id, message: `${d.id} appears twice.` });
+  for (const d of inp.dups) if (!r.errors.some((e) => e.code === "DUPLICATE_FINDING" && e.id === d.id)) r.errors.push({ code: "DUPLICATE_FINDING", lens: null, col: null, id: d.id, message: `${d.id} appears twice: merge the drafts if they are the same gap, or give each its own claim_key (<subject>:<aspect>) if they are separate gaps.` });
   for (const c of inp.collisions) r.errors.push({ code: "ID_COLLISION", lens: null, col: null, id: c.assigned, message: `${c.id} collides with a different finding in the ledger (assigned ${c.assigned}).` });
   return { run: ctx.run, scope: ctx.scope, valid: r.errors.length === 0, errors: r.errors, counts: r.counts, saturation: r.saturation };
 }
@@ -5690,13 +5700,14 @@ async function computeDiff(ctx, inp) {
   const live0 = prepared.filter((p) => p.d.status !== "withdrawn");
   const withdrawnDrafts = prepared.filter((p) => p.d.status === "withdrawn");
 
-  // B2/B6: which earlier finding a draft is (contract §10, "Identity"). The locating quote is the first evidence quote from
+  // B2/B6/B7: which earlier finding a draft is (contract §10, "Identity"). The locating quote is the first evidence quote from
   // the locator's file (else the first quote). A draft and an earlier finding of the same lens, check and locator file are
-  //   same   both locating quotes are in today's text and overlap there (absence-only on both sides: the same locator and a shared searched term);
-  //   other  the earlier quote is still in today's text and does not overlap: the earlier gap's evidence still stands elsewhere;
-  //   maybe  the earlier quote is gone from today's text (or only one side has a quote) and both sit in the same unit.
-  // Exactly one `same` (claimed by no other draft) is automatic. `maybe`, or competing `same`, is a `match` question. `other` never matches:
-  // location alone never reuses an id. A draft whose computed id is taken by an earlier finding it is not gets a split id `<id>-<n>`.
+  //   same   their locating quotes overlap in today's text (absence-only on both sides: the same locator and a shared searched term);
+  //   maybe  disjoint quotes share a line, or one quote is unavailable and the anchor or locator still agrees;
+  //   other  both quotes still stand on separate lines, or there is no common anchor for unavailable evidence.
+  // Exactly one `same` (claimed by no other draft) is automatic. A `maybe` or a shared `same` with an unmatched earlier finding is a
+  // `match` question: location alone never reuses an id, and nothing is merged silently. A draft whose computed id is taken by an
+  // earlier finding it is not gets a split id `<id>-<n>`.
   const M = R("matches");
   const locQ = (col, ev) => {
     const qs = (Array.isArray(ev) ? ev : []).filter((e) => isObj(e) && isStr(e.file) && isStr(e.quote) && ctx.colByPath(e.file));
@@ -5714,20 +5725,25 @@ async function computeDiff(ctx, inp) {
     const fl = parseLocator(ctx, f.locator, null);
     if (f.lens !== p.d.lens || f.check !== p.d.check || fl.col !== p.loc.col) return null;
     const xq = locQ(p.loc.col, p.d.evidence), yq = locQ(fl.col, f.evidence);
-    const xa = anchorOf(ctx, p.loc.norm, p.d.evidence), ya = isStr(f.anchor) ? f.anchor : anchorOf(ctx, f.locator, f.evidence);
-    const sameUnit = xa === ya || p.loc.norm === f.locator;
+    const xa = anchorOf(ctx, p.loc.norm, p.d.evidence), ya = anchorOf(ctx, f.locator, f.evidence);
     if (xq && yq) {
-      const yo = occ(yq);
-      if (!yo.length) return sameUnit ? { rel: "maybe", how: "anchor", at: xa } : { rel: "other" };
-      const xo = occ(xq);
-      return xo.some((u) => yo.some((v) => u.col === v.col && u.a < v.b && v.a < u.b)) ? { rel: "same", how: "quote", at: xa } : { rel: "other" };
-    }
-    if (!xq && !yq) {
-      if (p.loc.norm !== f.locator) return { rel: "other" };
+      const yo = occ(yq), xo = occ(xq);
+      if (xo.some((u) => yo.some((v) => u.col === v.col && u.a < v.b && v.a < u.b))) return { rel: "same", how: "quote", at: xa };
+      if (xo.length && yo.length) {
+        const xc = ctx.colByPath(xq.file), yc = ctx.colByPath(yq.file);
+        if (xc.col !== yc.col) return { rel: "other" };
+        const priorLines = new Set(quoteLines(ctx, yc, yq.quote).map((line) => line.ln));
+        if (!quoteLines(ctx, xc, xq.quote).some((line) => priorLines.has(line.ln))) return { rel: "other" };
+        if (f.status === "fixed" && !famOf(p.id, f.id)) return { rel: "other" };
+        return { rel: "maybe", how: "line", at: xa };
+      }
+    } else if (!xq && !yq && p.loc.norm === f.locator) {
       const ty = termsOf(f.absence);
-      return [...termsOf(p.d.absence)].some((t) => ty.has(t)) ? { rel: "same", how: "absence", at: p.loc.norm } : { rel: "other" };
+      if ([...termsOf(p.d.absence)].some((t) => ty.has(t))) return { rel: "same", how: "absence", at: p.loc.norm };
     }
-    return sameUnit ? { rel: "maybe", how: "anchor", at: xa } : { rel: "other" };
+    if (!(xa === ya || p.loc.norm === f.locator)) return { rel: "other" };
+    if (f.status === "fixed" && !famOf(p.id, f.id)) return { rel: "other" };
+    return { rel: "maybe", how: "unit", at: xa };
   };
   const foldEntries = [...foldP.values()].sort((x, y) => cmpStr(x.id, y.id));
   const famOf = (x0, id) => id === x0 || (id.startsWith(x0 + "-") && /^\d+$/.test(id.slice(x0.length + 1)));
@@ -5756,12 +5772,13 @@ async function computeDiff(ctx, inp) {
     if (!list.length) throw matchBad(p.id, "it has no candidate (no earlier finding of the same check shares its evidence or its unit), so the answer has no effect", { candidates: [] });
     answered.add(p.id);
     if (isObj(m) && nonEmpty(m.distinct) && m.same_as === undefined) continue;
-    if (!(isObj(m) && isStr(m.same_as) && m.distinct === undefined)) throw matchBad(p.id, 'give {"same_as": "<id>"} or {"distinct": "<reason>"}', {});
+    if (!(isObj(m) && isStr(m.same_as) && m.distinct === undefined)) throw matchBad(p.id, 'give {"same_as": "<id>", "reason": "<why it is the same gap>"} or {"distinct": "<reason>"}', {});
+    if (!nonEmpty(m.reason)) throw matchBad(p.id, `same_as needs a reason (why it is the same gap as ${m.same_as}); the report prints it`, { same_as: m.same_as });
     const c = list.find((z) => z.y === m.same_as);
     if (!c) throw matchBad(p.id, `${m.same_as} is not one of its candidates (${list.map((z) => z.y).join(", ")})`, { same_as: m.same_as, candidates: list.map((z) => z.y) });
     if (claimed.has(c.y)) throw matchBad(p.id, `${c.y} is already matched by ${claimed.get(c.y)}`, { same_as: c.y });
     claimed.set(c.y, p.id);
-    if (c.y !== p.id) rekey.set(p.id, { ...c, kind: famOf(p.id, c.y) ? "family" : "same_as", auto: false });
+    if (c.y !== p.id) rekey.set(p.id, { ...c, kind: famOf(p.id, c.y) ? "family" : "same_as", auto: false, reason: m.reason });
   }
   const matched = new Set(answered);
   // a draft whose computed id is a `same` candidate keeps that id first
@@ -5810,15 +5827,13 @@ async function computeDiff(ctx, inp) {
     }
     return runCache.get(r);
   };
+  // without a usable text copy of an existing file the quote counts as already there (a deleted or edited copy launders nothing)
   const quoteIn = (rt, c, quote) => {
     const f = snapFile(rt.snap, c.col);
     if (!f?.exists) return false;
-    if (rt.text.has(c.col)) {
-      if (!rt.norm.has(c.col)) rt.norm.set(c.col, normQ(rt.text.get(c.col)));
-      return rt.norm.get(c.col).includes(normQ(quote));
-    }
-    const hs = quoteLineHashes(ctx, c, quote), have = new Set(f.lines ?? []);
-    return hs.length > 0 && hs.every((h) => have.has(h));
+    if (!rt.text.has(c.col)) return true;
+    if (!rt.norm.has(c.col)) rt.norm.set(c.col, normQ(rt.text.get(c.col)));
+    return rt.norm.get(c.col).includes(normQ(quote));
   };
   const heldIn = (p, r) => {
     const rt = runText(r);
@@ -5826,7 +5841,10 @@ async function computeDiff(ctx, inp) {
     const ev = evQuotes(p.d.evidence);
     if (ev.length) {
       const i = ev.findIndex((e) => quoteIn(rt, ctx.colByPath(e.file), e.quote));
-      if (i >= 0) return { held: true, why: `evidence quote ${i + 1} ("${trunc(normQ(ev[i].quote), 60)}") was already in ${ctx.colByPath(ev[i].file).key} in run ${r}` };
+      if (i >= 0) {
+        const c = ctx.colByPath(ev[i].file);
+        return { held: true, why: rt.text.has(c.col) ? `evidence quote ${i + 1} ("${trunc(normQ(ev[i].quote), 60)}") was already in ${c.key} in run ${r}` : `run ${r} kept no usable text copy of ${c.key}, so evidence quote ${i + 1} cannot be shown to be new` };
+      }
       return { held: false, why: `none of its ${ev.length} evidence quote(s) was in run ${r}'s text` };
     }
     if (!snapFile(rt.snap, p.loc.col)?.exists) return { held: false, why: `${p.loc.key} did not exist in run ${r}` };
@@ -5882,11 +5900,16 @@ async function computeDiff(ctx, inp) {
   const findingLines = [];
   const statusLines = [];
   const apologyLines = [];
-  const rkHow = (p) => (p.rk.how === "quote" ? `same lens and check, and its evidence overlaps ${p.id}'s in today's text` : p.rk.how === "absence" ? `same lens, check and locator, and a searched term in common with ${p.id}` : `same lens, check and anchor ${p.rk.at}; ${p.id}'s evidence is gone from today's text`);
+  const rkHow = (p) => {
+    if (p.rk.how === "quote") return `same lens and check, and its evidence overlaps ${p.id}'s in today's text`;
+    if (p.rk.how === "absence") return `same lens, check and locator, and a searched term in common with ${p.id}`;
+    if (p.rk.how === "line") return `same lens and check, with separate quotes on one line in ${p.rk.at}`;
+    return `same lens, check and unit ${p.rk.at}, no shared evidence`;
+  };
   const rkReason = (p) => {
     if (p.rk.kind === "split") return `split: drafted as ${p.drafted}, the id of an earlier, different gap; this gap gets its own id ${p.id}${p.rk.auto ? "" : " (distinct in reconcile.json)"}`;
     const tag = p.rk.kind === "family" ? "split" : "same_as";
-    return `${tag}: drafted as ${p.drafted} (claim_key ${p.ck}, locator ${p.loc.norm}); ${rkHow(p)}${p.rk.auto ? "" : " (matched in reconcile.json)"}`;
+    return `${tag}: drafted as ${p.drafted} (claim_key ${p.ck}, locator ${p.loc.norm}); ${rkHow(p)}${p.rk.auto ? "" : ` (matched in reconcile.json: ${oneLine(p.rk.reason ?? "")})`}`;
   };
   const mkStatus = (id, status, reason, verify, by) => mkLine("status", { run: N, id, status, reason, verify: verify ?? null, by: by ?? null });
   for (const p of live) {
@@ -5956,7 +5979,15 @@ async function computeDiff(ctx, inp) {
     const ev = await evalPred(ctx, prior.verify, memo);
     // B6: fixed needs a passing verify AND a change to its own files since P; a passing verify on unchanged text fixes nothing
     const qs = evQuotes(prior.evidence);
-    const locs = [prior.locator, ...(Array.isArray(prior.also) ? prior.also : []), ...qs.map((e) => e.file), ...(isObj(prior.absence) && Array.isArray(prior.absence.files) ? prior.absence.files : [])].map((x) => parseLocator(ctx, x, null)).filter((x) => x.col);
+    // B8: its files are what it cites, what its verify reads and where its applied fixes landed
+    const vf = predFiles(prior.verify);
+    const appliedFiles = [
+      ...model.L.lines.filter((l) => l.t === "apply" && l.id === id && l.result === "applied" && l.run > P.run).flatMap((l) => (Array.isArray(l.files) ? l.files : [])),
+      ...(apply ? (Array.isArray(applyDoc?.applied) ? applyDoc.applied : []).filter((a) => isObj(a) && a.id === id && a.result === "applied").flatMap((a) => (Array.isArray(a.files) ? a.files : [])) : []),
+    ];
+    const locs = [prior.locator, ...(Array.isArray(prior.also) ? prior.also : []), ...qs.map((e) => e.file), ...(isObj(prior.absence) && Array.isArray(prior.absence.files) ? prior.absence.files : []), ...vf.filter((x) => x !== "*"), ...appliedFiles]
+      .filter(isStr).map((x) => parseLocator(ctx, x, null)).filter((x) => x.col)
+      .concat(vf.includes("*") ? ctx.cols.map((c) => ({ col: c.col, key: c.key })) : []);
     const filesChanged = uniq(locs.filter((l) => { const a = snapFile(snapP, l.col), b = snapFile(snap, l.col); return (a?.sha256 ?? null) !== (b?.sha256 ?? null); }).map((l) => l.key));
     const stands = qs.length > 0 && qs.every((e) => !quoteProblem(ctx, e.file, e.quote));
     let hint, status = prior.status, why;
@@ -6171,7 +6202,7 @@ const verdictText = (scope, v) => (scope === "scope-only" && SCOPE_WORDS[v] ? SC
 
 function coverageGate(ctx, inp) {
   const r = coverageCheck(ctx, inp);
-  for (const d of inp.dups) if (!r.errors.some((e) => e.code === "DUPLICATE_FINDING" && e.id === d.id)) r.errors.push({ code: "DUPLICATE_FINDING", lens: null, col: null, id: d.id, message: `${d.id} appears twice.` });
+  for (const d of inp.dups) if (!r.errors.some((e) => e.code === "DUPLICATE_FINDING" && e.id === d.id)) r.errors.push({ code: "DUPLICATE_FINDING", lens: null, col: null, id: d.id, message: `${d.id} appears twice: merge the drafts if they are the same gap, or give each its own claim_key (<subject>:<aspect>) if they are separate gaps.` });
   for (const c of inp.collisions) r.errors.push({ code: "ID_COLLISION", lens: null, col: null, id: c.assigned, message: `${c.id} collides with a different finding in the ledger (assigned ${c.assigned}).` });
   return r;
 }
@@ -6361,7 +6392,13 @@ function buildReport(ctx, model, sc, cellsLine, cells, P) {
   for (const f of fr) if (f.first_run === N) newByClass[f.class] = (newByClass[f.class] ?? 0) + 1;
   const misses = runLines.filter((l) => l.t === "status" && isStr(l.reason) && l.reason.startsWith("sweep-miss")).map((l) => l.id);
   if (misses.length) L(`- Sweep misses (not found again, but not fixed either; kept as they were): ${misses.join(", ")}`);
-  for (const x of runLines.filter((l) => l.t === "status" && isStr(l.reason) && l.reason.startsWith("same_as:"))) L(`- Same gap, new wording: ${x.id} was ${oneLine(x.reason.slice(8).trim())}`);
+  // A16: a re-key shows the earlier claim next to this run's, so a wrong merge is visible
+  const claimsOf = (id) => {
+    const ls = model.L.lines.filter((l) => l.t === "finding" && l.id === id);
+    const before = ls.filter((l) => l.run < N).pop(), now = ls.find((l) => l.run === N);
+    return before && now ? ` Earlier claim: "${trunc(oneLine(before.claim), 140)}"; this run: "${trunc(oneLine(now.claim), 140)}".` : "";
+  };
+  for (const x of runLines.filter((l) => l.t === "status" && isStr(l.reason) && l.reason.startsWith("same_as:"))) L(`- Same gap, new wording: ${x.id} was ${oneLine(x.reason.slice(8).trim())}.${claimsOf(x.id)}`);
   for (const x of runLines.filter((l) => l.t === "status" && isStr(l.reason) && l.reason.startsWith("split:"))) L(`- Own id: ${x.id} was ${oneLine(x.reason.slice(6).trim())}`);
   for (const f of fr.filter((l) => l.first_run === N)) L(`- New ${f.id} (${f.lens}, ${f.check}): ${f.class}${f.class_hint && f.class_hint !== f.class ? `, raised from the script hint ${f.class_hint}` : ""}. Reason: ${oneLine(f.class_reason ?? "none")}`);
   L(`- Reconcile: ${fr.length} finding line(s), new by class: ${Object.keys(newByClass).length ? Object.entries(newByClass).map(([k, v]) => `${k} ${v}`).join(", ") : "none"}; status changes: ${runLines.filter((l) => l.t === "status").length}`);

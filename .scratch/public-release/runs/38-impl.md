@@ -275,3 +275,9 @@ Re-verify after round 1: FAIL, 2 blocking (B6, B4 residual). Both are fixed in t
   - Script-helper blocks identical (fixture 40)
   - The suites leave `git status` unchanged.
 - **Known limit:** a gap whose evidence mixes an old quote and a new one (a contradiction that a new line creates) is classed missed-earlier. The script cannot tell which quote carries the gap, so it takes the side that cannot launder a miss.
+
+## Fix round 4
+
+The owner approved another round after round 3's fixture and packaging failures. Round 3 was already in the branch's parent revision. This round distinguishes disjoint quotes on the same line from evidence on separate lines, even when both rows share a section locator. A missing quote still uses the anchor or locator. The explicit answer format now agrees across the source, contract, and skill instructions. The shipped copies include the round 3 and round 4 fixes.
+
+Fixtures preserve the prior assertions and supply a reason for explicit matches where required. New probes cover distinct and confirmed matches for separate quotes in one row, changed verification files, and separately an approved applied file outside the cited files.

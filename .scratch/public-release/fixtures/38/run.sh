@@ -369,13 +369,15 @@ chk "B2: two drafts that both match one id -> need match for each, nothing re-ke
 export X1="$(J "$TMP/o.json" 'o.needs.filter(n=>n.need==="match")[0].id')" X2="$(J "$TMP/o.json" 'o.needs.filter(n=>n.need==="match")[1].id')"
 R "$D11" review ledger-diff --run 3 --write > "$TMP/o.json"; chk "B2: --write with an open match -> RECONCILE_INCOMPLETE" "$TMP/o.json" '!o.ok && o.error.code==="RECONCILE_INCOMPLETE" && o.error.details.needs.some(n=>n.need==="match")'
 REC3="$D11/.lvr/review/runs/run-3/reconcile.json"
-printf '{"run":3,"matches":{"%s":{"same_as":"%s"},"%s":{"same_as":"%s"}}}' "$X1" "$L08ID" "$X2" "$L08ID" > "$REC3"
+printf '{"run":3,"matches":{"%s":{"same_as":"%s"}}}' "$X1" "$L08ID" > "$REC3"
+R "$D11" review ledger-diff --run 3 > "$TMP/o.json"; chk "B2: an explicit same_as without a reason -> MATCH_INVALID" "$TMP/o.json" '!o.ok && o.error.code==="MATCH_INVALID" && /same_as needs a reason/.test(o.error.message)'
+printf '{"run":3,"matches":{"%s":{"same_as":"%s","reason":"same gateway fee"},"%s":{"same_as":"%s","reason":"same gateway fee"}}}' "$X1" "$L08ID" "$X2" "$L08ID" > "$REC3"
 R "$D11" review ledger-diff --run 3 > "$TMP/o.json"; chk "B2: one id matched twice -> MATCH_INVALID (already matched)" "$TMP/o.json" '!o.ok && o.error.code==="MATCH_INVALID" && /is already matched by/.test(o.error.message) && /Nothing was written/.test(o.error.message)'
-printf '{"run":3,"matches":{"%s":{"same_as":"RV-L08-00000000"}}}' "$X1" > "$REC3"
+printf '{"run":3,"matches":{"%s":{"same_as":"RV-L08-00000000","reason":"claimed match"}}}' "$X1" > "$REC3"
 R "$D11" review ledger-diff --run 3 > "$TMP/o.json"; chk "B2: same_as an id that is not a candidate -> MATCH_INVALID" "$TMP/o.json" '!o.ok && o.error.code==="MATCH_INVALID" && /is not one of its candidates/.test(o.error.message)'
 printf '{"run":3,"matches":{"%s":{"same":"x"}}}' "$X1" > "$REC3"
 R "$D11" review ledger-diff --run 3 > "$TMP/o.json"; chk "B2: a match that is neither same_as nor distinct -> MATCH_INVALID" "$TMP/o.json" '!o.ok && o.error.code==="MATCH_INVALID"'
-printf '{"run":3,"matches":{"%s":{"same_as":"%s"},"%s":{"distinct":"the fee per payment and the monthly minimum are two gaps"}}}' "$X1" "$L08ID" "$X2" > "$REC3"
+printf '{"run":3,"matches":{"%s":{"same_as":"%s","reason":"same gateway fee"},"%s":{"distinct":"the fee per payment and the monthly minimum are two gaps"}}}' "$X1" "$L08ID" "$X2" > "$REC3"
 R "$D11" review ledger-diff --run 3 > "$TMP/o.json"
 chk "B2: same_as + distinct resolves the match; the distinct draft is a new finding on unchanged text, so it is missed-earlier and needs the apology" "$TMP/o.json" 'o.ok && !o.needs.some(n=>n.need==="match") && o.fresh.some(f=>f.id===process.env.L08ID && f.drafted_as===process.env.X1) && o.fresh.find(f=>f.id===process.env.X2).class==="missed-earlier" && o.needs.filter(n=>n.id===process.env.X2).map(n=>n.need).sort().join()==="apology,learned-check"'
 prep "$D11" 3 ck2; export XC="$(J "$D11/.lvr/review/runs/run-3/findings.json" 'o.findings.find(f=>f.lens==="L08").id')"
@@ -549,7 +551,7 @@ R "$D22" review ledger-diff --run 2 --write > "$TMP/o.json"; chk "B6 uncertain: 
 printf '{"run":2,"matches":{"%s":{"distinct":"B is about the edited row, A was about the old one"}}}' "$B22" > "$D22/.lvr/review/runs/run-2/reconcile.json"
 R "$D22" review ledger-diff --run 2 > "$TMP/o.json"
 chk "B6 uncertain, distinct: B is new (its quoted row is new -> new-due-to-change); A: verify fails, its evidence is gone -> partial" "$TMP/o.json" 'o.ok && o.fresh.find(f=>f.id===process.env.B22).class==="new-due-to-change" && o.disappeared[0].id===process.env.L08ID && o.disappeared[0].hint==="partial" && o.disappeared[0].status==="partial"'
-printf '{"run":2,"matches":{"%s":{"same_as":"%s"}}}' "$B22" "$L08ID" > "$D22/.lvr/review/runs/run-2/reconcile.json"
+printf '{"run":2,"matches":{"%s":{"same_as":"%s","reason":"edited quote still describes the same gateway fee"}}}' "$B22" "$L08ID" > "$D22/.lvr/review/runs/run-2/reconcile.json"
 fin "$D22" 2
 LEDGER_OF "$D22/.lvr/review/LEDGER.jsonl" 2 > "$TMP/o.json"
 chk "B6 uncertain, same_as: A's id carries THIS run's claim, fix and verify (the reused id shows the new text)" "$TMP/o.json" '((f)=>f && f.claim.includes("edited row still has no per-booking fee") && f.fix==="Price Vercel Pro." && f.verify.manual==="check" && f.claim_key==="payment-gateway:mdr" && o.s.some(s=>s.id===process.env.L08ID && /matched in reconcile.json/.test(s.reason)))(o.f.find(x=>x.id===process.env.L08ID))'
@@ -617,6 +619,42 @@ R "$D18" journal append --type review_started --payload '{"run":1,"scope":"full"
 R "$D18" review ledger-diff --run 1 --write > "$TMP/o.json"
 chk "B5: --apply as run 1 -> NOT_APPLICABLE, nothing written" "$TMP/o.json" '!o.ok && o.error.code==="NOT_APPLICABLE" && /there is no finished review run before it/.test(o.error.message)'
 test ! -e "$D18/.lvr/review/LEDGER.jsonl" && echo "PASS B5: no ledger was written" || { echo "FAIL B5: ledger written"; fail=1; }
+
+# ---------------------------------------------------------------- (B7) different spans of the same row require an explicit match
+D28="$TMP/d28"; mkproj "$D28"; open "$D28" 1; prep "$D28" 1 base; fin "$D28" 1
+open "$D28" 2; prep "$D28" 2 gateway-row-tail
+export B28="$(J "$D28/.lvr/review/runs/run-2/findings.json" 'o.findings.find(f=>f.lens==="L08").id')"
+R "$D28" review ledger-diff --run 2 > "$TMP/o.json"
+chk "B7: disjoint quotes on one row need a match with no forced apology" "$TMP/o.json" 'o.ok && o.needs.some(n=>n.id===process.env.B28 && n.need==="match") && !o.needs.some(n=>n.need==="apology")'
+R "$D28" review ledger-diff --run 2 --write > "$TMP/o.json"
+chk "B7: an unresolved match blocks the ledger write" "$TMP/o.json" '!o.ok && o.error.code==="RECONCILE_INCOMPLETE"'
+REC28="$D28/.lvr/review/runs/run-2/reconcile.json"
+printf '{"run":2,"matches":{"%s":{"distinct":"The second quote could describe another cost gap."}}}' "$B28" > "$REC28"
+R "$D28" review ledger-diff --run 2 > "$TMP/o.json"
+chk "B7: an explicit distinct answer gives the new gap its own ID" "$TMP/o.json" 'o.ok && o.fresh.some(f=>f.id===process.env.B28 && f.transition==="new" && f.class==="missed-earlier") && o.disappeared.some(f=>f.id===process.env.L08ID && f.hint==="sweep-miss")'
+printf '{"run":2,"matches":{"%s":{"same_as":"%s","reason":"Both quotes describe the payment gateway fee."}}}' "$B28" "$L08ID" > "$REC28"
+fin "$D28" 2
+chk "B7: confirmed match preserves the prior ID" "$TMP/ld.json" 'o.ok && o.counts.new===0 && o.matches.some(m=>m.id===process.env.B28 && m.same_as===process.env.L08ID)'
+chk "B7: score and verdict are unchanged" "$TMP/sc.json" 'o.ok && o.lens_scores.L08===8 && o.verdict==="BUILD-READY" && o.missed_earlier===0'
+chk "B7: report rendered" "$TMP/rd.json" 'o.ok'
+grep -q 'Both quotes describe the payment gateway fee' "$D28/.lvr/review/REVIEW-2026-11-21-2.md" \
+  && echo "PASS B7: report records the match reason" || { echo "FAIL B7: match reason missing"; fail=1; }
+
+# ---------------------------------------------------------------- (B8) a verified fix can land in a file that was not cited
+for mode in review apply; do
+  D="$TMP/b8-$mode"; mkproj "$D"; open "$D" 1
+  if [[ "$mode" == apply ]]; then prep "$D" 1 gateway-apply-file; else prep "$D" 1 gateway-decision; fi
+  fin "$D" 1
+  printf '\nD-021 verified gateway fee policy\n' >> "$D/DECISIONS.md"
+  open "$D" 2; prep "$D" 2 no-l08
+  if [[ "$mode" == apply ]]; then
+    printf '{"run":2,"approvals":[{"id":"%s","decision":"apply","words":"ya","at":"2026-11-21T09:00:00Z"}]}' "$L08ID" > "$D/.lvr/review/runs/run-2/approvals.json"
+    printf '{"run":2,"applied":[{"id":"%s","files":["DECISIONS.md"],"result":"applied","decision_id":null}]}' "$L08ID" > "$D/.lvr/review/runs/run-2/apply.json"
+  fi
+  fin "$D" 2
+  chk "B8 $mode: passing verification and changed DECISIONS.md close the finding" "$TMP/ld.json" 'o.ok && o.disappeared.some(f=>f.id===process.env.L08ID && f.verify==="pass" && f.status==="fixed" && f.files_changed.join()==="DECISIONS.md")'
+  chk "B8 $mode: report rendered" "$TMP/rd.json" 'o.ok'
+done
 
 # ---------------------------------------------------------------- (h) read-only
 D6="$TMP/d6"; mkproj "$D6"

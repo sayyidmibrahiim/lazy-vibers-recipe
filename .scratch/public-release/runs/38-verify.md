@@ -474,3 +474,39 @@ Fix: count the files named by `verify` predicates and by this finding's `apply` 
 - **A19.** The `DUPLICATE_FINDING` message says "merge the drafts". When the two drafts are separate gaps (both `-` in one unit), the right action per contract §5 is a `<subject>:<aspect>` claim_key each. The message should say so, or a reviewer may merge, and so hide, a real gap.
 - **A20.** A `matches.same_as` answer for a `maybe` carries no reason, while `distinct` does. A required reason, printed in the header, would make a wrong merge visible.
 - **A12 and A13** stand: ledger truncation launders a miss to "initial", and blocked reasons are not checked against readable files.
+
+
+## Re-verify after fix round 3
+
+Same-context verify (Codex, 2026-11-23). I checked the ticket and the committed changes from `9781b6d..f311fbd`. The earlier resume note recorded the owner's approval for this round, and the commit already contains the changes for B7 and B8. Test projects were temporary copies. The production build used the cloud environment's now-reachable font endpoints.
+
+### Verdict: FAIL (blocking)
+
+| Check | Result |
+|---|---|
+| B7, two separate quotes from the same payment-gateway row | PASS on the source script. Reconciliation asked for a match and refused to write until answered. Confirming the same gap kept the previous ID, L08 at 8, BUILD-READY, and zero apologies. The report rendered. |
+| B8, fix in an uncited file | PASS on the source script. Writing a marker in DECISIONS.md satisfied a nested verify predicate. Both ordinary review and a run with explicit apply approval credited the finding as fixed and rendered. |
+| Existing ticket 38 fixture suite | FAIL. `bash .scratch/public-release/fixtures/38/run.sh` exited 1 with 189 passes and 24 failed assertions. The unchanged report, price-change and planted-miss cases passed. |
+| Skill synchronization | FAIL. `npm run check:skills` reported seven bundled helper scripts different from the source. Lens registry regeneration check passed (15 lenses, 165 checks). |
+| Lint, TypeScript and production build | PASS. Lint emitted the existing unused-variable warning in the research probe. |
+
+The fixture failures group into three causes. B1 detects that packaged skills still ship round 2, which means the verified B7 and B8 fixes are unavailable in installed copies. B2 and one B6 assertion exercise the documented `same_as` input without a reason. The source script rejects that input before performing the intended validation, but the public contract and skill instructions still show it. The other B6 failures begin when different cost-table rows are treated as a possible match because their explicit section locator is identical. Without an answer the ledger does not advance, so downstream score and render assertions fail.
+
+The approved third round is now verified. The edit limit is reached. No implementation, fixture, or packaged skill was changed during re-verification.
+
+## Re-verify after fix round 4
+
+Same-context verify (Codex, 2026-11-23). I re-read the ticket and inspected the diff before running the checks.
+
+### Verdict: PASS
+
+| Check | Result |
+|---|---|
+| Ticket 38 fixtures | 225 passes, 0 failures. The unchanged plan keeps the same score and byte-identical report body. The price change moves only L01/L08 and is classified as new due to change. The planted miss requires an apology, root cause and learned check. |
+| Identity | Distinct rows under the same heading keep separate IDs. For separate quotes on the same line, an unresolved match blocks the write. A distinct answer assigns a new ID. A confirmed match preserves the earlier ID and score, and the report shows the reason. |
+| Fix closure | A changed file read by a nested verify predicate closes the finding. An approved applied edit also closes it when the changed file is recorded by the apply step and verification passes. The unchanged-file control and approval rejection cases still pass. |
+| Published skill contents | The source and all seven copies compare byte-for-byte. The shipped review contract matches the source spec. Lens registry is current (15 lenses, 165 checks). |
+| Existing fixtures 03, 04, 26, 27, 40 | All pass. Fixture 27 completed 191 cases and 6 fuzz runs covering 240 events with 0 failures. |
+| Lint, TypeScript, production build | Pass. The existing unused-variable lint warning in the research probe remains. |
+
+The lens registry, coverage and score fixtures, approved-apply flow, and the written review protocol cover the remaining ticket boxes. The report's run header contains run-specific metadata, while the body and its hash are byte-identical for the unchanged control. The optional fresh-context instructions were inspected in the skill. This verification used the same context as implementation.
