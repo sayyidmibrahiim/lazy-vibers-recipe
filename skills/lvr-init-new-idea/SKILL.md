@@ -147,6 +147,8 @@ Run this loop once per core booster, in the table order above, then move to the 
 
 Purpose: capture the raw idea fully; detect User Language; propose slug + display name; confirm the market. No structured questions in S0 — those start at S1. When S0 closes, the Domain Brief is built before S1 starts (step 8).
 
+**Booster** — load grilling for targeted clarifying questions after the user gives their idea. The free-form opening and the short follow-up limit still apply.
+
 1. **Open the Section**: journal `section_start` (payload: section "S0"). Write the first `PROJECT_DIR/.lvr/state.json`, shape per conventions §2, with:
    - `schema_version`: 2 (the v2 keys — `project.error` null, `product` unasked, empty `pipeline.research`, `boosters.installed` `[]`, `framework_decision` null, `release_check` `{}`, `review` null, `agents_delegated` `[]`, `sessions` with this run's session — take their defaults from the journal-built state; conventions §2)
    - `project`: slug = the confirmed or provisional slug ("" if none yet), name "", idea_raw "" (filled in step 3), user_language "" (filled in step 4), created_at = the `section_start` S0 timestamp (ISO-8601 UTC), status "interview"
@@ -208,6 +210,7 @@ Generic procedure for every Section. Per-Section procedures for S0–S9 live in 
    4. **Present** — show the open items targeted at this Section as "Things you may not know" (§3 of that file: User Language, each with "(source, date)") and turn each into a question (it counts toward the batch size) or a `designer_filled` decision whose rationale cites the item and its tag — an item whose source is an `[unverified: …]` marker is always a question. Record the `Became` cell, and one `## Context research` line in the Section Record (S6 has no record of its own: its line goes under `## Risks (S6)` in `S5-research.md`).
    - Script: `LVR research log --context --in -` with `{"section":"<S>","scope":"scan","topic":"…","queries":["…"],"sources":[…],"outcome":"found","findings":["U-11"]}` (`"findings":[]` plus `"note"` when nothing is new).
 2. **Load** — follow the tier's reload discipline (conventions §7): T1/T2 load this Section's procedure block and its Boosters at Section start; T3 loads, every turn, only principles + `state.json` + this Section's procedure block + the current record — never the transcript.
+   - Use [the section map](references/booster-map.md). After a skill or reference actually informs the work, journal `LVR journal append --type booster_loaded --payload '{"section":"<S>","name":"<name>","usage":"start|pass|reference"}'`, setting one usage value. This also applies to the S0 clarifiers. Record a fallback in the Section Record whenever an applicable install was unavailable.
 3. **Micro-batch loop** — batch size by tier: T1 up to 3, T2 up to 2, T3 exactly 1 (conventions §7). Phrase every question in User Language, plain and outcome-oriented, with a one-line reason it matters; choose the next batch from the previous answers. After EVERY answer: journal `answer_recorded` (payload `{ "section", "answer_id", "q", "a", "skipped" }` — `q` as asked, `a` verbatim, both User Language; `a` null for skipped) + state write (`sections.<S>.answers["<S>.qNN"] = { "q", "a", "skipped" }`, `q` stored as asked in User Language) — one checkpoint per answer. Bank question numbers are a suggested pool order; the authoritative id is `S<N>.qNN`, assigned at ask time within the Section. Keep both controls visible with every batch: **skip** (recorded with `"skipped": true`; never blocks) and **"cukup" / that's enough for this Section** (jumps straight to the exit-criteria check). A deferral ("later") is not a skip: the question stays open and may be re-asked in a targeted batch. Only an explicit skip — or leaving it unanswered at the exit check, which fires the `assumed` fallback — records `skipped: true`. Never re-ask a recorded answer — check `answers` before composing each batch.
    - Script: after every answer `LVR answer record --section <S> --in -` with `{"q":"<as asked>","a":"<verbatim>"}` (add `"skipped":true` for a skip; the id `<S>.q<n>` is assigned for you). Answers can never be silently overwritten (`ANSWER_EXISTS`).
 4. **Decisions** — any decision surfaced in the Section goes into `decisions[]` (`D-NNN`, status `user_confirmed | assumed | designer_filled` per principle 12) at the checkpoint where it is made; `assumed` and `designer_filled` also land in ASSUMPTIONS.md at S9. Status follows who decided: an explicit user choice made in conversation is `user_confirmed` even if the topic was designer-surfaced; `designer_filled` is only for decisions the user never made themselves. A decision that rests on a fact cites it in its rationale (a `U-NN` item or a cite tag, conventions §10); one that rests on an unverified fact is never `designer_filled` — ask the user, or it becomes an S6 blocking risk (principle 1).
@@ -241,7 +244,7 @@ Each block below is one Section's procedure for the engine above; the block plus
 
 Purpose: problem, target users, platform shape, what "working" means for the user. Record: `S1-context.md`. The English text here and in the bank is the source; questions are spoken in User Language at runtime (conventions §4).
 
-**Booster** — pm-skills interview patterns (`product-on-purpose/pm-skills`, Apache-2.0; status in `boosters.core`). `installed` → load it at Section start (T3: only this one, drop after use — conventions §7) and let its interview patterns shape phrasing. Any other status → use the internal bank alone and write `Booster: pm-skills (degraded — internal bank used)` into the Section Record so S9 surfaces it in OVERVIEW.md.
+**Booster** — load grilling at start for ready interview decisions. Apply `define-problem-statement` and `mom-test` when shaping the problem and grounded follow-ups. Use `define-jtbd-canvas` as a reference. Keep the internal question bank for degraded mode.
 
 **Question strategy** — establish in this order, each batch composed from the previous answers (bank: `references/sections/S1-context.md`):
 
@@ -292,7 +295,7 @@ Purpose: problem, target users, platform shape, what "working" means for the use
 
 Purpose: what the user already has and can pay — devices, accounts, hosting, budget ceiling. Record: `S2-kondisi.md` (historical filename, conventions §5). English is the source; questions are spoken in User Language at runtime.
 
-**Booster** — none; the internal bank plus its cost fact-sheet is the S2 booster. Bank: `references/sections/S2-conditions.md`.
+**Booster** — load grilling for unresolved budget, device and deployment choices. Use the internal cost leads, then verify the actual prices live. Bank: `references/sections/S2-conditions.md`.
 
 **Price verification (principle 1)** — the bank's fact-sheet is a lead list last read 2026-11-08, older than the 30-day `price` limit. Before quoting ANY price to the user: read it live from the source, quote it with its cite tag (conventions §10), and log the step (`LVR research log`, `purpose: "claim"`). Research that really fails → log it as failed, quote the number with `[unverified: price · RQ-NNN]`, say so plainly, and treat it as a question for the user — never the basis of a `designer_filled` decision. Never quote from memory.
 
@@ -321,7 +324,7 @@ Purpose: what the user already has and can pay — devices, accounts, hosting, b
 
 Purpose: login, personal data, payments, third-party services, where data may legally live. Record: `S3-data.md`. English is the source; questions are spoken in User Language at runtime.
 
-**Booster** — none. Bank: `references/sections/S3-data-privacy.md`.
+**Booster** — load grilling for ready data and privacy decisions. Consult the sourced Domain Brief. Bank: `references/sections/S3-data-privacy.md`.
 
 **Question strategy** — establish in this order: login yes/no (the biggest fork); if login, reuse-existing-account vs new username+password; the personal-data inventory; which of it is sensitive; money inside the app; then third-party connections, where data may legally live, offline behavior, erasure, who sees whose data, and what must survive a loss.
 
@@ -350,7 +353,7 @@ Purpose: login, personal data, payments, third-party services, where data may le
 
 Purpose: feature expectations captured in detail, iteratively, until the user says enough. Record: `S4-fitur.md`. English is the source; questions are spoken in User Language at runtime.
 
-**Booster** — pm-skills interview patterns (`product-on-purpose/pm-skills`, Apache-2.0; status in `boosters.core`): Mom Test + user-story/Gherkin patterns. `installed` → load at Section start (T3: only this one, drop after use). Any other status → internal bank alone + `Booster: pm-skills (degraded — internal bank used)` in the record.
+**Booster** — load grilling at the start of the capture rounds. Apply `mom-test`, `deliver-edge-cases`, `user-stories` and `deliver-acceptance-criteria` where relevant. Use the UI aids from the section plan for interface ideas. Keep the bank and surface degraded mode when using it alone.
 
 **Capture format (F-01…)** — every feature is captured per the format in `references/sections/S4-features.md`: plain-words name, one named kind of user, a click-by-click happy-path script ("posting ke IG" style — a stranger holding the phone could follow it without asking anything), priority must/should/could confirmed aloud, and the failure cases the user cares about. When capturing each F-NN, also coin an English display name — the record keeps the user's verbatim words; the English name is what SPEC/requirements.md, USER_FLOWS.md, and blueprint.json use. A name without a script is a placeholder, not a feature.
 
@@ -379,7 +382,7 @@ Purpose: feature expectations captured in detail, iteratively, until the user sa
 
 Purpose: competitor scan, stack candidates with reasons, cost table, regional availability. Record: `S5-research.md` (becomes `RESEARCH.md` at S9). Mostly AI work: the Conductor does the research; the user is asked only targeted questions when findings demand a fact no record holds. English is the source; research runs on English sources plus the primary local sources of the user's market, summarized in English (conventions §4); questions are spoken in User Language at runtime. At Section start also set `project.status` = "researching" (conventions §2). The S5 research is this Section's scan (engine step 1b): start with the Domain Brief items targeted at S5.
 
-**Booster** — web research is required and was checked in Step 1; there is no model-knowledge fallback. If search or fetch stops working mid-Section (a tool error is an outage, not failed research — conventions §10), stop with the enable guidance and resume with `/lvr-continue` — never fill the gap from memory and never log it as `failed`. competitor-analysis (browserbase `competitor-analysis`, or the Firecrawl MCP; status in `boosters.core`) adds depth: `installed` → load at Section start (T3: only this one, drop after use). Any other status → research with the plain web tools and write `Booster: competitor-analysis (degraded — plain web search used)` into the record so S9 surfaces it in OVERVIEW.md.
+**Booster** — load `discover-competitive-analysis` for the scan. Use plain search with the internal procedure when this aid is unavailable and record the degraded aid. Search and fetch are still required. If search or fetch stops working mid-Section (a tool error is an outage, not failed research — conventions §10), stop with the enable guidance and resume with `/lvr-continue`.
 
 **Claim discipline (principles 1 and 14)** — every claim in the record carries a cite group (conventions §10); key facts have one primary source or two independent sites; the freshest primary source wins and conflicts are recorded. `unverified` only after logged research failed: `[unverified: <category> · RQ-NNN]`. Log every research step (`LVR research log`, `purpose: "s5"`). Reuse what S2 and the Domain Brief already cited by copying the tag with the claim; a copied tag past its freshness limit is researched again. Recommendations cite the research they rest on — never an unsourced "best practice". Bank: `references/sections/S5-research.md`.
 
@@ -415,7 +418,7 @@ Purpose: competitor scan, stack candidates with reasons, cost table, regional av
 # S5 — Deep research
 
 ## Booster
-<competitor-analysis: installed | degraded — plain web search used>
+<discover-competitive-analysis: used | degraded — internal scan with live web sources>
 
 <findings, appended per sub-query; every claim: a cite group, or `[unverified: <category> · RQ-NNN]` after logged failed research>
 
@@ -442,7 +445,7 @@ Purpose: competitor scan, stack candidates with reasons, cost table, regional av
 
 Purpose: confront the S5 findings with the recorded answers; surface conflicts, risks, cost surprises. Output: risks appended to `S5-research.md` — S6 keeps no record of its own (conventions §5). Mostly AI work: the Conductor walks the findings itself; the user is asked only when a risk needs their call. The English text here is the source; questions are spoken in User Language at runtime.
 
-**Booster** — none. The working material is the S5 record plus the S1–S4 records.
+**Booster** — apply `architecture-designer` to trade-offs and `threat-modeling` when triggered. Use `cost-estimator` as a checklist and refresh all prices. Work from the S5 record and the S1–S4 records.
 
 **Work strategy** — first the freshness re-check (engine step 1b: `LVR cite check --all`; research every expired fact again and update every record that repeats it). Then walk every S5 finding (competitor lessons, stack trade-offs, cost rows, regional constraints, `[unverified: …]` claims) and classify each. An unverified key fact that a recommendation, a decision, or the plan rests on is `blocking` unless the user confirms it aloud (record that as a `user_confirmed` decision):
 
@@ -492,7 +495,7 @@ Every finding carries one line of evidence: the record row or answer id it comes
 
 Purpose: freeze the MVP — every feature F-NN → `in-MVP` or Parking Lot (recorded, never deleted). Record: `S7-scope.md`; journal `scope_locked`. At Section start also set `project.status` = "review" (conventions §2; the `section_start` S7 checkpoint carries it). Mostly AI work: the Conductor prepares the split; the user makes the cuts and gives one explicit confirmation. English is the source; questions are spoken in User Language at runtime (conventions §4).
 
-**Booster** — none. Guide: `references/sections/S7-scope.md`.
+**Booster** — apply `define-prioritization-framework` to the shortlist before the user confirms it. Guide: `references/sections/S7-scope.md`.
 
 **Work strategy** (walk protocol in the bank):
 
@@ -561,7 +564,7 @@ Purpose: break the in-MVP list into milestones `M0…Mn`, each independently ver
 
 Script: close S8 with `LVR journal append --type section_done --payload '{"section":"S8","record":"S8-milestones.md","milestones":[{"id":"M0","goal":"…","features":["F-01"]}]}'` — the `milestones` array fills `state.milestones[]`.
 
-**Booster** — none core (planning-and-task-breakdown principles, addyosmani, when the harness carries them). Not a Step-3 core install, so no `boosters.core` entry: if the harness carries them, load at Section start (T3: drop after use); if not, the decomposition rules in the bank are the booster (the routed fallback). Guide: `references/sections/S8-milestones.md`.
+**Booster** — load `planning-and-task-breakdown` for milestone decomposition, dependencies and verification. Its fallback is the internal decomposition bank in `references/sections/S8-milestones.md`.
 
 **M0 — the walking skeleton (generic)** — the thinnest slice that runs end to end on the real stack: deployed to the S2 deploy target (the future HANDOVER target), real at every layer (real stack, real data store, nothing stubbed end to end), carrying exactly one real user task (the S1 day-one answer; F-01's happy path when that was skipped) from first tap to visible result, provable by one command or scripted check.
 
@@ -615,7 +618,7 @@ Script: close S8 with `LVR journal append --type section_done --payload '{"secti
 
 Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the 20-file Blueprint Bundle (conventions §8; the per-file specs are packaged in `references/bundle/templates.md`). The bundle lives in the project folder next to `.lvr/` and must be self-sufficient: any harness, with no LVR skills installed, can build the product from it. Mostly AI work: the Conductor compiles; the user is brought in only when a gap needs their call. English is the source — the bundle is written in English; the web UI renders it in User Language (principle 5, conventions §4). The bundle files are S9's output: no `S9-*.md` Section Record is written (conventions §5).
 
-**Booster** — OpenSpec pattern (structure reference), SimpleEnglish (document rules), humanizer (de-slop pass), karpathy-guidelines + ponytail (`CODE_STYLE.md`), agents.md spec (`AGENTS.md`); statuses in `boosters.core`. `installed` → apply each at the step that uses it (T3: one at a time, drop after use — conventions §7). Any other status → the rules in this block plus the templates are the fallback, and the degraded booster is surfaced in OVERVIEW.md's Limitations — never silent.
+**Booster** — apply `deliver-prd` for PRD, `api-designer` when applicable, and `user-stories` and `deliver-acceptance-criteria` for requirements. Reference `develop-adr` and the Spec Kit templates when applicable. Apply ponytail to code style, then SimpleEnglish and anti-slop to prose. Apply the applicable UI or AI aids to those files. Fetch [the AGENTS.md format](https://raw.githubusercontent.com/agentsmd/agents.md/main/README.md) as documentation. Use the licensed anti-slop snapshot only as a degraded fallback when needed. Surface degraded uses in OVERVIEW.
 
 **Work material (engine step 2)** — at Section start load: every Section Record in `.lvr/docs/sections/` (S0–S8), `state.json` (for `decisions[]`, `milestones[]`, `boosters.core`), and `references/bundle/templates.md`. T3: never the transcript — each turn reloads only the templates plus the records that feed the one file being compiled.
 
@@ -633,7 +636,7 @@ Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the 2
    - all 20 files exist and are non-empty.
    - Script: `LVR crosscheck` runs this whole list (rules X1–X8, read-only; X8 = `cite check --all`, findings I1–I13) over the drafted bundle and returns `findings[]` with exact messages; fix only what it reports, with targeted edits, then run it again until `clean` is true. Its `needs_model[]` items (stack and entity names identical across files; Why and confirm lines specific; verification steps exact and covering their criterion; OVERVIEW and RESEARCH prices really sourced; also the cost tables agree) are yours to check by reading — the script never guesses them. A duplicated `## F-NN` block or an F-NN that exists in only some files is reported by the script (X1). Parked features keep a `SPEC/requirements.md` block marked parked, a `SCOPE.md` row, and a `USER_FLOWS.md` heading marked `(parked — see SCOPE.md)` (conventions §5); the script checks all three.
 3. **SimpleEnglish document-rules pass** — short sentences, active voice, jargon defined on first use (principle 7); applies to all bundle files, strictest for OVERVIEW.md; never fights GFM structure.
-4. **Humanizer de-slop pass** — concrete and specific, no filler (principle 6); rewrite slop lines, never drop content.
+4. **Anti-slop editing pass** — concrete and specific, no filler (principle 6); rewrite slop lines, never drop content.
 5. **Emit blueprint.json** — the exact schema v1 in `references/bundle/templates.md` §19, derived from `state.json`: regenerate it, never hand-edit it. Write the one-line CLAUDE.md + GEMINI.md stubs (exact line in the templates).
    - Script: `LVR blueprint emit` (add `--in -` with the stack, `idea_summary_en` and costs JSON when it answers `BLUEPRINT_NEEDS_INPUT`; the hint shows the shape) and `LVR handoff stubs`. Both write only what is missing or wrong.
 6. **Close** — journal `doc_generated` per file (payload: the file path) with a state write each — one checkpoint per file (conventions §9). Then: `project.status` = "bundled"; `sections.S9` closes per engine step 6 with `record` = the bundle files; `current_section` stays "S9" (S10 Build has no section pointer; `/lvr-build` tracks it in `project.status`); suggest `/lvr-handoff` (engine step 7). S9 is resumable per file: a file already on disk that passes the cross-check is kept — only missing or failing files are drafted again, never a silent blanket rewrite.
@@ -645,7 +648,7 @@ Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the 2
 - T3: one file SECTION per turn with append-chunks — write the file's skeleton, then append one top-level section per turn, checkpointing per chunk.
 - **Truncation recovery** (conventions §7): on `finishReason=length`, a mid-sentence cutoff, or a missing required section — reload the last complete block from the file on disk, continue exactly from there with no repetition, and append; checkpoint `truncation_recovered` after every successful append; repeat until the skeleton's required structure is complete. Never save a truncated file as complete; never regenerate from scratch what can be continued.
 
-**Degraded surfacing** — every degraded booster (the records' `Booster: … (degraded — …)` lines from S1/S4/S5 plus any degraded status in `boosters.core`) and every Section that ran blocked and later resolved MUST surface in OVERVIEW.md under a `## Limitations` heading — one plain line each. Never silently dropped: quality caveats live where the owner reads.
+**Degraded surfacing** — every degraded booster (the Section Records' `Booster: … (degraded — …)` lines and any degraded status in `boosters.core` or `boosters.enhancer`) and every Section that ran blocked and later resolved MUST surface in OVERVIEW.md under a `## Limitations` heading — one plain line each. Never silently dropped: quality caveats live where the owner reads.
 
 **Regeneration** — per file, explicit, only on user request or on a handoff gap-fix (`/lvr-handoff` re-lints instead of regenerating — conventions §9). Never blanket-regenerate the bundle; blueprint.json is the standing exception — derived and always regenerated from state, never hand-edited.
 

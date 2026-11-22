@@ -121,7 +121,7 @@ Loaded by every LVR skill before any work. The list below is a summary; the full
 3. **Recheck before agreeing AND before disagreeing** — verify, then take a position.
 4. **Allowed to say "I don't know"** — followed immediately by "let me research".
 5. **User Language** — interact in the user's language; artifacts stay English source of truth.
-6. **No slop** — concrete, specific, no filler; final documents pass the humanizer pattern list.
+6. **No slop** — concrete, specific, no filler; final documents pass the anti-slop editing pass.
 7. **Plain language** — documents follow SimpleEnglish document rules (short sentences, active voice, jargon defined); this never fights GFM structure.
 8. **Simplicity + surgical changes** — minimal sufficient solution (ponytail ladder), touch only what the task needs (karpathy surgical rule).
 9. **Verification-before-completion** — nothing is "done" without its verification step passing; milestones are the unit of proof.

@@ -2,7 +2,7 @@
 
 Work guide for Section S5. The English text is the source; research runs on English sources plus the primary local sources of the user's market, and findings are summarized in English (conventions §4). S5 is mostly Conductor work — the few user questions are at the bottom. Record: `PROJECT_DIR/.lvr/docs/sections/S5-research.md`; findings are appended to it per sub-query, never held whole in context (principle 13).
 
-Web research is required (principle 14): the web research check passed before this project started, and there is no model-knowledge fallback. If search or fetch stops working mid-Section (a tool error is an outage, not failed research — conventions §10), stop with the enable guidance — never fill the gap from memory and never log it as `failed`. Booster note: competitor-analysis (browserbase `competitor-analysis`, or the Firecrawl MCP; status in `boosters.core`) adds depth when `installed`; without it, research with the plain web tools and write `Booster: competitor-analysis (degraded — plain web search used)` into the record.
+Web research is required (principle 14). On a search or fetch outage, stop with enablement guidance. Load `discover-competitive-analysis` for the scan. If the skill is unavailable, use the internal procedure with live web tools and record that aid as degraded.
 
 ## Claim discipline (principles 1 and 14)
 

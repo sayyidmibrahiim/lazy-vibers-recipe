@@ -2,7 +2,7 @@
 
 Candidate questions for Section S1. The English text is the source: translate each question into User Language when asking (conventions §4). Bank order is not ask order — `S1.qNN` ids are assigned in the order actually asked. Compose batches adaptively from the answers so far; never ask what `answers` already holds. Controls (skip, "enough for this Section") follow the engine's micro-batch loop — always visible, never repeated here.
 
-Booster note: when pm-skills interview patterns are `installed`, they shape phrasing and follow-up style; this bank is the internal fallback and the gap-filler either way.
+Booster note: start with grilling. Apply `define-problem-statement` and `mom-test` and reference the JTBD template. This bank fills gaps and supports degraded runs.
 
 ## Opening questions (establish first, in this order)
 

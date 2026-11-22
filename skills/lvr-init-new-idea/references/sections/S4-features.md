@@ -2,7 +2,7 @@
 
 Candidate questions for Section S4. The English text is the source: translate each question into User Language when asking (conventions §4). Bank order is not ask order — `S4.qNN` ids are assigned in the order actually asked. S4 is a capture loop, not a list to walk: most batches react to the feature being captured. Controls (skip, "enough for this Section") follow the engine's micro-batch loop; the "enough" protocol at the bottom of this file defines what happens when the user pulls it.
 
-Booster note: pm-skills interview patterns (`product-on-purpose/pm-skills`, Apache-2.0) — Mom Test and user-story/Gherkin patterns. Status `installed` → let them shape phrasing. Any other status → use this bank alone and mark the Section Record `Booster: pm-skills (degraded — internal bank used)` so S9 surfaces it in OVERVIEW.md.
+Booster note: use grilling for intake rounds. Apply `deliver-edge-cases`, `user-stories` and `deliver-acceptance-criteria`. When applicable, use `mom-test` for follow-up phrasing. If using this bank alone, record the degraded mode in the Section Record.
 
 ## Feature capture format (F-01…)
 

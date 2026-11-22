@@ -81,6 +81,8 @@ Only when the lint is clean. These are the only bundle writes this skill ever ma
 
 ## Step 5 — Entry prompt + close
 
+Consult the pinned `verification-before-completion` reference for the builder's evidence gate. After using it, journal `LVR journal append --type booster_loaded --payload '{"name":"verification-before-completion","section":"S9","usage":"reference"}'`.
+
 1. **Entry prompt** — write `TARGET/HANDOFF-PROMPT.md` in English (refreshed at every completed close; its content is deterministic for a given project, so re-running produces the same file). Required content, as numbered rules the builder must follow:
    - read `AGENTS.md` first — it is the entry point and names the context load order;
    - execute the milestones from `MILESTONES.md` in order;

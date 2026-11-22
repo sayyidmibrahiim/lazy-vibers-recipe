@@ -16,3 +16,5 @@
 2026-11-22T18:17:45Z | codex/gpt-6 | task 06 | claimed; native Codex install/remove verified on a disposable copy; native remove leaves empty roots and its lockfile | next: implement isolated native staging and ownership-checked cleanup
 2026-11-22T18:25:16Z | codex/gpt-6 | task 06 | native staging, deployment receipt, cleanup guard and skill entry points implemented | next: verify native load, ownership regressions and paired S4 review
 2026-11-22T18:28:06Z | codex/gpt-6 | task 06 | native install and cleanup verified; 12 registry/lifecycle tests and shared regressions green; closed | next: ticket 07 section-by-section tool mapping and credits
+2026-11-22T18:28:17Z | codex/gpt-6 | task 07 | claimed and mapped old booster instructions | next: installable procedure map, credits, licensed fallback and load journal
+2026-11-22T18:35:28Z | codex/gpt-6 | task 07 | native route, 26 use records, credits and shared tests verified; closed | next: ticket 08 profile engine and base file definition

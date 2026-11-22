@@ -21,7 +21,7 @@ const SCRIPT_DIR = path.dirname(SELF);
 const EVENT_TYPES = [
   "session_start", "session_end", "folder_gate_passed", "folder_gate_rejected", "folder_gate_subfolder_created", "tier_declared",
   "capability_probe_passed", "capability_probe_failed", "context_guard_triggered", "truncation_recovered", "tier_changed",
-  "booster_check", "booster_install_ok", "booster_install_failed", "booster_choice", "booster_installed", "booster_uninstalled", "section_start",
+  "booster_check", "booster_install_ok", "booster_install_failed", "booster_choice", "booster_installed", "booster_uninstalled", "booster_loaded", "section_start",
   "section_done", "section_blocked", "answer_recorded", "loop_back_opened", "loop_back_closed",
   "scope_locked", "doc_generated", "handoff_started", "gap_found", "handoff_done",
   "recheck_started", "recheck_finding", "recheck_research_refresh", "recheck_fix_applied", "recheck_done", "review_started", "review_done",
@@ -1156,6 +1156,11 @@ function validatePayload(type, p, opts = {}) {
       if (p.managed !== undefined && (!opts.internal || !validBoosterReceipt(p.managed))) throw invalid("managed", "an ownership receipt written by booster deploy");
       break;
     }
+    case "booster_loaded":
+      needStr("name");
+      needSec();
+      if (!["start", "pass", "reference"].includes(p.usage)) throw invalid("usage", "start|pass|reference");
+      break;
     case "booster_uninstalled": needStr("name"); needStr("path"); optStr(p, "reason"); break;
     case "agent_delegated": validateAgent(p, false); break;
     case "framework_selected": {

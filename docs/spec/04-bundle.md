@@ -15,7 +15,7 @@ The bundle is the product. It is generated at S9 (and maintained by v1 skills), 
 | `SPEC/api.md` | S9 | builder | Conventions, endpoint table, request/response examples for critical endpoints, status codes, error format |
 | `SPEC/architecture.md` | S9 | builder | Stack + reasons (mirrors DECISIONS), components, **ASCII data-flow diagram**, folder structure, local run instructions, failure points |
 | `USER_FLOWS.md` | S9 | builder + owner | Per feature: flow diagram (ASCII) + numbered click-by-click interaction script (the "posting ke IG" style), both happy path and key alternatives |
-| `CODE_STYLE.md` | S9 | builder | Language/framework conventions, naming, testing expectations, error handling, simplicity rules (ponytail + karpathy distilled, adapted to the chosen stack) |
+| `CODE_STYLE.md` | S9 | builder | Language/framework conventions, naming, testing expectations, error handling, simplicity rules (ponytail principles adapted to the chosen stack) |
 | `SECURITY.md` | S9 | builder | Auth model, PII inventory + protection, secrets handling, dependencies policy, compliance notes (region-appropriate) |
 | `RESEARCH.md` | S5/S9 | builder + owner | Competitor scan, comparable products, stack comparison with trade-offs, cost table — every claim with a cite tag (source, published/updated date, access date) or a logged `[unverified: …]` marker (spec 07) |
 | `SCOPE.md` | S7/S9 | builder + owner | MVP list (F-01…) + Parking Lot, explicit |
@@ -29,12 +29,14 @@ The bundle is the product. It is generated at S9 (and maintained by v1 skills), 
 
 Format rules (all files): GitHub-flavored Markdown · English source · no Mermaid (ASCII diagrams) · SimpleEnglish document rules · consistency enforced (same stack/entity/feature names everywhere).
 
+For the AGENTS.md format, consult the upstream specification at [agentsmd/agents.md](https://raw.githubusercontent.com/agentsmd/agents.md/main/README.md). The format is documentation.
+
 ## Compilation order (S9)
 
 1. Draft each file from section records + `decisions[]` + `milestones[]`.
 2. **Cross-check pass**: every F-… has a USER_FLOWS entry and requirements entry; every decision has a DECISIONS.md row; every non-confirmed decision (`assumed` + `designer_filled`) is in ASSUMPTIONS.md; stack names identical across files; every claim carries a valid, fresh cite tag or a logged unverified marker (spec 07). `lvr.mjs crosscheck` runs this list mechanically (feature coverage including parked features, decisions mirror, ASSUMPTIONS, display and feature names, acceptance criterion vs VERIFICATION, cost sources, file presence, citations — rule X8 = `cite check --all`) and leaves the judgment items (stack and entity names, specificity) to the model.
 3. SimpleEnglish document-rules pass.
-4. Humanizer pass (de-slop).
+4. Anti-slop editing pass.
 5. Emit `blueprint.json` + harness adapters.
 6. Journal `doc_generated` per file (checkpoint granularity).
 

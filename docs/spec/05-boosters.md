@@ -1,45 +1,33 @@
-# Spec 05 — Boosters (dependency model)
+# Spec 05 — Boosters and section routing
 
-Boosters are external, verified skills/MCPs treated as **essential dependencies** (ADR-0004). The Conductor guarantees their presence before the work that needs them — quality is never silently degraded.
+The pinned registry defines sources, installs and triggers. In an installed skill it is available as `references/boosters.json`. The lifecycle procedure covers staging, ownership, cleanup and user-visible failure handling.
 
-## Tiers
+| Tier | Use |
+|---|---|
+| Core | Check and install during bootstrap. The affected step stops on failure to offer help, degraded mode or stop. |
+| Conditional | Supply only when the section and known product conditions apply. Keep unknown conditions pending. |
+| Reference | Consult and credit the exact source for the work at hand. |
 
-| Tier | Meaning | On failure (harness forbids install, offline, missing API key) |
-|---|---|---|
-| **core** | Output quality guarantee depends on it | **Never silent.** Pipeline stops the affected step and offers the user explicit options: (a) help me install fully (guided, per-harness), (b) continue with output marked `degraded` in state + journal + OVERVIEW note, (c) stop here |
-| **enhancer** | Makes output better | Continue, mark `degraded`, note in journal and final OVERVIEW |
+The six core entries are PM skills, grilling, planning-and-task-breakdown, ponytail, anti-slop, and SimpleEnglish. Each entry needs a permissive license. Historical plans may contain separately disclosed runtime-only dependencies under ADR-0001. Web search and page fetch stay mandatory under spec 07. Temporary loss of web access stops research with enablement guidance.
 
-## Core boosters (v0)
+## Route by section
 
-| Booster | Repo | License | Used at |
+| Stage | Load at start | Apply as a pass | Consult as a reference |
 |---|---|---|---|
-| pm-skills interview patterns | `product-on-purpose/pm-skills` | Apache-2.0 | S1, S4 |
-| OpenSpec pattern (structure reference) | `Fission-AI/OpenSpec` | MIT | S9 |
-| SimpleEnglish (document-rule subset) | `AminBlg/SimpleEnglish` | MIT | S9 (+OVERVIEW strictest) |
-| humanizer (de-slop pass) | `blader/humanizer` | MIT | S9 |
-| karpathy-guidelines | `multica-ai/andrej-karpathy-skills` | MIT | S9 (CODE_STYLE), S10 |
-| ponytail | `DietrichGebert/ponytail` | MIT | S9 (CODE_STYLE), S10 |
-| competitor-analysis (research depth) | `browserbase/skills` or Firecrawl MCP | MIT | S5 |
-| Playwright MCP | `microsoft/playwright-mcp` | MIT | S10 verification (when build runs) |
-| agents.md spec | `agentsmd/agents.md` | (spec text, permissive) | S9 |
+| S0 | grilling for targeted follow-ups | | |
+| S1 | grilling for ready decisions | define-problem-statement, mom-test | define-jtbd-canvas |
+| S2 | grilling for budget and device questions | | Internal cost leads, then verify every actual price live |
+| S3 | grilling for unresolved data and privacy choices | | Domain Brief sources |
+| S4 | grilling for the feature capture rounds | mom-test, deliver-edge-cases, user-stories, deliver-acceptance-criteria. For UI ideas, use applicable impeccable, emil-design-eng, antislop-human, and antislop-layoutmobile guidance for layout, motion and accessibility. | |
+| S5 | discover-competitive-analysis for the scan | | |
+| S6 | | architecture-designer, threat-modeling when applicable | cost-estimator for the checklist and cost model. Refresh every price before using it. |
+| S7 | | define-prioritization-framework | |
+| S8 | planning-and-task-breakdown | | |
+| S9 | | deliver-prd, applicable api-designer, user-stories and deliver-acceptance-criteria for requirements, ponytail for code style, simple-english then anti-slop for prose. Where applicable, use ui-ux-pro-max, impeccable, emil-design-eng, ux-copy, antislop-human, and antislop-layoutmobile for interface work. Use prompt-engineer, agent-spec, or skill-creator where the product calls for them. | develop-adr, spec-kit-templates when data applies, cost-estimator, the upstream AGENTS.md format, and applicable review-animations-standards and web-interface-guidelines |
+| Handoff | | | verification-before-completion for the builder's evidence gate |
 
-**Web research is a required capability, not a booster** (principle 14, spec 07 §1): a working web search and page fetch — the harness's own tools or any search/fetch MCP server — checked at the start of `/lvr-init-new-idea` and `/lvr-continue`. It has no "continue degraded" choice: without it the skill explains how to enable it and stops. The competitor-analysis booster above only adds depth to S5 on top of that capability; choosing "continue degraded" for it is allowed only when the web research check passed, and S5 then researches with the plain web tools.
+When a skill or reference actually informs the work, append a `booster_loaded` event with its name, section and usage (`start`, `pass`, or `reference`). Record handoff uses under S9. A presence check does not establish a load. If the preferred skill was unavailable, document the fallback in the Section Record and surface the degraded mode in OVERVIEW.
 
-NC-licensed candidates (e.g. `deanpeters/Product-Manager-Skills`, CC BY-NC-SA 4.0) are **allowed as runtime dependencies only** (install at runtime, credit, never copy content into LVR files) and are flagged in CAPABILITIES.md with the commercialization reminder (ADR-0001).
+Use the installed anti-slop skill for the S9 prose pass. The MIT snapshot in `references/third-party/anti-slop/` is available as a degraded reference when a user proceeds without the install. Fetch the [AGENTS.md format](https://raw.githubusercontent.com/agentsmd/agents.md/main/README.md) as documentation.
 
-## Bootstrap check (start of `/lvr-init-new-idea`, after Folder Gate)
-
-1. Read `boosters[]` from `state.json` (fresh project → all `missing`).
-2. For each core booster: detect presence (harness skill list, known install paths). Missing → install:
-   - Preferred: `npx skills add <repo>` (cross-harness installer).
-   - Claude Code: `claude plugin marketplace add <repo>` + install.
-   - Fallback: copy the skill folder into the harness's skills directory.
-3. Journal `booster_check` + `booster_install_ok|failed` per booster.
-4. Failure → **interactive choice** (see tiers). User choice → journal `booster_choice`, booster status `installed|failed|degraded`.
-5. MCP-type boosters need runtime keys (e.g. Firecrawl): check config presence the same way; missing key → same interactive choice.
-
-## Maintenance
-
-- The Capability Registry (`docs/research/agent-skill-catalog.md`) is the source of candidates; re-verify quarterly (stars, activity, license).
-- Adding a core booster = spec change (this file + `02-sections.md` routing) + registry entry; never a silent skill-file edit.
-- Removal/deprecation: keep the old entry listed as deprecated for one minor version so existing bundles' CAPABILITIES.md stay explainable.
+Keep the registry, routing and shipped references together when changing a dependency. Credit each pinned source and verify its license before adding it.

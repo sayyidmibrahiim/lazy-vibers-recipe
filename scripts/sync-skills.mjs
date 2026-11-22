@@ -29,6 +29,7 @@ const sources = [
   { src: path.join(SKILLS, "lvr-booster-lifecycle.md"), dest: (s) => path.join(s, "references", "booster-lifecycle.md") },
   { src: path.join(SKILLS, "lvr-boosters.json"), dest: (s) => path.join(s, "references", "boosters.json"), optional: true },
   { src: path.join(SKILLS, "lvr-freshness.json"), dest: (s) => path.join(s, "references", "freshness.json") },
+  { src: path.join(ROOT, "docs", "spec", "05-boosters.md"), dest: (s) => path.join(s, "references", "booster-map.md"), only: "lvr-init-new-idea" },
   { src: path.join(ROOT, "docs", "spec", "08-review.md"), dest: (s) => path.join(s, "references", "contract.md"), only: "lvr-review-plan" },
 ];
 

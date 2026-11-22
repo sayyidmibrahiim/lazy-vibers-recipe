@@ -26,7 +26,7 @@ The Constitution of the LVR (Lazy Vibers Recipe) pipeline: the 14 rules that bin
 
 6. **No slop**
 
-   Be concrete and specific, with no filler words. Final documents pass the humanizer pattern list.
+   Be concrete and specific, with no filler words. Final documents pass the anti-slop editing pass.
 
 7. **Plain language**
 
