@@ -36,6 +36,8 @@ For the AGENTS.md format, consult the upstream specification at [agentsmd/agents
 
 After the scope is locked, `profile plan --write` saves the selected types and their extra paths in `.lvr/profile-plan.json`. It keeps that list on retries. S9 uses it for the additional files. The derived v1 index includes `profile_files` when the snapshot has extra paths. Existing indexes with no extra paths retain their original shape. The complete bundle manifest and lint expansion are ticket 28.
 
+[Personal workflow plans](09-workflows.md) define the draft skill, local profile schema, tools, evaluations and install plan for the skill and agent profiles.
+
 ## Compilation order (S9)
 
 1. Draft each file from section records + `decisions[]` + `milestones[]`.

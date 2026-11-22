@@ -102,6 +102,15 @@
           "feeds": [
             "PROFILE_SCHEMA.md"
           ]
+        },
+        {
+          "id": "skill-egress",
+          "question": "Which sites can receive a search, and which details can appear in it?",
+          "why": "Each site needs a clear limit on what it receives.",
+          "feeds": [
+            "TOOLS.md",
+            "PROFILE_SCHEMA.md"
+          ]
         }
       ],
       "exit_criteria": [
@@ -121,7 +130,7 @@
           "question": "What is the first part of the task that follows the same rule every time?",
           "why": "This separates predictable work from decisions.",
           "feeds": [
-            "TOOLS_LIST.md",
+            "TOOLS.md",
             "SKILL_DRAFT.md"
           ]
         },
@@ -130,7 +139,7 @@
           "question": "Which tools can it use, and which tools should stay off limits?",
           "why": "Access should match the actual job.",
           "feeds": [
-            "TOOLS_LIST.md"
+            "TOOLS.md"
           ]
         },
         {
@@ -138,7 +147,7 @@
           "question": "Which action should always ask you before it runs?",
           "why": "That keeps one-way changes under your control.",
           "feeds": [
-            "TOOLS_LIST.md"
+            "TOOLS.md"
           ]
         }
       ],
@@ -194,7 +203,7 @@
     "SKILL_DRAFT.md",
     "TRIGGERS.md",
     "PROFILE_SCHEMA.md",
-    "TOOLS_LIST.md",
+    "TOOLS.md",
     "EVALS.md",
     "INSTALL_MANIFESTS.md"
   ]

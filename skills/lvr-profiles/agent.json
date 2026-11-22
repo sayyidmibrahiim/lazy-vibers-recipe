@@ -13,7 +13,8 @@
           "question": "Who talks to the agent and what do they want it to accomplish?",
           "why": "Real users and tasks anchor the design.",
           "feeds": [
-            "AGENT_SPEC.md"
+            "AGENT_SPEC.md",
+            "SKILL_DRAFT.md"
           ]
         },
         {
@@ -43,6 +44,40 @@
         "ai-designer"
       ]
     },
+    "S2": {
+      "questions": [
+        {
+          "id": "agent-host",
+          "question": "Which assistant or app should be able to install this first?",
+          "why": "The target host sets the setup steps.",
+          "feeds": [
+            "INSTALL_MANIFESTS.md"
+          ]
+        },
+        {
+          "id": "agent-tool-limit",
+          "question": "Which sites or tools should it be allowed to contact?",
+          "why": "An allowlist makes the data boundary explicit.",
+          "feeds": [
+            "TOOLS.md"
+          ]
+        },
+        {
+          "id": "agent-local-config",
+          "question": "Who will control its installation and private settings?",
+          "why": "A clear owner can change or remove access later.",
+          "feeds": [
+            "INSTALL_MANIFESTS.md",
+            "PROFILE_SCHEMA.md"
+          ]
+        }
+      ],
+      "exit_criteria": [
+        "Name the install target, its local scope and who controls access."
+      ],
+      "boosters": [],
+      "agents": []
+    },
     "S3": {
       "questions": [
         {
@@ -58,7 +93,8 @@
           "question": "What actions can change something, and who approves each one?",
           "why": "A user needs control over consequential actions.",
           "feeds": [
-            "GUARDRAILS.md"
+            "GUARDRAILS.md",
+            "TOOLS.md"
           ]
         },
         {
@@ -66,7 +102,8 @@
           "question": "What should it remember across chats, and for how long?",
           "why": "Retention affects convenience and privacy.",
           "feeds": [
-            "GUARDRAILS.md"
+            "GUARDRAILS.md",
+            "PROFILE_SCHEMA.md"
           ]
         }
       ],
@@ -163,7 +200,8 @@
           "question": "Which real conversations should become repeatable tests?",
           "why": "Good answers can be compared to agreed examples.",
           "feeds": [
-            "CHAT_EVAL.md"
+            "CHAT_EVAL.md",
+            "EVALS.md"
           ]
         },
         {
@@ -199,6 +237,11 @@
     "CONVERSATION_FLOWS.md",
     "PROMPT_SPEC.md",
     "GUARDRAILS.md",
-    "CHAT_EVAL.md"
+    "CHAT_EVAL.md",
+    "SKILL_DRAFT.md",
+    "PROFILE_SCHEMA.md",
+    "TOOLS.md",
+    "EVALS.md",
+    "INSTALL_MANIFESTS.md"
   ]
 }
