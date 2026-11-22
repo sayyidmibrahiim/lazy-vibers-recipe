@@ -22,6 +22,10 @@ Nothing is ever deleted: every feature not in-MVP lands in the Parking Lot with 
 
 Count the in-MVP list. Above ~8 features, say plainly (User Language): "This is more than a first version builds well — every extra feature pushes back the day you can actually use it. Want to cut to the <n> that matter most, or keep all <m>?" Offer a concrete cut (the `should`/`could` rows are the candidates) and let the user decide. The warning never auto-cuts, and it fires even when the user is enthusiastic — that is the anti-yes-man duty (principle 2). Record the warning and the user's call in the record's Size check section.
 
+## Scope review (before the lock)
+
+After the size check and before the confirmation, offer the light scope review when `/lvr-review-plan` is installed (the folder `lvr-review-plan/` next to this skill's folder). It is on by default and skippable. It runs that skill's `--scope-only` mode (its `references/protocol.md` §10) on the split exactly as you will present it: lenses L01, L02, L04, L08, L10 and L15, findings with quotes, and a scope verdict ("scope sound: lock it" / "fix before locking" / "do not lock yet"). Tell the user the verdict and the blocking and major findings in plain words. The user decides: a fix changes the split before the lock, an accepted risk becomes a decision at the lock, and going ahead as is is allowed. The review never edits the plan and never locks for the user. Record the outcome in the record's `## Scope review`. Not installed → one plain line, then lock without it.
+
 ## The lock protocol
 
 1. Present the final list — in-MVP with a one-line description each, then the Parking Lot with its reasons.
@@ -45,6 +49,11 @@ Count the in-MVP list. Above ~8 features, say plainly (User Language): "This is 
 
 ## Size check
 <in-MVP count; when > ~8: the warning given + the user's call>
+
+## Scope review
+- Run <N> · <"scope sound: lock it" | "fix before locking" | "do not lock yet"> · blocking <n>, major <n>, minor <n> · report `.lvr/review/REVIEW-<date>-<N>.md`
+- User's call: <fixed: what changed | accepted: D-NNN | went ahead as is>
+(or one line: "skipped by the user (S7.qNN)" / "review skill not installed")
 
 ## Lock
 - Confirmed: <S7.qNN> · decision <D-NNN> · journaled `scope_locked` <ts>

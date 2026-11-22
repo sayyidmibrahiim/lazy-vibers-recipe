@@ -21,7 +21,7 @@ Each skill is one folder with a SKILL.md file and its own references. The table 
 | `/lvr-init-new-idea` | Runs the Folder Gate and the interview S0–S9 (intake, context, conditions, data and privacy, features, deep research, feasibility loop, scope lock, milestone plan, compile) | A Blueprint Bundle of 20 files in the project folder |
 | `/lvr-continue` | Resumes a run or rebuilds the state from the journal | A restored state and an offer of the next step |
 | `/lvr-handoff` | Lints all 20 bundle files, emits `blueprint.json`, and writes the builder stubs | A bundle ready for any builder harness |
-| `/lvr-recheck-plan` | Runs the adversarial audit R1–R6 | A RECHECK report and applied fixes |
+| `/lvr-review-plan` | Reviews the finished plan through 15 critical lenses with quoted evidence (formerly `/lvr-recheck-plan`) | A scored review report with an honest verdict and a findings ledger; fixes only with `--apply` after you approve them |
 | `/lvr-add-feature` | Adds one post-lock feature through a mini-pipeline | An updated bundle, append-only |
 | `/lvr-build` | Executes the milestones and runs each verification procedure | A build log with verified milestones |
 | `/lvr-personal-brand` | Builds a brand kit after the milestones are verified | Three files in `brand/` |

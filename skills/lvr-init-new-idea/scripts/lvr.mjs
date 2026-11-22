@@ -105,6 +105,9 @@ const secNum = (s) => parseInt(String(s).slice(1), 10);
 const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check", "all", "context", "remove-legacy"]);
 /** Every `--file` value in order (cite check takes several); a symbol key so the unknown-flag check never sees it. */
 const FILE_LIST = Symbol("files");
+/** Repeatable review flags (--text, --claim, --id): every value in order. */
+const MULTI_LIST = Symbol("multi");
+const MULTI_FLAGS = new Set(["text", "claim", "id"]);
 const OPTIONAL_VALUE_FLAGS = new Set(["compare"]);
 const REPEAT_FLAGS = new Set(["decision"]);
 const GLOBAL_FLAGS = ["dir", "pretty", "help", "version"];
@@ -136,6 +139,7 @@ function parseArgv(argv) {
       if (REPEAT_FLAGS.has(k)) (flags[k] ??= []).push(v);
       else flags[k] = v;
       if (k === "file") (flags[FILE_LIST] ??= []).push(v);
+      if (MULTI_FLAGS.has(k)) ((flags[MULTI_LIST] ??= {})[k] ??= []).push(v);
     } else pos.push(t);
   }
   return { pos, flags };
@@ -4337,6 +4341,2130 @@ async function cmdStateMigrate({ dir, flags }) {
   return info.kind === "copy" ? migrateCopy(dir) : migrateInPlace(dir, null);
 }
 
+// ---------------------------------------------------------------- 11e. review (docs/spec/08-review.md)
+// `review snapshot|claims|coverage|ids|ripple|verify|ledger-diff|score|stability|render|freshness`. Deterministic, no model.
+// Writes only .lvr/review/** (and the journal through `render --journal`); never a bundle file, never state.json directly.
+const REVIEW_LEDGER = ".lvr/review/LEDGER.jsonl";
+const REVIEW_LEARNED = ".lvr/review/learned-checks.md";
+const ID_SRC = "F-\\d+|M\\d+|D-\\d{3,}|RQ-\\d{3,}|U-\\d+|LC-\\d{3,}";
+const ID_ONE = new RegExp(`(?<![A-Za-z0-9-])(${ID_SRC})(?![A-Za-z0-9])`);
+const ID_ALL = new RegExp(`(?<![A-Za-z0-9-])(?:${ID_SRC})(?![A-Za-z0-9])`, "g");
+const COUNTED = new Set(["open", "partial", "regressed", "accepted"]);
+const OPENISH = new Set(["open", "partial", "regressed"]);
+const IMPACTS = ["I1", "I2", "I3", "I4"];
+const LIKELIHOODS = ["L1", "L2", "L3"];
+const DETECTS = ["caught", "weak", "none"];
+const FIX_CLASSES = ["mechanical", "research", "decision"];
+const FOUND_BY = ["sweep", "premortem", "consequence", "simulation", "saturation", "fresh-pass"];
+const MISSED = new Set(["missed-earlier", "checklist-gap"]);
+const ROOT_CAUSES = ["cell-skipped", "shallow-read", "claim-not-extracted", "severity-miscalibrated", "check-missing", "no-web-blocked", "fix-ripple-unmodelled"];
+// B3 (fix round 1): `not-applicable-type` is gone. Pack checks for other product types are already left out by activeChecks.
+const NA_REASONS = ["stores-data-false", "has-ui-false", "file-absent-by-profile", "file-not-yet-built"];
+const BLOCKED_REASONS = ["file-unreadable", "tool-failed", "needs-access"];
+const HORIZONS = ["first-session", "launch", "month-6", "inversion"];
+const PRED_KEYS = ["contains", "absent", "matches", "count", "lint", "cite_clean", "crosscheck", "blueprint_in_sync", "all", "any", "not", "manual"];
+const LEDGER_T = {
+  run: ["run", "scope", "mode", "date", "prev_run", "independence", "procedure", "lenses_sha256", "learned_sha256", "freshness_sha256", "snapshot_sha256", "checks"],
+  finding: ["run", "id", "lens", "check", "locator", "claim_key", "also", "claim", "evidence", "absence", "fact", "evidence_level", "load_bearing", "impact", "impact_reason", "likelihood", "likelihood_reason", "one_way_door", "detect", "detect_quote", "severity", "chain", "fix", "fix_class", "verify", "ripple", "owner", "conflicts_with", "order", "found_by", "caused_by", "status", "class", "class_hint", "class_reason", "first_run", "should_since", "text_changed_reason", "withdrawn_reason"],
+  status: ["run", "id", "status", "reason", "verify", "by"],
+  cells: ["run", "cells_sha256", "r_cells", "counts", "passes", "saturated", "premortem", "fresh_pass"],
+  apology: ["run", "id", "class", "should_since", "root_cause", "text", "learned"],
+  approval: ["run", "id", "decision", "words", "at", "decision_id"],
+  apply: ["run", "id", "files", "result", "decision_id"],
+  score: ["run", "scope", "lens_scores", "lens_counts", "na", "unscored", "caps", "min", "overall", "verdict", "open", "accepted", "missed_earlier", "score_if_caught_in_run1", "corrected_history"],
+  run_done: ["run", "report", "body_sha256", "verdict"],
+};
+const RUN_OWNED = new Set(["run", "finding", "status", "cells", "apology", "approval", "apply"]);
+/** Fields added after a line type first shipped: a line without them reads as null. */
+const LEDGER_LATE = { approval: new Set(["decision_id"]) };
+
+const sortKeys = (v) => (Array.isArray(v) ? v.map(sortKeys) : isObj(v) ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys(v[k])])) : v);
+const canonJson = (v) => JSON.stringify(sortKeys(v));
+const dayIso = (day) => new Date(day * DAY_MS).toISOString().slice(0, 10);
+const uniq = (a) => [...new Set(a)];
+const cmpStr = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+
+/** N(): the quote normalisation of spec 08 §4. */
+function normQ(s) {
+  let t = String(s).normalize("NFKC");
+  t = t.replace(/[‘’‚‛′]/g, "'").replace(/[“”„‟″]/g, '"').replace(/[‐-―−]/g, "-")
+    .replace(/[   ]/g, " ").replace(/…/g, "...").replace(/[​‌‍⁠﻿]/g, "").replace(/[*_`]/g, "");
+  return t.replace(/\s+/g, " ").trim();
+}
+const lineHash = (l) => sha256(normQ(l)).slice(0, 12);
+const normText = (raw) => stripBom(raw).replace(/\r\n?/g, "\n");
+/** Unit key of a heading (spec 08 §3). */
+const slugKey = (t) => (String(t).normalize("NFKC").toLowerCase().replace(/[*_`]/g, "").replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-+|-+$/g, "") || "untitled");
+const claimKeyNorm = (s) => (String(s ?? "-").normalize("NFKC").toLowerCase().replace(/[\s_]+/g, "-").replace(/[^a-z0-9:./-]/g, "").replace(/-+/g, "-").replace(/^-+|-+$/g, "") || "-");
+const findingId = (lens, check, loc, ck) => `RV-${lens}-${sha256(`${check}|${loc}|${ck}`).slice(0, 8)}`;
+const nonEmpty = (v) => isStr(v) && v.trim() !== "";
+const isDate = (v) => isStr(v) && /^\d{4}-\d{2}-\d{2}$/.test(v) && !!parseDay(v)?.ok;
+
+function severityOf(f) {
+  let s;
+  switch (f.impact) {
+    case "I1": s = "note"; break;
+    case "I2": s = "minor"; break;
+    case "I3": s = f.likelihood === "L1" ? "minor" : f.likelihood === "L3" && f.one_way_door === true ? "blocking" : "major"; break;
+    case "I4": s = f.likelihood === "L1" ? "major" : "blocking"; break;
+    default: return null;
+  }
+  if (f.detect === "none") { if (s === "minor") s = "major"; else if (s === "major") s = "blocking"; }
+  if (f.load_bearing === true && Number.isInteger(f.evidence_level) && f.evidence_level <= 1 && (s === "note" || s === "minor")) s = "major";
+  return s;
+}
+
+// ----- files: atomic, confined, idempotent
+function putReviewFile(dir, rel, content) {
+  const target = confine(dir, path.join(dir, rel));
+  let cur = null;
+  try { cur = fs.readFileSync(target, "utf8"); } catch { /* new */ }
+  if (cur === content) return false;
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  writeFileAtomic(target, content, "REVIEW_WRITE_FAILED");
+  return true;
+}
+function readWork(dir, rel, code, what) {
+  const p = path.join(dir, rel);
+  let t;
+  try { t = readText(p); } catch { throw fail(code, `${what} not found: ${rel}.`, { file: rel }); }
+  try { return JSON.parse(t); } catch (e) { throw fail("BAD_JSON_INPUT", `${rel} is not valid JSON: ${e.message}`, { file: rel }); }
+}
+function readWorkOpt(dir, rel) {
+  const p = path.join(dir, rel);
+  if (!fs.existsSync(p)) return null;
+  try { return JSON.parse(readText(p)); } catch (e) { throw fail("BAD_JSON_INPUT", `${rel} is not valid JSON: ${e.message}`, { file: rel }); }
+}
+
+// ----- registry
+function loadLenses(explicit) {
+  const searched = explicit ? [path.resolve(explicit)] : [
+    path.join(SCRIPT_DIR, "..", "references", "lenses.json"),
+    path.join(SCRIPT_DIR, "..", "..", "lvr-review-plan", "references", "lenses.json"),
+    path.join(SCRIPT_DIR, "..", "skills", "lvr-review-plan", "references", "lenses.json"),
+  ];
+  const found = searched.find((p) => { try { return fs.statSync(p).isFile(); } catch { return false; } });
+  if (!found) throw fail("LENSES_MISSING", "lenses.json not found; the review cannot run.", { searched });
+  const bytes = fs.readFileSync(found);
+  let data;
+  try { data = JSON.parse(stripBom(bytes.toString("utf8"))); } catch (e) { throw fail("LENSES_INVALID", `lenses.json is not valid JSON: ${e.message}`, { path: found, errors: [{ pointer: "", message: e.message }] }); }
+  const errs = [];
+  const E = (pointer, message) => errs.push({ pointer, message });
+  const colList = (a, ptr, scopeOnly) => {
+    if (!Array.isArray(a)) { E(ptr, "must be an array"); return; }
+    a.forEach((c, i) => {
+      if (!isObj(c) || !isStr(c.col)) E(`${ptr}/${i}`, "needs col");
+      else if (!isStr(c.path) && !(scopeOnly && isStr(c.record_of) && isStr(c.default))) E(`${ptr}/${i}`, "needs path (or record_of + default)");
+    });
+  };
+  if (!isObj(data) || data.schema_version !== 1) E("/schema_version", "must be 1");
+  else {
+    colList(data.columns?.full, "/columns/full", false);
+    colList(data.columns?.scope_only, "/columns/scope_only", true);
+    if (!Array.isArray(data.lenses) || !data.lenses.length) E("/lenses", "must be a non-empty array");
+    else data.lenses.forEach((l, i) => {
+      const p = `/lenses/${i}`;
+      if (!isObj(l) || !/^L\d{2}$/.test(l.id ?? "")) { E(p, "needs an id Lnn"); return; }
+      if (!isStr(l.name)) E(`${p}/name`, "must be a string");
+      if (!isStr(l.owner_section)) E(`${p}/owner_section`, "must be a string");
+      if (!(l.applies === "always" || (isObj(l.applies) && isStr(l.applies.flag) && isStr(l.applies.reason)))) E(`${p}/applies`, "must be always or {flag, na_when, reason}");
+      if (!isObj(l.core) || !Array.isArray(l.core.full) || !(l.core.scope_only === null || Array.isArray(l.core.scope_only))) E(`${p}/core`, "needs full[] and scope_only[]|null");
+      if (typeof l.scope_only !== "boolean") E(`${p}/scope_only`, "must be a boolean");
+      const cf = l.cells?.full;
+      if (!isObj(cf) || !Array.isArray(cf.R) || !Array.isArray(cf.o)) E(`${p}/cells/full`, "needs R[] and o[]");
+      const cs = l.cells?.scope_only;
+      if (!(cs === null || (isObj(cs) && Array.isArray(cs.R) && Array.isArray(cs.o)))) E(`${p}/cells/scope_only`, "needs null or R[] and o[]");
+      if (!Array.isArray(l.checks)) E(`${p}/checks`, "must be an array");
+      else l.checks.forEach((c, j) => {
+        const q = `${p}/checks/${j}`;
+        if (!isObj(c) || !isStr(c.id) || !c.id.startsWith(l.id + ".")) E(q, `id must start with ${l.id}.`);
+        else {
+          if (!IMPACTS.includes(c.impact)) E(`${q}/impact`, "must be I1..I4");
+          if (typeof c.scope_only !== "boolean") E(`${q}/scope_only`, "must be a boolean");
+          if (!(c.pack === null || isStr(c.pack))) E(`${q}/pack`, "must be a string or null");
+          if (typeof c.retired !== "boolean") E(`${q}/retired`, "must be a boolean");
+        }
+      });
+    });
+  }
+  if (errs.length) throw fail("LENSES_INVALID", `lenses.json is not valid (${errs.length} problem${errs.length === 1 ? "" : "s"}).`, { path: found, errors: errs.slice(0, 20) });
+  return { path: found, data, sha256: crypto.createHash("sha256").update(bytes).digest("hex") };
+}
+
+/** learned-checks.md: `## LC-NNN · Lxx · from <id> (run <k>, <class>)` + `- Applies to: COL, COL`. */
+function loadLearned(dir) {
+  const p = path.join(dir, REVIEW_LEARNED);
+  let raw;
+  try { raw = fs.readFileSync(p, "utf8"); } catch { return { exists: false, sha256: null, items: [] }; }
+  const lines = normText(raw).split("\n");
+  const items = [];
+  const bad = (line, message) => fail("LEARNED_INVALID", `learned-checks.md line ${line}: ${message}`, { file: REVIEW_LEARNED, line });
+  let cur = null;
+  const close = () => { if (cur && !cur.applies) throw bad(cur.line, `${cur.id} has no "- Applies to: COL, COL" line.`); };
+  lines.forEach((ln, i) => {
+    if (/^## /.test(ln)) {
+      close();
+      const m = ln.match(/^## (LC-\d{3,}) · (L\d{2}) · from (\S+) \(run (\d+), ([a-z-]+)\)\s*$/);
+      if (!m) throw bad(i + 1, "the heading must read `## LC-NNN · Lxx · from <id> (run <k>, <class>)`.");
+      if (items.some((x) => x.id === m[1])) throw bad(i + 1, `${m[1]} appears twice.`);
+      cur = { id: m[1], lens: m[2], from: m[3], run: +m[4], class: m[5], applies: null, line: i + 1 };
+      items.push(cur);
+      return;
+    }
+    if (cur) {
+      const a = ln.match(/^- Applies to:\s*(.*)$/);
+      if (a) cur.applies = a[1].split(",").map((x) => x.trim()).filter(Boolean);
+    }
+  });
+  close();
+  return { exists: true, sha256: crypto.createHash("sha256").update(raw).digest("hex"), items };
+}
+
+// ----- units, snapshot
+const planView = (st) => {
+  const v = { project: { slug: st.project?.slug, name: st.project?.name, user_language: st.project?.user_language }, product: st.product, pipeline: { sections: {}, loop_backs: st.pipeline?.loop_backs }, decisions: st.decisions, milestones: st.milestones, framework_decision: st.framework_decision, boosters: st.boosters };
+  for (const [s, x] of Object.entries(st.pipeline?.sections ?? {})) v.pipeline.sections[s] = { status: x.status, record: x.record };
+  return sortKeys(JSON.parse(JSON.stringify(v)));
+};
+
+/** Units of a Markdown text (headings, then id units), 1-based inclusive line ranges. */
+function mdUnits(text) {
+  const lines = text.split("\n");
+  const heads = parseHeadings(text);
+  const units = [];
+  const seen = new Map();
+  const uniqKey = (k) => { const n = (seen.get(k) ?? 0) + 1; seen.set(k, n); return n === 1 ? k : `${k}-${n}`; };
+  const endOf = (h) => { const nx = heads.find((x) => x.line > h.line && x.level <= h.level); return nx ? nx.line : lines.length; };
+  const mk = (key, kind, a, b) => ({ key, kind, line_start: a + 1, line_end: b, sha256: sha256(lines.slice(a, b).join("\n")) });
+  for (const h of heads) units.push(mk(uniqKey(slugKey(h.text)), "heading", h.line, endOf(h)));
+  const idSeen = new Map();
+  const idUniq = (id) => { const n = (idSeen.get(id) ?? 0) + 1; idSeen.set(id, n); return n === 1 ? `id:${id}` : `id:${id}-${n}`; };
+  const code = blankFences(text).split("\n");
+  const headAt = new Map(heads.map((h) => [h.line, h]));
+  const idUnits = [];
+  code.forEach((ln, i) => {
+    const h = headAt.get(i);
+    if (h) { const m = h.text.match(ID_ONE); if (m) idUnits.push({ id: m[1], a: i, b: endOf(h) }); return; }
+    if (ln.trim().startsWith("|")) {
+      const cells = splitRow(ln);
+      if (cells.every((c) => /^:?-+:?$/.test(c))) return;
+      const m = cleanCell(cells[0] ?? "").match(new RegExp(`^(${ID_SRC})(?![A-Za-z0-9])`));
+      if (m) idUnits.push({ id: m[1], a: i, b: i + 1 });
+      return;
+    }
+    const li = ln.match(/^(\s*)(?:[-*+]|\d+[.)])\s+(?:\*\*|__|\*|_)?\s*(.*)$/);
+    if (li) {
+      const m = li[2].match(new RegExp(`^(${ID_SRC})(?![A-Za-z0-9])`));
+      if (m) {
+        let j = i + 1;
+        while (j < code.length && code[j].trim() !== "" && code[j].match(/^\s*/)[0].length > li[1].length) j++;
+        idUnits.push({ id: m[1], a: i, b: j });
+      }
+    }
+  });
+  for (const u of idUnits) units.push(mk(idUniq(u.id), "id", u.a, u.b));
+  units.sort((x, y) => x.line_start - y.line_start || (x.kind === y.kind ? 0 : x.kind === "heading" ? -1 : 1) || cmpStr(x.key, y.key));
+  return units;
+}
+function jsonUnits(text) {
+  let doc;
+  try { doc = JSON.parse(text); } catch { return []; }
+  if (!isObj(doc)) return [];
+  const lines = text.split("\n");
+  const starts = [];
+  lines.forEach((l, i) => { const m = l.match(/^ {2}("(?:[^"\\]|\\.)*"):/); if (m) { try { starts.push({ name: JSON.parse(m[1]), line: i }); } catch { /* skip */ } } });
+  const lastBrace = (() => { for (let i = lines.length - 1; i >= 0; i--) if (lines[i].trim() === "}") return i; return lines.length; })();
+  return Object.keys(doc).map((name) => {
+    const k = starts.findIndex((s) => s.name === name);
+    const a = k >= 0 ? starts[k].line : null;
+    const b = k >= 0 ? (k + 1 < starts.length ? starts[k + 1].line : lastBrace) : null;
+    return { key: `key:/${name}`, kind: "key", line_start: a === null ? null : a + 1, line_end: b, sha256: sha256(canonJson(doc[name])) };
+  });
+}
+
+/** The review context: state, run, scope, registry, scope columns, file texts. */
+function reviewCtx(dir, flags, opt = {}) {
+  needLvr(dir);
+  const ls = loadState(dir);
+  if (ls.kind === "absent") throw fail("STATE_MISSING", "There is no state.json in this project.");
+  if (ls.kind === "unreadable") throw fail("STATE_UNREADABLE", `state.json is not valid JSON: ${ls.error}`);
+  if (ls.kind === "invalid") throw fail("STATE_INVALID", `state.json has ${ls.errors.length} error(s); run state validate.`, { errors: ls.errors });
+  const st = ls.state;
+  if (flags.run === undefined || flags.run === true) throw fail("MISSING_FLAG", "Flag --run is required.", { flag: "run" });
+  const run = /^\d+$/.test(String(flags.run)) ? parseInt(flags.run, 10) : 0;
+  if (run < 1) throw fail("MISSING_FLAG", "--run must be an integer >= 1.", { flag: "run" });
+  const last = st.review?.last ?? null;
+  if (!last) throw fail("RUN_NOT_OPEN", "No review run is open: journal review_started first.", { open_run: null });
+  if (opt.open && (last.run !== run || last.done_at !== null)) throw fail("RUN_NOT_OPEN", `Run ${run} is not the open review run.`, { open_run: last.done_at === null ? last.run : null });
+  if (last.run !== run) throw fail("RUN_MISMATCH", `Run ${run} is not the current review run (${last.run}).`, { current_run: last.run });
+  let scope = last.scope;
+  if (flags.scope !== undefined) {
+    if (!REVIEW_SCOPES.includes(flags.scope)) throw fail("MISSING_FLAG", "--scope must be full or scope-only.", { flag: "scope" });
+    if (flags.scope !== last.scope) throw fail("RUN_MISMATCH", `--scope ${flags.scope} does not match the run's scope (${last.scope}).`, { scope: last.scope });
+    scope = flags.scope;
+  }
+  const reg = loadLenses(flags.lenses);
+  const cols = [];
+  if (scope === "full") for (const c of reg.data.columns.full) cols.push({ col: c.col, path: c.path, key: c.path });
+  else {
+    for (const c of reg.data.columns.scope_only) {
+      if (c.record_of) {
+        const rec = st.pipeline?.sections?.[c.record_of]?.record;
+        const p = isStr(rec) && rec !== "" ? `.lvr/docs/sections/${rec}` : c.default;
+        cols.push({ col: c.col, path: p, key: p });
+      } else cols.push({ col: c.col, path: c.path.replace("<N>", String(run)), key: c.path });
+    }
+  }
+  if (scope === "scope-only") {
+    const pc = cols.find((c) => c.col === "PROPOSAL");
+    if (pc && !fs.existsSync(path.join(dir, pc.path))) throw fail("PROPOSAL_MISSING", `The scope proposal is missing: write ${pc.path} (the split exactly as shown to the user) first.`, { path: pc.path });
+  }
+  const ctx = {
+    dir, st, run, scope, last, reg, cols, runRel: `.lvr/review/runs/run-${run}`, _text: new Map(), _norm: new Map(), _units: new Map(),
+    col: (name) => cols.find((c) => c.col === name) ?? null,
+    colByPath: (p) => {
+      const q = String(p).trim().replace(/\\/g, "/").replace(/^(\.\/)+/, "");
+      return cols.find((c) => c.key === q || c.path === q) ?? null;
+    },
+    /** { exists, text } of a column (normalised text; STATE = the sorted plan view). */
+    file: (c) => {
+      if (ctx._text.has(c.col)) return ctx._text.get(c.col);
+      let r;
+      if (c.col === "STATE") r = { exists: true, text: JSON.stringify(planView(st), null, 2) };
+      else {
+        const abs = path.resolve(dir, c.path);
+        const rel = path.relative(dir, abs);
+        if (rel === ".." || rel.startsWith(".." + path.sep) || path.isAbsolute(rel)) r = { exists: false, text: "" };
+        else {
+          try { r = fs.statSync(abs).isFile() ? { exists: true, text: normText(fs.readFileSync(abs, "utf8")) } : { exists: false, text: "" }; } catch { r = { exists: false, text: "" }; }
+        }
+      }
+      ctx._text.set(c.col, r);
+      return r;
+    },
+    normFile: (c) => {
+      if (!ctx._norm.has(c.col)) ctx._norm.set(c.col, normQ(ctx.file(c).text));
+      return ctx._norm.get(c.col);
+    },
+    units: (c) => {
+      if (!ctx._units.has(c.col)) {
+        const f = ctx.file(c);
+        ctx._units.set(c.col, !f.exists ? [] : /\.json$/i.test(c.path) ? jsonUnits(f.text) : mdUnits(f.text));
+      }
+      return ctx._units.get(c.col);
+    },
+    lensesInScope: () => reg.data.lenses.filter((l) => scope === "full" || l.scope_only),
+  };
+  Object.defineProperty(ctx, "F", { get: () => (ctx._F ??= loadFreshness(flags.freshness)) });
+  ctx.today = todayInfo();
+  return ctx;
+}
+
+/** Cells (R and o) of a lens for the run's scope; null when the lens has none in this scope. */
+function lensCells(ctx, l) {
+  const c = ctx.scope === "full" ? l.cells.full : l.cells.scope_only;
+  return c ? { R: c.R, o: c.o } : null;
+}
+function lensCore(ctx, l) { return (ctx.scope === "full" ? l.core.full : l.core.scope_only) ?? []; }
+
+/** Active checks: id -> { lens, impact }; learned checks: id -> { lens }. */
+function activeChecks(ctx, learned) {
+  const types = new Set(["base", ...(ctx.st.product?.types ?? [])]);
+  const m = new Map();
+  for (const l of ctx.lensesInScope()) {
+    for (const c of l.checks) {
+      if (c.retired) continue;
+      if (ctx.scope === "scope-only") { if (!(l.scope_only && c.scope_only)) continue; } else if (c.pack !== null && !types.has(c.pack)) continue;
+      m.set(c.id, { lens: l.id, impact: c.impact, learned: false });
+    }
+  }
+  for (const it of learned.items) if (ctx.lensesInScope().some((l) => l.id === it.lens)) m.set(it.id, { lens: it.lens, impact: null, learned: true });
+  return m;
+}
+
+function buildSnapshot(ctx, learned) {
+  const files = ctx.cols.map((c) => {
+    const f = ctx.file(c);
+    const units = ctx.units(c);
+    const lines = [];
+    const seen = new Set();
+    for (const l of f.text.split("\n")) {
+      if (normQ(l) === "") continue;
+      const h = lineHash(l);
+      if (!seen.has(h)) { seen.add(h); lines.push(h); }
+    }
+    return { col: c.col, path: c.key, exists: f.exists, bytes: f.exists ? Buffer.byteLength(f.text, "utf8") : 0, sha256: f.exists ? sha256(f.text) : null, units, lines };
+  });
+  return {
+    run: ctx.run, scope: ctx.scope, files, lenses_sha256: ctx.reg.sha256, learned_sha256: learned.sha256, freshness_sha256: sha256(fs.readFileSync(ctx.F.path)),
+    snapshot_sha256: sha256(canonJson(files.map(noLines))),
+  };
+}
+function loadSnap(ctx, n) {
+  const rel = `.lvr/review/runs/run-${n}/snapshot.json`;
+  const s = readWorkOpt(ctx.dir, rel);
+  if (!isObj(s) || !Array.isArray(s.files)) throw fail("SNAPSHOT_MISSING", `Snapshot for run ${n} not found: run \`review snapshot --run ${n}\` first.`, { run: n });
+  return s;
+}
+const snapFile = (snap, col) => snap.files.find((f) => f.col === col) ?? null;
+/** Run n's text copy (`text.json`): col -> text, only for files whose hash equals run n's snapshot (a changed copy is ignored). */
+function loadSnapText(ctx, n, snap) {
+  const out = new Map();
+  const t = readWorkOpt(ctx.dir, `.lvr/review/runs/run-${n}/text.json`);
+  if (!isObj(t) || !Array.isArray(t.files) || !snap) return out;
+  for (const f of t.files) {
+    const sf = isObj(f) && isStr(f.text) ? snapFile(snap, f.col) : null;
+    if (sf?.exists && sf.sha256 === sha256(f.text)) out.set(f.col, f.text);
+  }
+  return out;
+}
+
+
+// ----- locators, quotes, drafts
+/** { col, key, unit, norm } or { err } (spec 08 §5). `snap` (optional) checks the unit against the snapshot. */
+function parseLocator(ctx, raw, snap) {
+  if (!isStr(raw) || raw.trim() === "") return { err: "locator must be a non-empty string" };
+  const s = raw.trim().replace(/\\/g, "/").replace(/^(\.\/)+/, "");
+  const h = s.indexOf("#");
+  const p = h < 0 ? s : s.slice(0, h);
+  let frag = h < 0 ? null : s.slice(h + 1);
+  const c = ctx.colByPath(p);
+  if (!c) return { err: `${p} is not a column file of this scope` };
+  if (frag !== null) {
+    if (/^id:/i.test(frag)) frag = "id:" + frag.slice(3).trim().toUpperCase();
+    else if (/^key:/.test(frag)) frag = frag.trim();
+    else frag = slugKey(frag);
+    if (frag === "") frag = null;
+  }
+  const norm = c.key + (frag === null ? "" : `#${frag}`);
+  if (snap) {
+    const f = snapFile(snap, c.col);
+    if (frag !== null && (!f || !f.exists || !f.units.some((u) => u.key === frag))) return { err: `${norm} names no unit of the snapshot` };
+  }
+  return { col: c.col, key: c.key, unit: frag, norm };
+}
+
+/** Quote check of spec 08 §4. Returns null when it verifies, else { code, message, details }. */
+function quoteProblem(ctx, file, quote) {
+  const c = isStr(file) ? ctx.colByPath(file) : null;
+  const nq = isStr(quote) ? normQ(quote) : "";
+  if (!c) return { code: "QUOTE_NOT_FOUND", message: `${file}: not a column file of this scope.`, details: { file, quote: nq, found_prefix: "" } };
+  if (nq.length < 20) return { code: "QUOTE_TOO_SHORT", message: `The quote has ${nq.length} characters after normalisation; at least 20 are needed.`, details: { file: c.key, quote: nq } };
+  const hay = ctx.normFile(c);
+  if (hay.includes(nq)) return null;
+  let lo = 0, hi = nq.length;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (hay.includes(nq.slice(0, mid))) lo = mid; else hi = mid - 1; }
+  return { code: "QUOTE_NOT_FOUND", message: `The quote is not in ${c.key}${ctx.file(c).exists ? "" : " (the file is absent)"}.`, details: { file: c.key, quote: nq, found_prefix: nq.slice(0, lo) } };
+}
+/** Any scope file holds the quote (pre-mortem `handled`, scope-carry `fixed`). */
+function quoteAnywhere(ctx, quote, file) {
+  if (file) return quoteProblem(ctx, file, quote);
+  const nq = normQ(quote);
+  if (nq.length < 20) return { code: "QUOTE_TOO_SHORT", message: `The quote has ${nq.length} characters after normalisation; at least 20 are needed.`, details: { quote: nq } };
+  for (const c of ctx.cols) if (ctx.normFile(c).includes(nq)) return null;
+  return { code: "QUOTE_NOT_FOUND", message: "The quote is in no file of this scope.", details: { quote: nq } };
+}
+/** The lines a quote spans in a file: [{ ln (1-based), h (line hash) }], [] when not found. */
+function quoteLines(ctx, c, quote) {
+  const nq = normQ(quote);
+  const lines = ctx.file(c).text.split("\n");
+  let joined = "";
+  const spans = [];
+  lines.forEach((l, i) => {
+    const n = normQ(l);
+    if (n === "") return;
+    if (joined !== "") joined += " ";
+    spans.push({ a: joined.length, b: joined.length + n.length, h: lineHash(l), ln: i + 1 });
+    joined += n;
+  });
+  const at = joined.indexOf(nq);
+  if (at < 0 || nq === "") return [];
+  return spans.filter((s) => s.a < at + nq.length && s.b > at).map((s) => ({ ln: s.ln, h: s.h }));
+}
+const quoteLineHashes = (ctx, c, quote) => quoteLines(ctx, c, quote).map((x) => x.h);
+/**
+ * The anchor of a finding (B2, contract §10): the smallest unit of the locator's file that holds the first line of the
+ * first evidence quote from that file, as `FILE#<unit key>`. Without such a quote (absence evidence, a quote that is
+ * no longer in the file) the anchor is the normalised locator itself. Wording never enters the anchor.
+ */
+function anchorOf(ctx, locator, evidence) {
+  const loc = parseLocator(ctx, locator, null);
+  if (!loc.col) return isStr(locator) ? locator : "";
+  const c = ctx.col(loc.col);
+  const e = (Array.isArray(evidence) ? evidence : []).find((x) => isObj(x) && isStr(x.quote) && isStr(x.file) && ctx.colByPath(x.file)?.col === loc.col);
+  const ql = e ? quoteLines(ctx, c, e.quote) : [];
+  if (!ql.length) return loc.norm;
+  const ln = ql[0].ln;
+  const hold = ctx.units(c).filter((u) => Number.isInteger(u.line_start) && u.line_start <= ln && ln <= u.line_end);
+  if (!hold.length) return loc.key;
+  hold.sort((a, b) => (a.line_end - a.line_start) - (b.line_end - b.line_start) || (a.kind === b.kind ? 0 : a.kind === "id" ? -1 : 1) || cmpStr(a.key, b.key));
+  return `${loc.key}#${hold[0].key}`;
+}
+
+const regexUnsafe = (src) => /\((?:[^()\\]|\\.)*(?:[*+]|\{\d+,\d*\})(?:[^()\\]|\\.)*\)(?:[*+]|\{\d+,\d*\})/.test(src);
+/** Shape check of a verify predicate (spec 08 §9): null when valid, else { code, message }. */
+function predProblem(p, depth = 0) {
+  const bad = (m) => ({ code: "VERIFY_INVALID", message: m });
+  if (depth > 6) return bad("predicate nesting is too deep");
+  if (!isObj(p) || Object.keys(p).length !== 1) return bad("a predicate is an object with exactly one key");
+  const k = Object.keys(p)[0];
+  const v = p[k];
+  if (!PRED_KEYS.includes(k)) return bad(`unknown predicate "${k}"`);
+  const fileTxt = (o) => isObj(o) && nonEmpty(o.file) && nonEmpty(o.text) && (o.unit === undefined || isStr(o.unit)) && (o.case === undefined || typeof o.case === "boolean");
+  switch (k) {
+    case "contains": case "absent": return fileTxt(v) ? null : bad(`${k} needs {file, text, unit?, case?}`);
+    case "matches":
+      if (!(isObj(v) && nonEmpty(v.file) && isStr(v.regex) && v.regex !== "" && (v.flags === undefined || (isStr(v.flags) && /^[ims]*$/.test(v.flags))) && (v.unit === undefined || isStr(v.unit)))) return bad("matches needs {file, regex, flags?, unit?}");
+      if (v.regex.length > 200) return bad("regex is longer than 200 characters");
+      if (regexUnsafe(v.regex)) return { code: "VERIFY_REGEX_UNSAFE", message: "the regex has a nested quantifier" };
+      try { new RegExp(v.regex, (v.flags ?? "") + "u"); } catch (e) { return bad(`regex does not compile: ${e.message}`); }
+      return null;
+    case "count": return isObj(v) && nonEmpty(v.file) && nonEmpty(v.text) && ["=", ">=", "<="].includes(v.op) && Number.isInteger(v.n) && v.n >= 0 ? null : bad("count needs {file, text, op (=|>=|<=), n}");
+    case "lint": return isObj(v) && nonEmpty(v.id) && (v.file === undefined || isStr(v.file)) ? null : bad("lint needs {id, file?}");
+    case "cite_clean": return isObj(v) && nonEmpty(v.file) ? null : bad("cite_clean needs {file}");
+    case "crosscheck": return isObj(v) && /^X[1-8]$/.test(v.rule ?? "") ? null : bad("crosscheck needs {rule: X1..X8}");
+    case "blueprint_in_sync": return v === true ? null : bad("blueprint_in_sync must be true");
+    case "all": case "any":
+      if (!Array.isArray(v) || !v.length) return bad(`${k} needs a non-empty array`);
+      for (const x of v) { const e = predProblem(x, depth + 1); if (e) return e; }
+      return null;
+    case "not": return predProblem(v, depth + 1);
+    case "manual": return nonEmpty(v) ? null : bad("manual needs the text of what a person checks");
+    default: return bad("unknown predicate");
+  }
+}
+const predKind = (p) => (isObj(p) ? Object.keys(p)[0] ?? "manual" : "manual");
+
+/** A cite group string (`fact`): [] when valid, else the problems. */
+function factProblems(ctx, fact) {
+  if (!isStr(fact) || fact.trim() === "") return ["fact must be a cite group string"];
+  const tags = scanTags(fact);
+  if (!tags.length) return ["fact holds no [cite: …] tag"];
+  const out = [];
+  let cat = null;
+  const rest = stripTagSpans(fact, tags).trim();
+  if (rest !== "") out.push("fact holds text outside the cite tags");
+  for (const t of tags) {
+    if (t.kind !== "cite") { out.push("fact may hold cite tags only"); continue; }
+    const p = parseCite(t, ctx.F);
+    if (p.err) { out.push(`malformed cite: ${p.err}`); continue; }
+    if (cat !== null && cat !== p.cat) out.push("mixed categories in one fact");
+    cat = p.cat;
+    const a = parseDay(p.acc), d = p.date ? parseDay(p.date) : null;
+    if (!a.ok || a.day > ctx.today.day) out.push(`bad access date ${p.acc}`);
+    if (d && (!d.ok || d.day > ctx.today.day || (a.ok && d.day > a.day))) out.push(`bad published date ${p.date}`);
+    if (p.flags.amend && !parseDay(p.flags.amend).ok) out.push(`bad amend-check date ${p.flags.amend}`);
+  }
+  return out;
+}
+
+/** Field problems of one draft (spec 08 §5); quotes are checked later. Returns { errors, loc, ck, id, severity }. */
+function draftFields(ctx, d, env) {
+  const errors = [];
+  const add = (code, message) => errors.push({ code, message });
+  const r = { errors, loc: null, ck: null, id: null, severity: null };
+  if (!isObj(d)) { add("FINDING_INVALID", "A finding must be an object."); return r; }
+  const check = env.checks.get(d.check);
+  if (!isStr(d.lens) || !ctx.reg.data.lenses.some((l) => l.id === d.lens)) add("FINDING_INVALID", `lens "${d.lens}" is not in the registry.`);
+  else if (!ctx.lensesInScope().some((l) => l.id === d.lens)) add("FINDING_INVALID", `lens ${d.lens} is not part of a ${ctx.scope} run.`);
+  if (!check) add("FINDING_INVALID", `check "${d.check}" is not an active check or a learned check of this run.`);
+  else if (check.lens !== d.lens) add("FINDING_INVALID", `check ${d.check} belongs to ${check.lens}, not ${d.lens}.`);
+  const loc = parseLocator(ctx, d.locator, env.snap);
+  if (loc.err) add("LOCATOR_UNKNOWN", loc.err); else r.loc = loc;
+  if (d.also !== undefined && d.also !== null) {
+    if (!Array.isArray(d.also) || !d.also.every((x) => isStr(x))) add("FINDING_INVALID", "also must be a list of locators.");
+    else for (const a of d.also) { const x = parseLocator(ctx, a, env.snap); if (x.err) add("LOCATOR_UNKNOWN", `also: ${x.err}`); }
+  }
+  if (d.claim_key !== undefined && d.claim_key !== null && !isStr(d.claim_key)) add("FINDING_INVALID", "claim_key must be a string.");
+  r.ck = claimKeyNorm(d.claim_key);
+  const hasFact = d.fact !== undefined && d.fact !== null && d.fact !== "";
+  if (hasFact) { const fp = factProblems(ctx, d.fact); if (fp.length) add("FACT_INVALID", fp.join("; ")); }
+  else if (!(isStr(d.claim) && /^Fails (?:if|when) /.test(d.claim))) add("NO_CONSTRUCTION", 'claim must start with "Fails if " or "Fails when " (or cite a fact).');
+  const ev = d.evidence;
+  const hasAbs = isObj(d.absence);
+  if (!Array.isArray(ev)) add("EVIDENCE_MISSING", "evidence must be a list of {file, quote}.");
+  else {
+    if (!ev.length && !hasAbs) add("EVIDENCE_MISSING", "evidence is empty and there is no absence evidence.");
+    ev.forEach((e, i) => { if (!(isObj(e) && isStr(e.file) && isStr(e.quote))) add("EVIDENCE_MISSING", `evidence[${i}] needs {file, quote}.`); });
+  }
+  if (d.absence !== undefined && d.absence !== null) {
+    const a = d.absence;
+    if (!(isObj(a) && Array.isArray(a.files) && a.files.length && a.files.every((x) => isStr(x)) && Array.isArray(a.searched) && a.searched.length >= 2 && a.searched.every((x) => nonEmpty(x)))) add("EVIDENCE_MISSING", "absence needs {files, searched} with at least 2 search terms.");
+  }
+  if (!(d.evidence_level === null || d.evidence_level === undefined || (Number.isInteger(d.evidence_level) && d.evidence_level >= 0 && d.evidence_level <= 3))) add("FINDING_INVALID", "evidence_level must be 0-3 or null.");
+  for (const k of ["load_bearing", "one_way_door"]) if (d[k] !== undefined && typeof d[k] !== "boolean") add("FINDING_INVALID", `${k} must be true or false.`);
+  if (!IMPACTS.includes(d.impact)) add("FINDING_INVALID", "impact must be I1..I4.");
+  if (!LIKELIHOODS.includes(d.likelihood)) add("FINDING_INVALID", "likelihood must be L1..L3.");
+  if (IMPACTS.includes(d.impact) && check?.impact && d.impact !== check.impact && !nonEmpty(d.impact_reason)) add("FINDING_INVALID", `impact ${d.impact} differs from the check's hint ${check.impact}: impact_reason is required.`);
+  if (!DETECTS.includes(d.detect)) add("FINDING_INVALID", "detect must be caught, weak or none.");
+  if (d.detect === "caught" && !(isObj(d.detect_quote) && isStr(d.detect_quote.file) && isStr(d.detect_quote.quote))) add("DETECT_QUOTE_MISSING", "detect caught needs detect_quote {file, quote}.");
+  if (!FIX_CLASSES.includes(d.fix_class) || !nonEmpty(d.fix) || d.verify === undefined || d.verify === null) add("FIX_MISSING", "fix, fix_class (mechanical|research|decision) and verify are required.");
+  if (d.verify !== undefined && d.verify !== null) { const pp = predProblem(d.verify); if (pp) add(pp.code, pp.message); }
+  if (d.ripple !== undefined && d.ripple !== null && !(Array.isArray(d.ripple) && d.ripple.every((x) => isStr(x)))) add("FINDING_INVALID", "ripple must be a list of files.");
+  if (d.owner !== undefined && d.owner !== null && !(isStr(d.owner) && (d.owner === "owner" || /^S(10|[0-9])$/.test(d.owner) || /^lvr-[a-z0-9-]+$/.test(d.owner)))) add("FINDING_INVALID", "owner must be a Section, a skill or owner.");
+  if (d.conflicts_with !== undefined && d.conflicts_with !== null && !(Array.isArray(d.conflicts_with) && d.conflicts_with.every((x) => isStr(x)))) add("FINDING_INVALID", "conflicts_with must be a list of ids.");
+  if (!(d.order === undefined || d.order === null || Number.isInteger(d.order))) add("FINDING_INVALID", "order must be an integer or null.");
+  if (d.found_by !== undefined && d.found_by !== null && !FOUND_BY.includes(d.found_by)) add("FINDING_INVALID", `found_by must be one of ${FOUND_BY.join(", ")}.`);
+  if (d.caused_by !== undefined && d.caused_by !== null && !isStr(d.caused_by)) add("FINDING_INVALID", "caused_by must be an id or null.");
+  if (d.status !== undefined && d.status !== null && d.status !== "withdrawn") add("FINDING_INVALID", "status may only be withdrawn.");
+  if (d.status === "withdrawn" && !nonEmpty(d.withdrawn_reason)) add("FINDING_INVALID", "a withdrawn finding needs withdrawn_reason.");
+  if (!errors.length || (check && check.lens === d.lens && r.loc)) {
+    if (check && check.lens === d.lens && r.loc) r.id = findingId(d.lens, d.check, r.loc.norm, r.ck);
+  }
+  if (IMPACTS.includes(d.impact) && LIKELIHOODS.includes(d.likelihood) && DETECTS.includes(d.detect)) {
+    r.severity = severityOf({ impact: d.impact, likelihood: d.likelihood, one_way_door: d.one_way_door === true, detect: d.detect, load_bearing: d.load_bearing === true, evidence_level: d.evidence_level ?? null });
+    if ((r.severity === "blocking" || r.severity === "major") && !(Array.isArray(d.chain) && d.chain.length >= 2 && d.chain.every((x) => nonEmpty(x)))) add("CHAIN_MISSING", `a ${r.severity} finding needs a chain of 2 or more consequences.`);
+  }
+  if (d.id !== undefined && d.id !== null && r.id !== null && d.id !== r.id && !String(d.id).startsWith(r.id + "-")) add("ID_MISMATCH", `id ${d.id} does not match the computed id ${r.id}.`);
+  return r;
+}
+
+/** Prepared drafts with ids; handles duplicates and ledger collisions. */
+function prepareDrafts(ctx, rawList, env) {
+  const prepared = rawList.map((d, index) => ({ index, d, ...draftFields(ctx, d, env) }));
+  const dups = [];
+  const collisions = [];
+  const triples = env.ledgerTriples ?? new Map();
+  const seen = new Map();
+  for (const p of prepared) {
+    if (!p.id) continue;
+    const triple = `${p.d.check}|${p.loc.norm}|${p.ck}`;
+    let id = p.id, n = 1;
+    for (;;) {
+      const t = triples.get(id);
+      if (t === undefined || t === triple) break;
+      n++;
+      id = `${p.id}-${n}`;
+    }
+    if (id !== p.id) { collisions.push({ index: p.index, id: p.id, assigned: id }); p.baseId = p.id; p.id = id; }
+    if (seen.has(p.id)) { dups.push({ id: p.id, indexes: [seen.get(p.id), p.index] }); p.errors.push({ code: "DUPLICATE_FINDING", message: `${p.id} appears twice in this run: merge the drafts.` }); } else seen.set(p.id, p.index);
+  }
+  return { prepared, dups, collisions };
+}
+const FINDING_KEYS = ["id", "lens", "check", "locator", "also", "claim_key", "claim", "evidence", "absence", "fact", "evidence_level", "load_bearing", "impact", "impact_reason", "likelihood", "likelihood_reason", "one_way_door", "detect", "detect_quote", "severity", "chain", "fix", "fix_class", "verify", "ripple", "owner", "conflicts_with", "order", "found_by", "caused_by", "status", "text_changed_reason", "withdrawn_reason"];
+const orderedFinding = (d) => { const o = {}; for (const k of FINDING_KEYS) if (d[k] !== undefined) o[k] = d[k]; for (const k of Object.keys(d)) if (!(k in o)) o[k] = d[k]; return o; };
+
+
+// ----- ledger
+function readLedger(dir) {
+  const p = path.join(dir, REVIEW_LEDGER);
+  let raw;
+  try { raw = fs.readFileSync(p, "utf8"); } catch { return { exists: false, raw: "", lines: [], ends: [] }; }
+  if (raw.charCodeAt(0) === 0xfeff) raw = raw.slice(1);
+  const lines = [];
+  const ends = [];
+  let off = 0;
+  const parts = raw.split("\n");
+  parts.forEach((seg, i) => {
+    const endOff = off + seg.length + (i < parts.length - 1 ? 1 : 0);
+    off = endOff;
+    const t = seg.replace(/\r$/, "");
+    if (t.trim() === "") return;
+    const bad = (problem) => fail("LEDGER_INVALID", `LEDGER.jsonl line ${i + 1}: ${problem}.`, { line: i + 1, problem });
+    let o;
+    try { o = JSON.parse(t); } catch { throw bad("not valid JSON"); }
+    if (!isObj(o) || !isStr(o.t) || !LEDGER_T[o.t]) throw bad("unknown or missing line type `t`");
+    for (const k of LEDGER_T[o.t]) if (!(k in o)) { if (LEDGER_LATE[o.t]?.has(k)) o[k] = null; else throw bad(`missing field "${k}" for a ${o.t} line`); }
+    if (!Number.isInteger(o.run) || o.run < 1) throw bad("run must be an integer >= 1");
+    lines.push({ ...o, _n: i + 1 });
+    ends.push(endOff);
+  });
+  // hand ids RV-Lxx-m-… map to hash ids from their stored triple
+  const map = new Map();
+  for (const l of lines) if (l.t === "finding" && isStr(l.id) && /^RV-L\d{2}-m-/.test(l.id) && isStr(l.check) && isStr(l.locator)) map.set(l.id, findingId(l.lens, l.check, l.locator.trim().replace(/\\/g, "/").replace(/^(\.\/)+/, ""), claimKeyNorm(l.claim_key)));
+  if (map.size) {
+    const m = (x) => (isStr(x) && map.has(x) ? map.get(x) : x);
+    for (const l of lines) {
+      if ("id" in l) l.id = m(l.id);
+      if (l.t === "status") l.by = m(l.by);
+      if (l.t === "finding") { l.caused_by = m(l.caused_by); if (Array.isArray(l.conflicts_with)) l.conflicts_with = l.conflicts_with.map(m); }
+    }
+  }
+  return { exists: true, raw, lines, ends };
+}
+function ledgerModel(L) {
+  const runs = new Map();
+  for (const l of L.lines) {
+    if (l.t === "run" && !runs.has(l.run)) runs.set(l.run, { run: l.run, scope: l.scope, header: l, scored: false, score: null, done: null });
+  }
+  for (const l of L.lines) {
+    const r = runs.get(l.run);
+    if (!r) continue;
+    if (l.t === "score") { r.scored = true; r.score = l; }
+    if (l.t === "run_done") r.done = l;
+  }
+  return { L, runs };
+}
+const scoredRuns = (m, scope) => [...m.runs.values()].filter((r) => r.scored && r.scope === scope).sort((a, b) => a.run - b.run);
+const prevScored = (m, scope, n) => { const l = scoredRuns(m, scope).filter((r) => r.run < n); return l.length ? l[l.length - 1] : null; };
+/** The fold of spec 08 §6: id -> latest finding line with its status after later status lines. */
+function foldAt(m, scope, upTo, includeOpen = false) {
+  const counted = (n) => { const r = m.runs.get(n); return !!r && n <= upTo && (r.scored || (includeOpen && n === upTo)); };
+  const out = new Map();
+  for (const l of m.L.lines) {
+    if (!counted(l.run)) continue;
+    if (l.t === "finding" && m.runs.get(l.run).scope === scope) out.set(l.id, { ...l });
+    else if (l.t === "status" && out.has(l.id)) out.get(l.id).status = l.status;
+  }
+  return out;
+}
+const countedIn = (fold) => [...fold.values()].filter((f) => COUNTED.has(f.status));
+function ledgerTriples(m) {
+  const t = new Map();
+  for (const l of m.L.lines) if (l.t === "finding" && !t.has(l.id)) t.set(l.id, `${l.check}|${l.locator}|${claimKeyNorm(l.claim_key)}`);
+  return t;
+}
+function ledgerAppend(dir, objs) {
+  if (!objs.length) return;
+  const p = confine(dir, path.join(dir, REVIEW_LEDGER));
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  let prefix = "";
+  try { const st = fs.statSync(p); if (st.size > 0) { const fd = fs.openSync(p, "r"); const b = Buffer.alloc(1); try { fs.readSync(fd, b, 0, 1, st.size - 1); } finally { fs.closeSync(fd); } if (b[0] !== 10) prefix = "\n"; } } catch { /* new file */ }
+  const fd = fs.openSync(p, "a");
+  try { fs.writeSync(fd, prefix + objs.map((o) => JSON.stringify(o) + "\n").join("")); fs.fsyncSync(fd); } finally { fs.closeSync(fd); }
+}
+function mkLine(t, o) {
+  const r = { t };
+  for (const k of LEDGER_T[t]) r[k] = o[k] === undefined ? null : o[k];
+  return r;
+}
+const stripN = (l) => { const r = { ...l }; delete r._n; return r; };
+const noLines = (f) => { const r = { ...f }; delete r.lines; return r; };
+/** Append `lines` of the types in `owned` for run `n`: nothing when already there, a resume when the existing lines are a prefix, else LEDGER_RUN_EXISTS. */
+function writeRunLines(dir, n, owned, lines) {
+  return withLock(dir, "review ledger", () => {
+    const L = readLedger(dir);
+    const existing = L.lines.filter((l) => l.run === n && owned.has(l.t)).map((l) => JSON.stringify(stripN(l)));
+    const want = lines.map((l) => JSON.stringify(l));
+    const same = existing.every((e, i) => e === want[i]);
+    if (!same || existing.length > want.length) throw fail("LEDGER_RUN_EXISTS", `The ledger already holds different lines for run ${n}; nothing was written.`, { run: n, existing: existing.length, wanted: want.length });
+    if (existing.length === want.length) return false;
+    ledgerAppend(dir, lines.slice(existing.length));
+    return true;
+  });
+}
+
+// ----- claims and freshness
+const MONTHS = "Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?|Januari|Februari|Maret|Mei|Juni|Juli|Agustus|Oktober|Desember|Agu|Des";
+const NUMBER_UNIT_RE = /(?<![\w.])\d[\d.,]*\s?(?:%|(?:ms|s|GB|MB|KB|TB|req|reqs|requests?|users?)(?![A-Za-z])|\/(?:month|day|mo|hour|hr|sec|s|year|yr)(?![A-Za-z]))/i;
+const DATE_RE = new RegExp(`(?<![\\d-])\\d{4}-\\d{2}-\\d{2}(?![\\d-])|\\b(?:${MONTHS})\\.?\\s+\\d{4}\\b`, "i");
+const ABSOLUTE_RE = /\b(?:always|never|all|every|unlimited|guaranteed|instant(?:ly)?|free forever)\b|(?<![\w.])100\s?%/i;
+const HEDGE_RE = /\b(?:should|probably|maybe|likely|TBD|TODO|appropriate|similar|as needed|some)\b|\betc\./i;
+const URL_RE = /https?:\/\/\S+/;
+const CLAIM_KINDS = ["money", "fee_or_rate", "version", "number_unit", "date", "url", "id", "absolute", "hedge"];
+
+function fenceFlags(lines) {
+  let fence = null;
+  return lines.map((ln) => {
+    const f = ln.match(/^ {0,3}(`{3,}|~{3,})/);
+    if (f) { if (!fence) { fence = f[1][0]; return true; } if (f[1][0] === fence) { fence = null; return true; } }
+    return fence !== null;
+  });
+}
+/** As-of / expiry of one parsed cite (spec 07 §4.1; expires_on = the first day it is no longer fresh). */
+function citeClock(p, F, today) {
+  const def = F.categories[p.cat];
+  const accDay = parseDay(p.acc).day;
+  const pubDay = p.date ? parseDay(p.date).day : null;
+  let asof = null, kind;
+  if (def.clock === "amendment") {
+    if (!p.flags.amend) return { asof: dayIso(accDay), kind: "acc", expires: null, fresh: false, age: today.day - accDay, limit: def.max_age_days, reason: "no amend-check" };
+    const am = parseDay(p.flags.amend).day;
+    asof = Math.min(am, accDay); kind = "amend-check/acc";
+  } else if (def.clock === "published") { asof = pubDay; kind = "pub/upd"; }
+  else if (p.flags.live) { asof = accDay; kind = "acc (live)"; }
+  else { asof = pubDay ?? accDay; kind = pubDay !== null ? "pub/upd" : "acc"; }
+  if (asof === null) return { asof: null, kind, expires: null, fresh: false, age: null, limit: def.max_age_days, reason: "no date" };
+  const expires = asof + def.max_age_days + 1;
+  return { asof: dayIso(asof), kind, expires: dayIso(expires), expiresDay: expires, fresh: today.day < expires, age: today.day - asof, limit: def.max_age_days };
+}
+function citesOfLine(ctx, plain, inCode) {
+  const tags = inCode ? [] : scanTags(plain);
+  const cites = [];
+  const marks = [];
+  for (const t of tags) {
+    if (t.kind === "cite") { const p = parseCite(t, ctx.F); if (!p.err) cites.push({ p, clock: citeClock(p, ctx.F, ctx.today) }); } else marks.push(t);
+  }
+  return { tags, cites, marks };
+}
+
+function buildClaims(ctx) {
+  const recorded = new Set();
+  for (const s of Object.values(ctx.st.pipeline?.sections ?? {})) for (const [aid, a] of Object.entries(s.answers ?? {})) if (!a.skipped) recorded.add(aid);
+  const out = [];
+  const byId = new Map();
+  for (const c of ctx.cols) {
+    const f = ctx.file(c);
+    if (!f.exists) continue;
+    const lines = f.text.split("\n");
+    const fenced = fenceFlags(lines);
+    const heads = ctx.units(c).filter((u) => u.kind === "heading" || u.kind === "key");
+    lines.forEach((ln, i) => {
+      if (ln.trim() === "") return;
+      const inCode = fenced[i];
+      const plain = inCode ? ln : ln.replace(/`[^`]*`/g, blankSpan);
+      const { tags, cites, marks } = citesOfLine(ctx, plain, inCode);
+      const bare = detectText(stripTagSpans(ln, tags));
+      const kinds = [];
+      if (CURRENCY_BEFORE.test(bare) || CURRENCY_AFTER.test(bare)) kinds.push("money");
+      if (PERCENT_RE.test(bare) && FEE_WORD_RE.test(bare)) kinds.push("fee_or_rate");
+      if (VERSION_RE.test(bare)) kinds.push("version");
+      if (NUMBER_UNIT_RE.test(bare)) kinds.push("number_unit");
+      if (DATE_RE.test(bare)) kinds.push("date");
+      if (URL_RE.test(ln)) kinds.push("url");
+      if (ID_ONE.test(bare)) kinds.push("id");
+      if (ABSOLUTE_RE.test(bare)) kinds.push("absolute");
+      if (HEDGE_RE.test(bare)) kinds.push("hedge");
+      if (!kinds.length) return;
+      let unit = null;
+      for (const u of heads) if (u.line_start !== null && u.line_start <= i + 1 && i + 1 <= u.line_end && (unit === null || u.line_start >= unit.line_start)) unit = u;
+      const id = "CL-" + sha256(`${c.key}|${unit?.key ?? ""}|${normQ(ln)}`).slice(0, 8);
+      if (byId.has(id)) { (byId.get(id).dup_lines ??= []).push(i + 1); return; }
+      const answerIds = [...ln.matchAll(ANSWER_ID_G)].map((m) => m[0]).filter((a) => recorded.has(a));
+      const fresh = cites.filter((x) => x.clock.fresh);
+      const source = cites.length ? "cite" : answerIds.length ? "answer" : marks.length ? "marker" : "none";
+      let level = 0;
+      if (answerIds.length) level = 3;
+      else if (fresh.length) level = fresh.some((x) => x.p.flags.primary) || new Set(fresh.map((x) => registrableDomain(x.p.url))).size >= 2 ? 3 : 2;
+      else if (MEMORY_PHRASES.some(([, re]) => { re.lastIndex = 0; return re.test(bare); })) level = 1;
+      const entry = {
+        id, col: c.col, file: c.key, unit: unit?.key ?? null, line: i + 1, text: ln.trim().length > 200 ? ln.trim().slice(0, 199) + "…" : ln.trim(), kinds, in_code: inCode, source,
+        cites: cites.map((x) => ({ category: x.p.cat, url: x.p.url, as_of: x.clock.asof, expires_on: x.clock.expires, fresh: x.clock.fresh, primary: x.p.flags.primary })),
+        evidence_level: level, expired: cites.length > 0 && fresh.length === 0,
+      };
+      byId.set(id, entry);
+      out.push(entry);
+    });
+  }
+  return out;
+}
+const claimsOut = (ctx, claims) => ({ run: ctx.run, scope: ctx.scope, today: ctx.today.iso, claims });
+
+function cmdReviewClaims({ dir, flags }) {
+  const ctx = reviewCtx(dir, flags, { open: true });
+  const claims = buildClaims(ctx);
+  const doc = claimsOut(ctx, claims);
+  const changed = putReviewFile(dir, `${ctx.runRel}/claims.json`, JSON.stringify(doc, null, 2) + "\n");
+  const byKind = Object.fromEntries(CLAIM_KINDS.map((k) => [k, claims.filter((c) => c.kinds.includes(k)).length]));
+  const bySource = Object.fromEntries(["cite", "answer", "marker", "none"].map((k) => [k, claims.filter((c) => c.source === k).length]));
+  const unsourced = claims.filter((c) => c.source === "none" && c.kinds.some((k) => ["money", "fee_or_rate", "version", "number_unit", "date"].includes(k)));
+  return { run: ctx.run, scope: ctx.scope, file: `${ctx.runRel}/claims.json`, changed, total: claims.length, by_kind: byKind, by_source: bySource, unsourced_count: unsourced.length, unsourced: unsourced.slice(0, 40).map((c) => ({ id: c.id, file: c.file, line: c.line, kinds: c.kinds })) };
+}
+
+function prevDateOf(ctx, m) { const p = prevScored(m, ctx.scope, ctx.run); return p ? p.header.date : null; }
+function cmdReviewFreshness({ dir, flags }) {
+  const ctx = reviewCtx(dir, flags);
+  let since = null;
+  if (flags.since !== undefined) { if (!isDate(flags.since)) throw fail("MISSING_FLAG", "--since must be YYYY-MM-DD.", { flag: "since" }); since = flags.since; }
+  else since = prevDateOf(ctx, ledgerModel(readLedger(dir)));
+  const sinceDay = since ? parseDay(since).day : null;
+  const cites = [];
+  for (const c of ctx.cols) {
+    const f = ctx.file(c);
+    if (!f.exists) continue;
+    const lines = f.text.split("\n");
+    const fenced = fenceFlags(lines);
+    lines.forEach((ln, i) => {
+      if (ln.trim() === "" || fenced[i]) return;
+      for (const t of scanTags(ln.replace(/`[^`]*`/g, blankSpan))) {
+        if (t.kind !== "cite") continue;
+        const p = parseCite(t, ctx.F);
+        if (p.err) continue;
+        const k = citeClock(p, ctx.F, ctx.today);
+        const expired = !k.fresh;
+        cites.push({
+          col: c.col, file: c.key, line: i + 1, category: p.cat, url: p.url, as_of: k.asof, as_of_kind: k.kind, age_days: k.age, limit_days: k.limit, expires_on: k.expires, expired,
+          crossed_since: sinceDay !== null && k.expiresDay !== undefined && k.expiresDay > sinceDay && k.expiresDay <= ctx.today.day,
+        });
+      }
+    });
+  }
+  return { run: ctx.run, scope: ctx.scope, today: ctx.today.iso, since, cites, expired: cites.filter((c) => c.expired).length, crossed_since: cites.filter((c) => c.crossed_since) };
+}
+
+// ----- ripple
+const NUM_TOKEN_RE = /\d{1,3}(?: \d{3})+|\d+(?:[.,]\d+)*/g;
+const digitsOf = (s) => s.replace(/[^\d]/g, "");
+function claimTerms(c) {
+  const t = [];
+  const line = detectText(c.text);
+  for (const re of [AMOUNT_BEFORE_G, AMOUNT_AFTER_G]) { re.lastIndex = 0; for (const m of line.matchAll(re)) t.push(m[1]); }
+  const nu = line.match(new RegExp(NUMBER_UNIT_RE.source, "gi")) ?? [];
+  for (const x of nu) { const d = x.match(/\d[\d.,]*/); if (d) t.push(d[0]); }
+  const v = line.match(new RegExp(VERSION_RE.source, "g")) ?? [];
+  t.push(...v);
+  t.push(...(line.match(ID_ALL) ?? []));
+  return uniq(t.map((x) => x.replace(/[.,]+$/, "")).filter(Boolean));
+}
+function cmdReviewRipple({ dir, flags }) {
+  const ctx = reviewCtx(dir, flags);
+  const multi = flags[MULTI_LIST] ?? {};
+  let terms = [...(multi.text ?? [])];
+  if (multi.claim?.length) {
+    const doc = readWorkOpt(dir, `${ctx.runRel}/claims.json`);
+    if (!doc) throw fail("CLAIMS_MISSING", `claims.json for run ${ctx.run} not found: run \`review claims --run ${ctx.run}\` first.`, { run: ctx.run });
+    for (const id of multi.claim) {
+      const c = (doc.claims ?? []).find((x) => x.id === id);
+      if (!c) throw fail("UNKNOWN_ID", `Claim ${id} is not in claims.json.`, { id });
+      terms.push(...claimTerms(c));
+    }
+  }
+  terms = uniq(terms.map((t) => String(t).trim()).filter(Boolean));
+  if (!terms.length) throw fail("MISSING_FLAG", "Give at least one --text or --claim.", { flag: "text" });
+  const prep = terms.map((t) => ({ t, n: normQ(t).toLowerCase(), digits: /^[\d.,\s]+$/.test(t) && /\d/.test(t) ? digitsOf(t) : null }));
+  const hits = [];
+  for (const c of ctx.cols) {
+    const f = ctx.file(c);
+    if (!f.exists) continue;
+    const us = ctx.units(c).filter((u) => u.kind === "heading" || u.kind === "key");
+    f.text.split("\n").forEach((ln, i) => {
+      const n = normQ(ln).toLowerCase();
+      if (n === "") return;
+      const hit = prep.some((p) => (p.n !== "" && n.includes(p.n)) || (p.digits && (n.match(NUM_TOKEN_RE) ?? []).some((tok) => digitsOf(tok) === p.digits)));
+      if (!hit) return;
+      let unit = null;
+      for (const u of us) if (u.line_start !== null && u.line_start <= i + 1 && i + 1 <= u.line_end && (unit === null || u.line_start >= unit.line_start)) unit = u;
+      hits.push({ col: c.col, file: c.key, unit: unit?.key ?? null, line: i + 1, text: ln.trim().length > 200 ? ln.trim().slice(0, 199) + "…" : ln.trim() });
+    });
+  }
+  return { run: ctx.run, scope: ctx.scope, terms, hits, files: uniq(hits.map((h) => h.file)) };
+}
+
+// ----- snapshot
+function cmdReviewSnapshot({ dir, flags }) {
+  const ctx = reviewCtx(dir, flags, { open: true });
+  const learned = loadLearned(dir);
+  const snap = buildSnapshot(ctx, learned);
+  let changed = putReviewFile(dir, `${ctx.runRel}/snapshot.json`, JSON.stringify(snap, null, 2) + "\n");
+  // the run's own text, so a later run can ask whether a gap's evidence was already there (contract §3, §10)
+  const text = { run: ctx.run, files: ctx.cols.filter((c) => ctx.file(c).exists).map((c) => ({ col: c.col, sha256: sha256(ctx.file(c).text), text: ctx.file(c).text })) };
+  changed = putReviewFile(dir, `${ctx.runRel}/text.json`, JSON.stringify(text) + "\n") || changed;
+  return { run: ctx.run, scope: ctx.scope, files: snap.files.map(noLines), lenses_sha256: snap.lenses_sha256, learned_sha256: snap.learned_sha256, freshness_sha256: snap.freshness_sha256, snapshot_sha256: snap.snapshot_sha256, changed };
+}
+
+
+// ----- ids and coverage
+function loadDraftList(ctx, rel) {
+  const doc = readWork(ctx.dir, rel, "FINDINGS_MISSING", "The findings file");
+  if (!isObj(doc) || !Array.isArray(doc.findings)) throw fail("BAD_JSON_INPUT", `${rel} must be {run, findings: [..]}.`, { file: rel });
+  if (doc.run !== undefined && doc.run !== ctx.run) throw fail("RUN_MISMATCH", `${rel} is for run ${doc.run}, not run ${ctx.run}.`, { file: rel });
+  return doc;
+}
+function draftEnv(ctx, learned, snap, model) {
+  return { checks: activeChecks(ctx, learned), snap, ledgerTriples: ledgerTriples(model) };
+}
+function cmdReviewIds({ dir, flags }) {
+  const ctx = reviewCtx(dir, flags);
+  let rel = `${ctx.runRel}/findings.json`;
+  if (flags.in !== undefined) {
+    if (flags.in === "-" || flags.in === true) throw fail("MISSING_FLAG", "--in must name a file inside the project.", { flag: "in" });
+    const abs = path.resolve(dir, flags.in);
+    rel = relPath(dir, abs);
+    if (rel === ".." || rel.startsWith("../") || path.isAbsolute(rel)) throw fail("PATH_OUTSIDE_PROJECT", "That file is outside the project folder.", { path: flags.in });
+  }
+  const doc = loadDraftList(ctx, rel);
+  const learned = loadLearned(dir);
+  const model = ledgerModel(readLedger(dir));
+  const { prepared, dups, collisions } = prepareDrafts(ctx, doc.findings, draftEnv(ctx, learned, readWorkOpt(dir, `${ctx.runRel}/snapshot.json`), model));
+  const valid = prepared.every((p) => !p.errors.length) && !dups.length && !collisions.length;
+  let written = false;
+  if (flags.write && valid) {
+    const out = { ...doc, run: ctx.run, findings: prepared.map((p) => orderedFinding({ ...p.d, id: p.id, severity: p.severity })) };
+    written = putReviewFile(dir, rel, JSON.stringify(out, null, 2) + "\n");
+  }
+  return { run: ctx.run, scope: ctx.scope, valid, written, findings: prepared.map((p) => ({ index: p.index, id: p.id, lens: isObj(p.d) ? p.d.lens ?? null : null, check: isObj(p.d) ? p.d.check ?? null : null, severity: p.severity, errors: p.errors })), duplicates: dups, collisions };
+}
+
+/** The journal event that opened run N (the last one when the run was resumed). Cached on ctx. */
+function runStartEvent(ctx) {
+  if (ctx._start === undefined) {
+    ctx._journal = readJournal(ctx.dir);
+    ctx._start = null;
+    for (const e of ctx._journal.events) if (e.type === "review_started" && e.payload.run === ctx.run) ctx._start = e;
+  }
+  return ctx._start;
+}
+/** Any apply signal makes the run an apply run, and with it the approval gate of contract §12. */
+const isApplyRun = (ctx, cells) => runStartEvent(ctx)?.payload?.mode === "apply" || cells?.mode === "apply" || fs.existsSync(path.join(ctx.dir, ctx.runRel, "approvals.json")) || fs.existsSync(path.join(ctx.dir, ctx.runRel, "apply.json"));
+const normUrl = (u) => { const t = String(u ?? "").trim(); const m = t.match(/^(https?:\/\/[^/?#]+)(.*)$/i); return m ? m[1].toLowerCase() + m[2].replace(/\/+$/, "") : t; };
+/** Sources of the research_logged events (outcome found) journaled in this run, after its review_started. */
+function runResearch(ctx) {
+  const start = runStartEvent(ctx);
+  if (!start) return [];
+  const out = [];
+  for (const e of ctx._journal.events) {
+    if (e.type !== "research_logged" || e.seq <= start.seq || e.payload.outcome !== "found") continue;
+    for (const src of Array.isArray(e.payload.sources) ? e.payload.sources : []) if (isObj(src) && isStr(src.url)) out.push({ id: e.payload.id ?? null, url: normUrl(src.url), published: src.published ?? null, updated: src.updated ?? null });
+  }
+  return out;
+}
+/**
+ * The --apply gate (B5, contract §12). Throws before anything is written: NOT_APPLICABLE, APPROVALS_MISSING,
+ * APPROVAL_INVALID, APPROVAL_UNKNOWN_ID, ACCEPT_DECISION_MISSING, APPLY_INVALID, APPLY_NOT_APPROVED.
+ */
+function applyGate(ctx, model, approvalsDoc, applyDoc) {
+  const N = ctx.run;
+  const notApp = (reason) => fail("NOT_APPLICABLE", `This --apply run cannot be recorded: ${reason}. Nothing was written.`, { run: N, reason });
+  if (ctx.scope !== "full") throw notApp("an --apply run is a full run");
+  const last = [...model.runs.values()].filter((r) => r.scored && r.run < N).sort((a, b) => b.run - a.run)[0] ?? null;
+  if (!last) throw notApp("there is no finished review run before it");
+  if (last.scope !== "full") throw notApp(`the last finished run (${last.run}) is a scope-only run`);
+  const counted = new Set(countedIn(foldAt(model, "full", last.run)).map((f) => f.id));
+  if (!counted.size) throw notApp(`run ${last.run} left no counted finding to act on`);
+  const apRel = `${ctx.runRel}/approvals.json`;
+  if (!isObj(approvalsDoc) || !Array.isArray(approvalsDoc.approvals)) throw fail("APPROVALS_MISSING", `An --apply run needs ${apRel} = {run, approvals: [{id, decision, words, at, decision_id}]} with the user's verbatim answers. Nothing was written.`, { file: apRel });
+  if (approvalsDoc.run !== undefined && approvalsDoc.run !== N) throw fail("RUN_MISMATCH", `${apRel} is for run ${approvalsDoc.run}, not run ${N}. Nothing was written.`, { file: apRel });
+  const decisions = new Map((Array.isArray(ctx.st.decisions) ? ctx.st.decisions : []).filter(isObj).map((d) => [d.id, d]));
+  const byId = new Map();
+  approvalsDoc.approvals.forEach((a, i) => {
+    if (!isObj(a) || !isStr(a.id) || !["apply", "skip", "accept"].includes(a.decision) || !nonEmpty(a.words)) throw fail("APPROVAL_INVALID", `approvals[${i}] needs id, decision (apply, skip or accept) and words (the user's verbatim answer). Nothing was written.`, { index: i });
+    if (byId.has(a.id)) throw fail("APPROVAL_INVALID", `${a.id} has two approvals: record one answer per finding. Nothing was written.`, { id: a.id });
+    if (!counted.has(a.id)) throw fail("APPROVAL_UNKNOWN_ID", `${a.id} is not a counted finding of run ${last.run}: an approval must name one. Nothing was written.`, { id: a.id, run: last.run });
+    if (a.decision === "accept") {
+      const d = isStr(a.decision_id) ? decisions.get(a.decision_id) : undefined;
+      if (!d || d.status !== "user_confirmed") throw fail("ACCEPT_DECISION_MISSING", `Accepting ${a.id} needs decision_id: a user_confirmed decision (LVR decision record) that states the cost in the user's words${isStr(a.decision_id) ? `; ${a.decision_id} is ${d ? `${d.status}, not user_confirmed` : "not in state.decisions"}` : ""}. Nothing was written.`, { id: a.id, decision_id: a.decision_id ?? null });
+    }
+    byId.set(a.id, a);
+  });
+  const apRel2 = `${ctx.runRel}/apply.json`;
+  if (applyDoc !== null && !(isObj(applyDoc) && Array.isArray(applyDoc.applied))) throw fail("APPLY_INVALID", `${apRel2} must be {run, applied: [{id, files, result, decision_id}]}. Nothing was written.`, { file: apRel2 });
+  (applyDoc?.applied ?? []).forEach((a, i) => {
+    if (!isObj(a) || !isStr(a.id) || !["applied", "failed"].includes(a.result) || !Array.isArray(a.files) || !a.files.every((f) => isStr(f))) throw fail("APPLY_INVALID", `applied[${i}] needs id, files (a list), result (applied or failed) and decision_id. Nothing was written.`, { index: i });
+    const ap = byId.get(a.id);
+    if (!ap || ap.decision !== "apply") throw fail("APPLY_NOT_APPROVED", `${a.id} is in apply.json, but the user did not approve applying it (${ap ? `the recorded answer is ${ap.decision}` : "no answer is recorded"}). Nothing was written.`, { id: a.id, decision: ap?.decision ?? null });
+  });
+  return { last, byId };
+}
+function blueprintV2(dir) {
+  try { const b = JSON.parse(readText(path.join(dir, "blueprint.json"))); return isObj(b) && b.schema_version >= 2 && Array.isArray(b.files); } catch { return false; }
+}
+/** True when the lens's `applies` condition is false, so the whole lens may be na (L06 stores_data, L14 has_ui). */
+const lensNaAllowed = (ctx, l) => isObj(l.applies) && (ctx.st.product?.flags ?? {})[l.applies.flag] === l.applies.na_when;
+/** Why an na is not allowed: null, or { code, message } (contract §8). `col` is null for a lens-level na. */
+function naProblem(ctx, l, reason, col) {
+  const bad = (message) => ({ code: "NA_REASON_INVALID", message });
+  if (col === null) {
+    if (!lensNaAllowed(ctx, l)) return { code: "NA_LENS_APPLIES", message: `${l.id} applies ${isObj(l.applies) ? `unless state.product.flags.${l.applies.flag} is ${l.applies.na_when}, and it is not` : "always"}: the whole lens cannot be na. Review its cells; a single cell may be na only with a reason that fits that cell` };
+    if (reason !== l.applies.reason) return bad(`a lens-level na of ${l.id} takes the reason ${l.applies.reason}`);
+    return null;
+  }
+  if (!NA_REASONS.includes(reason)) return bad(`reason "${reason}" is not one of ${NA_REASONS.join(", ")}`);
+  const fl = ctx.st.product?.flags ?? {};
+  if (reason === "stores-data-false" && !(l.id === "L06" && fl.stores_data === false)) return bad("stores-data-false is allowed only for L06 when state.product.flags.stores_data is false");
+  if (reason === "has-ui-false" && !(l.id === "L14" && fl.has_ui === false)) return bad("has-ui-false is allowed only for L14 when state.product.flags.has_ui is false");
+  if (reason === "file-not-yet-built" && ctx.scope !== "scope-only") return bad("file-not-yet-built is allowed only in scope-only runs");
+  if (reason === "file-absent-by-profile" && !blueprintV2(ctx.dir)) return bad("file-absent-by-profile needs blueprint.json v2 with files[]");
+  if ((reason === "file-not-yet-built" || reason === "file-absent-by-profile") && ctx.col(col) && ctx.file(ctx.col(col)).exists) return bad(`${reason} needs an absent file, but ${ctx.col(col).key} exists`);
+  return null;
+}
+
+/** The coverage check of spec 08 §8. `env` = { learned, snap, claimsDoc, cells, prepared, model }. */
+function coverageCheck(ctx, env) {
+  const { learned, snap, claimsDoc, cells, prepared } = env;
+  const errors = [];
+  const add = (code, lens, col, id, message) => errors.push({ code, lens: lens ?? null, col: col ?? null, id: id ?? null, message });
+  const apply = isApplyRun(ctx, cells);
+  const live = prepared.filter((p) => p.d?.status !== "withdrawn");
+  const byId = new Map(prepared.filter((p) => p.id).map((p) => [p.id, p]));
+  const alsoCols = (p) => uniq([p.loc?.col, ...(Array.isArray(p.d.also) ? p.d.also.map((a) => parseLocator(ctx, a, null).col) : [])].filter(Boolean));
+  const counts = { r_cells: 0, filled: 0, clean: 0, findings: 0, na: 0, blocked: 0, carried: 0 };
+  const colNames = new Set(ctx.cols.map((c) => c.col));
+  const lensById = (id) => ctx.reg.data.lenses.find((x) => x.id === id);
+  /** Live drafts of a lens (optionally of one check) whose locator or also names a column. */
+  const findingsAt = (lensId, col, checkId) => live.filter((p) => p.id && p.d.lens === lensId && (!checkId || p.d.check === checkId) && alsoCols(p).includes(col)).map((p) => p.id).sort(cmpStr);
+  const validateCell = (lensId, col, cell, isR, checkId = null) => {
+    const c = ctx.col(col);
+    if (!isObj(cell) || !isStr(cell.state)) { if (isR) add("CELL_EMPTY", lensId, col, null, "The cell has no state."); return null; }
+    const qp = (q, code) => { const p = quoteProblem(ctx, c.key, q); if (p) add(p.code, lensId, col, null, `${code ? code + ": " : ""}${p.message}`); };
+    switch (cell.state) {
+      case "findings": {
+        const ids = Array.isArray(cell.ids) ? cell.ids : [];
+        if (!ids.length && !cell.quote) add("CELL_EMPTY", lensId, col, null, "A findings cell lists no id and holds no quote.");
+        for (const id of ids) {
+          const p = byId.get(id);
+          if (!p) { add("UNKNOWN_FINDING", lensId, col, id, `${id} is not a finding of this run.`); continue; }
+          if (p.d.lens !== lensId) add("UNKNOWN_FINDING", lensId, col, id, `${id} belongs to ${p.d.lens}, not ${lensId}.`);
+          if (!alsoCols(p).includes(col)) add("FINDING_NOT_IN_FILE", lensId, col, id, `${id}'s locator and also do not name ${c.key}.`);
+        }
+        if (cell.quote !== undefined && cell.quote !== null) qp(cell.quote);
+        break;
+      }
+      case "clean":
+        qp(cell.quote);
+        if (!nonEmpty(cell.tried)) add("TRIED_MISSING", lensId, col, null, "A clean cell needs `tried`: the attack you made and why it failed.");
+        break;
+      case "na": {
+        const pr = naProblem(ctx, lensById(lensId), cell.reason, col);
+        if (pr) add(pr.code, lensId, col, null, pr.message);
+        else if (!nonEmpty(cell.note)) add("NA_REASON_INVALID", lensId, col, null, "An na cell needs a one-line note.");
+        const held = findingsAt(lensId, col, checkId);
+        if (held.length) add("NA_HAS_FINDINGS", lensId, col, held[0], `${col} cannot be na in ${lensId}: it holds ${held.join(", ")}. List the ids in a findings cell.`);
+        break;
+      }
+      case "blocked":
+        if (!BLOCKED_REASONS.includes(cell.reason)) add("BLOCKED_REASON_INVALID", lensId, col, null, `reason must be one of ${BLOCKED_REASONS.join(", ")}.`);
+        else if (!nonEmpty(cell.note)) add("BLOCKED_REASON_INVALID", lensId, col, null, "A blocked cell needs a note.");
+        break;
+      case "carried": {
+        if (!apply) { add("CARRIED_NOT_APPLY", lensId, col, null, "carried is allowed only in an --apply run."); break; }
+        const from = cell.from_run;
+        let ok = false;
+        if (Number.isInteger(from) && from >= 1 && from < ctx.run) {
+          const sf = readWorkOpt(ctx.dir, `.lvr/review/runs/run-${from}/snapshot.json`);
+          const a = isObj(sf) ? snapFile(sf, col) : null;
+          const b = snapFile(snap, col);
+          ok = !!a && !!b && a.sha256 === b.sha256 && a.exists === b.exists;
+        }
+        if (!ok) add("CARRIED_FILE_CHANGED", lensId, col, null, `${c.key} differs from run ${from}'s snapshot (or that snapshot is missing).`);
+        break;
+      }
+      default: add("CELL_EMPTY", lensId, col, null, `Unknown cell state "${cell.state}".`);
+    }
+    return cell.state;
+  };
+
+  for (const l of ctx.lensesInScope()) {
+    const lc = lensCells(ctx, l);
+    if (!lc) continue;
+    const cl = isObj(cells.lenses) ? cells.lenses[l.id] : undefined;
+    if (isObj(cl) && cl.status === "na") {
+      const pr = naProblem(ctx, l, cl.na_reason, null);
+      if (pr) add(pr.code, l.id, null, null, `Lens-level na: ${pr.message}.`);
+      const held = live.filter((p) => p.id && p.d.lens === l.id).map((p) => p.id).sort(cmpStr);
+      if (held.length) add("NA_HAS_FINDINGS", l.id, null, held[0], `${l.id} cannot be na: this run found ${held.join(", ")} in it.`);
+      if (!pr && !held.length) continue;
+    }
+    const cc = isObj(cl?.cells) ? cl.cells : {};
+    for (const col of Object.keys(cc)) if (!colNames.has(col)) add("CELL_UNKNOWN_COLUMN", l.id, col, null, `${col} is not a column of a ${ctx.scope} run.`);
+    for (const col of lc.R) {
+      if (!ctx.col(col)) continue;
+      counts.r_cells++;
+      const st = validateCell(l.id, col, cc[col], true);
+      if (st) { counts.filled++; if (counts[st] !== undefined) counts[st]++; }
+    }
+    for (const col of Object.keys(cc)) if (colNames.has(col) && !lc.R.includes(col)) validateCell(l.id, col, cc[col], false);
+    // core artifact
+    const core = lensCore(ctx, l);
+    const absent = core.filter((x) => (x === "product_type" ? (ctx.st.product?.types ?? []).length === 0 : ctx.col(x) && !ctx.file(ctx.col(x)).exists));
+    if (absent.length && !live.some((p) => p.d.lens === l.id && p.d.check === `${l.id}.0`)) add("CORE_ABSENT_NO_FINDING", l.id, absent[0], null, `${absent.join(", ")} is absent and there is no ${l.id}.0 finding.`);
+  }
+  // learned checks
+  for (const it of learned.items) {
+    const l = ctx.lensesInScope().find((x) => x.id === it.lens);
+    if (!l || !lensCells(ctx, l)) continue;
+    const cl = isObj(cells.lenses) ? cells.lenses[l.id] : undefined;
+    if (isObj(cl) && cl.status === "na" && !naProblem(ctx, l, cl.na_reason, null)) continue;
+    const lcc = cells.learned?.[it.id]?.cells ?? {};
+    for (const col of it.applies) {
+      if (!colNames.has(col)) { add("CELL_UNKNOWN_COLUMN", l.id, col, null, `${it.id} applies to ${col}, which is not a column of a ${ctx.scope} run.`); continue; }
+      if (!isObj(lcc[col]) || !lcc[col].state) add("LEARNED_ROW_MISSING", l.id, col, null, `${it.id} has no cell for ${col}.`);
+      else validateCell(l.id, col, lcc[col], false, it.id);
+    }
+  }
+  // findings
+  for (const p of prepared) {
+    const lensId = isObj(p.d) ? p.d.lens ?? null : null;
+    for (const e of p.errors) add(e.code, lensId, p.loc?.col, p.id, e.message);
+    if (!isObj(p.d)) continue;
+    for (const e of Array.isArray(p.d.evidence) ? p.d.evidence : []) {
+      if (!(isObj(e) && isStr(e.file) && isStr(e.quote))) continue;
+      const q = quoteProblem(ctx, e.file, e.quote);
+      if (q) add(q.code, lensId, p.loc?.col, p.id, `evidence: ${q.message}`);
+    }
+    if (p.d.detect === "caught" && isObj(p.d.detect_quote) && isStr(p.d.detect_quote.file)) {
+      const q = quoteProblem(ctx, p.d.detect_quote.file, p.d.detect_quote.quote);
+      if (q) add(q.code, lensId, p.loc?.col, p.id, `detect_quote: ${q.message}`);
+    }
+    if (isObj(p.d.absence) && Array.isArray(p.d.absence.files) && Array.isArray(p.d.absence.searched)) {
+      for (const f of p.d.absence.files) {
+        const c = isStr(f) ? ctx.colByPath(f) : null;
+        if (!c) { add("FINDING_INVALID", lensId, null, p.id, `absence: ${f} is not a column file of this scope.`); continue; }
+        const hay = ctx.normFile(c).toLowerCase();
+        for (const term of p.d.absence.searched) {
+          const nt = normQ(term).toLowerCase();
+          if (nt === "" || !hay.includes(nt)) continue;
+          const ln = ctx.file(c).text.split("\n").findIndex((x) => normQ(x).toLowerCase().includes(nt));
+          add("ABSENCE_HIT", lensId, c.col, p.id, `"${term}" is in ${c.key}${ln >= 0 ? ` (line ${ln + 1})` : ""}: it is not absent.`);
+        }
+      }
+    }
+    if (p.d.status !== "withdrawn" && p.loc && lensId) {
+      const cl = isObj(cells.lenses) ? cells.lenses[lensId] : undefined;
+      const cell = cl?.cells?.[p.loc.col];
+      if (!(isObj(cell) && cell.state === "findings" && Array.isArray(cell.ids) && cell.ids.includes(p.id))) add("FINDING_NOT_IN_CELL", lensId, p.loc.col, p.id, `${p.id} is not listed in ${lensId}'s ${p.loc.col} cell.`);
+    }
+  }
+  // load-bearing claims and attacks
+  const claimIds = new Set((claimsDoc.claims ?? []).map((c) => c.id));
+  for (const lb of Array.isArray(cells.load_bearing) ? cells.load_bearing : []) {
+    if (!isObj(lb) || !claimIds.has(lb.claim)) { add("LOAD_BEARING_UNKNOWN", null, null, isObj(lb) ? lb.claim ?? null : null, `Claim ${isObj(lb) ? lb.claim : "?"} is not in claims.json.`); continue; }
+    for (const lid of Array.isArray(lb.lenses) ? lb.lenses : []) {
+      const cl = isObj(cells.lenses) ? cells.lenses[lid] : undefined;
+      const lo = ctx.lensesInScope().find((x) => x.id === lid);
+      if (!lo || (isObj(cl) && cl.status === "na" && !naProblem(ctx, lo, cl.na_reason, null))) continue;
+      const a = (Array.isArray(cl?.attacks) ? cl.attacks : []).find((x) => isObj(x) && x.claim === lb.claim);
+      if (!(a && nonEmpty(a.attack) && nonEmpty(a.result))) add("ATTACK_MISSING", lid, null, lb.claim, `Load-bearing claim ${lb.claim} has no attack (steelman, attack, result) in ${lid}.`);
+    }
+  }
+  // pre-mortem
+  const causes = Array.isArray(cells.premortem) ? cells.premortem.filter(isObj) : [];
+  for (const h of HORIZONS.slice(0, 3)) if (!causes.some((c) => c.horizon === h && nonEmpty(c.cause))) add("PREMORTEM_INCOMPLETE", null, null, null, `The ${h} horizon has no cause.`);
+  let mapped = 0;
+  for (const c of causes) {
+    let ok = false;
+    if (isStr(c.maps_to) && byId.has(c.maps_to)) ok = true;
+    else if (c.maps_to === "handled" && isStr(c.quote)) ok = !quoteAnywhere(ctx, c.quote, c.file);
+    if (ok) mapped++; else add("PREMORTEM_UNMAPPED", null, null, null, `Pre-mortem cause "${trunc(c.cause, 60)}" maps to ${c.maps_to ?? "nothing"}: give a finding id, or handled with a verified quote.`);
+  }
+  const passes = Array.isArray(cells.passes) ? cells.passes.filter((x) => isObj(x) && Number.isInteger(x.new)) : [];
+  const saturation = { passes: passes.length, last_new: passes.length ? passes[passes.length - 1].new : null, saturated: passes.length >= 2 && passes[passes.length - 1].new === 0 };
+  errors.sort((a, b) => cmpStr(`${a.lens ?? ""}|${a.col ?? ""}|${a.code}|${a.id ?? ""}|${a.message}`, `${b.lens ?? ""}|${b.col ?? ""}|${b.code}|${b.id ?? ""}|${b.message}`));
+  return { valid: errors.length === 0, errors, counts, saturation, premortem: { causes: causes.length, mapped }, apply };
+}
+
+/** Everything the run's work files give, loaded once. */
+function runInputs(ctx, { needCells = true } = {}) {
+  const learned = loadLearned(ctx.dir);
+  const snap = loadSnap(ctx, ctx.run);
+  const claimsDoc = readWorkOpt(ctx.dir, `${ctx.runRel}/claims.json`);
+  if (!claimsDoc) throw fail("CLAIMS_MISSING", `claims.json for run ${ctx.run} not found: run \`review claims --run ${ctx.run}\` first.`, { run: ctx.run });
+  let cells = readWorkOpt(ctx.dir, `${ctx.runRel}/cells.json`);
+  if (!cells) { if (needCells) throw fail("CELLS_MISSING", `cells.json for run ${ctx.run} not found.`, { run: ctx.run }); cells = { lenses: {} }; }
+  if (!isObj(cells) || (cells.lenses !== undefined && !isObj(cells.lenses)) || (cells.run !== undefined && cells.run !== ctx.run)) throw fail("CELLS_INVALID", "cells.json must be {run, lenses: {…}, …} for this run.", { run: ctx.run });
+  const model = ledgerModel(readLedger(ctx.dir));
+  const doc = loadDraftList(ctx, `${ctx.runRel}/findings.json`);
+  const env = draftEnv(ctx, learned, snap, model);
+  const { prepared, dups, collisions } = prepareDrafts(ctx, doc.findings, env);
+  return { learned, snap, claimsDoc, cells, model, doc, prepared, dups, collisions, checks: env.checks };
+}
+function cmdReviewCoverage({ dir, flags }) {
+  const ctx = reviewCtx(dir, flags);
+  const inp = runInputs(ctx);
+  const r = coverageCheck(ctx, inp);
+  for (const d of inp.dups) if (!r.errors.some((e) => e.code === "DUPLICATE_FINDING" && e.id === d.id)) r.errors.push({ code: "DUPLICATE_FINDING", lens: null, col: null, id: d.id, message: `${d.id} appears twice.` });
+  for (const c of inp.collisions) r.errors.push({ code: "ID_COLLISION", lens: null, col: null, id: c.assigned, message: `${c.id} collides with a different finding in the ledger (assigned ${c.assigned}).` });
+  return { run: ctx.run, scope: ctx.scope, valid: r.errors.length === 0, errors: r.errors, counts: r.counts, saturation: r.saturation };
+}
+
+
+// ----- verify predicates (spec 08 §9)
+const normUnitKey = (frag) => (/^id:/i.test(frag) ? "id:" + frag.slice(3).trim().toUpperCase() : /^key:/.test(frag) ? frag.trim() : slugKey(frag));
+function predFile(ctx, file, unit) {
+  const c = ctx.colByPath(file);
+  let exists = false, text = "";
+  if (c) {
+    const f = ctx.file(c);
+    exists = f.exists; text = f.text;
+    if (unit && exists) {
+      const u = ctx.units(c).find((x) => x.key === normUnitKey(unit));
+      if (!u) return { exists: true, text: "", noUnit: unit };
+      if (u.line_start !== null) text = text.split("\n").slice(u.line_start - 1, u.line_end).join("\n");
+    }
+  } else {
+    const abs = path.resolve(ctx.dir, file);
+    const rel = path.relative(ctx.dir, abs);
+    if (!(rel === ".." || rel.startsWith(".." + path.sep) || path.isAbsolute(rel))) {
+      try { if (fs.statSync(abs).isFile()) { exists = true; text = normText(fs.readFileSync(abs, "utf8")); } } catch { /* absent */ }
+    }
+  }
+  return { exists, text };
+}
+function countOccurrences(hay, needle) {
+  if (needle === "") return 0;
+  let n = 0, i = 0;
+  for (;;) { const j = hay.indexOf(needle, i); if (j < 0) return n; n++; i = j + needle.length; }
+}
+async function evalPred(ctx, p, memo = {}) {
+  const k = predKind(p);
+  const v = p[k];
+  const R = (result, detail) => ({ result, detail });
+  const prep = (s, cs) => (cs ? normQ(s) : normQ(s).toLowerCase());
+  try {
+    switch (k) {
+      case "contains": case "absent": {
+        const f = predFile(ctx, v.file, v.unit);
+        if (!f.exists) return k === "absent" ? R("pass", `${v.file} does not exist`) : R("fail", `${v.file} does not exist`);
+        if (f.noUnit) return R("fail", `unit ${f.noUnit} is not in ${v.file}`);
+        const has = prep(f.text, v.case === true).includes(prep(v.text, v.case === true));
+        return k === "contains" ? R(has ? "pass" : "fail", has ? "text found" : "text not found") : R(has ? "fail" : "pass", has ? "text is still there" : "text is absent");
+      }
+      case "matches": {
+        const f = predFile(ctx, v.file, v.unit);
+        if (!f.exists) return R("fail", `${v.file} does not exist`);
+        if (f.noUnit) return R("fail", `unit ${f.noUnit} is not in ${v.file}`);
+        const re = new RegExp(v.regex, (v.flags ?? "") + "u");
+        const i = f.text.split("\n").findIndex((l) => re.test(l));
+        return R(i >= 0 ? "pass" : "fail", i >= 0 ? `matches line ${i + 1}` : "no line matches");
+      }
+      case "count": {
+        const f = predFile(ctx, v.file, undefined);
+        const n = f.exists ? countOccurrences(prep(f.text, false), prep(v.text, false)) : 0;
+        const ok = v.op === "=" ? n === v.n : v.op === ">=" ? n >= v.n : n <= v.n;
+        return R(ok ? "pass" : "fail", `found ${n}, wanted ${v.op} ${v.n}`);
+      }
+      case "lint": {
+        memo.lint ??= runChecks(makeBundle(ctx.dir), null).findings;
+        const hit = memo.lint.filter((f) => f.id === v.id && (v.file === undefined || f.file === v.file));
+        return R(hit.length ? "fail" : "pass", hit.length ? `${hit.length} lint finding(s) ${v.id}` : `no lint finding ${v.id}`);
+      }
+      case "cite_clean": {
+        const r = cmdCiteCheck({ dir: ctx.dir, flags: { [FILE_LIST]: [v.file] } });
+        return R(r.findings.length ? "fail" : "pass", `${r.findings.length} cite finding(s)`);
+      }
+      case "crosscheck": {
+        memo.xc ??= cmdCrosscheck({ dir: ctx.dir });
+        const rule = memo.xc.rules.find((x) => x.rule === v.rule);
+        return R(rule?.ok ? "pass" : "fail", rule ? `${rule.findings} finding(s) for ${v.rule}` : `no rule ${v.rule}`);
+      }
+      case "blueprint_in_sync": {
+        const r = await cmdBlueprintEmit({ dir: ctx.dir, flags: { check: true } });
+        return R(r.changed ? "fail" : "pass", r.changed ? `blueprint.json ${r.reason}` : "blueprint.json is in sync");
+      }
+      case "manual": return R("manual", v);
+      case "not": { const r = await evalPred(ctx, v, memo); return r.result === "pass" ? R("fail", r.detail) : r.result === "fail" ? R("pass", r.detail) : r; }
+      case "all": case "any": {
+        const rs = [];
+        for (const x of v) rs.push(await evalPred(ctx, x, memo));
+        const has = (s) => rs.some((r) => r.result === s);
+        let result;
+        if (k === "all") result = has("fail") ? "fail" : has("error") ? "error" : has("manual") ? "manual" : "pass";
+        else result = has("pass") ? "pass" : has("manual") ? "manual" : has("error") ? "error" : "fail";
+        return R(result, rs.map((r) => r.result).join(","));
+      }
+      default: return R("error", "unknown predicate");
+    }
+  } catch (e) {
+    return R("error", e instanceof LvrError ? `${e.code}: ${e.message}` : String(e.message ?? e));
+  }
+}
+
+async function cmdReviewVerify({ dir, flags }) {
+  const ctx = reviewCtx(dir, flags);
+  const model = ledgerModel(readLedger(dir));
+  const fold = foldAt(model, ctx.scope, ctx.run, true);
+  const ids = flags[MULTI_LIST]?.id ?? [];
+  const drafts = new Map();
+  if (ids.length) {
+    const doc = readWorkOpt(dir, `${ctx.runRel}/findings.json`);
+    if (isObj(doc) && Array.isArray(doc.findings)) {
+      const learned = loadLearned(dir);
+      for (const p of prepareDrafts(ctx, doc.findings, draftEnv(ctx, learned, readWorkOpt(dir, `${ctx.runRel}/snapshot.json`), model)).prepared) if (p.id && isObj(p.d)) drafts.set(p.id, p.d);
+    }
+  }
+  const targets = ids.length ? uniq(ids) : [...fold.values()].filter((f) => COUNTED.has(f.status)).map((f) => f.id);
+  const memo = {};
+  const results = [];
+  for (const id of targets.sort(cmpStr)) {
+    const pred = fold.get(id)?.verify ?? drafts.get(id)?.verify;
+    if (pred === undefined) throw fail("UNKNOWN_ID", `${id} is in neither the ledger fold nor this run's findings.`, { id });
+    const pp = predProblem(pred);
+    if (pp) throw fail(pp.code, `${id}: ${pp.message}.`, { id });
+    results.push({ id, ...(await evalPred(ctx, pred, memo)) });
+  }
+  return { run: ctx.run, scope: ctx.scope, results };
+}
+
+// ----- ledger-diff (spec 08 §10)
+const ROOT_OK = new Set(ROOT_CAUSES);
+async function computeDiff(ctx, inp) {
+  const { model, prepared, snap, cells, learned } = inp;
+  const N = ctx.run;
+  const bad = prepared.filter((p) => p.errors.length);
+  if (bad.length) throw fail("FINDING_INVALID", `${bad.length} finding draft(s) are invalid: run \`review ids --run ${N}\` and fix them first.`, { errors: bad.slice(0, 10).map((p) => ({ index: p.index, id: p.id, errors: p.errors })) });
+  const rec = readWorkOpt(ctx.dir, `${ctx.runRel}/reconcile.json`) ?? {};
+  const R = (k) => (isObj(rec[k]) ? rec[k] : {});
+  const P = prevScored(model, ctx.scope, N);
+  const foldP = P ? foldAt(model, ctx.scope, P.run) : new Map();
+  const snapP = P ? loadSnap(ctx, P.run) : null;
+  // P's snapshot is what the ledger recorded for P (its text copy is checked against it, contract §3)
+  if (snapP && isStr(P.header.snapshot_sha256) && sha256(canonJson(snapP.files.map(noLines))) !== P.header.snapshot_sha256) throw fail("SNAPSHOT_DRIFT", `runs/run-${P.run}/snapshot.json does not match the snapshot_sha256 the ledger recorded for run ${P.run}: it was changed after that run. Nothing was written.`, { run: P.run });
+  const Pday = P ? parseDay(P.header.date).day : null;
+  const apply = isApplyRun(ctx, cells);
+  const applyDoc = readWorkOpt(ctx.dir, `${ctx.runRel}/apply.json`);
+  const approvalsDoc = readWorkOpt(ctx.dir, `${ctx.runRel}/approvals.json`);
+  if (apply) applyGate(ctx, model, approvalsDoc, applyDoc);
+  const appliedNow = new Set((Array.isArray(applyDoc?.applied) ? applyDoc.applied : []).filter((a) => isObj(a) && a.result === "applied").map((a) => a.id));
+  const appliedSince = (id) => appliedNow.has(id) || model.L.lines.some((l) => l.t === "apply" && l.id === id && l.result === "applied" && P && l.run > P.run);
+  const needs = [];
+  const need = (id, n) => { if (!needs.some((x) => x.id === id && x.need === n)) needs.push({ id, need: n }); };
+  const live0 = prepared.filter((p) => p.d.status !== "withdrawn");
+  const withdrawnDrafts = prepared.filter((p) => p.d.status === "withdrawn");
+
+  // B2/B6: which earlier finding a draft is (contract §10, "Identity"). The locating quote is the first evidence quote from
+  // the locator's file (else the first quote). A draft and an earlier finding of the same lens, check and locator file are
+  //   same   both locating quotes are in today's text and overlap there (absence-only on both sides: the same locator and a shared searched term);
+  //   other  the earlier quote is still in today's text and does not overlap: the earlier gap's evidence still stands elsewhere;
+  //   maybe  the earlier quote is gone from today's text (or only one side has a quote) and both sit in the same unit.
+  // Exactly one `same` (claimed by no other draft) is automatic. `maybe`, or competing `same`, is a `match` question. `other` never matches:
+  // location alone never reuses an id. A draft whose computed id is taken by an earlier finding it is not gets a split id `<id>-<n>`.
+  const M = R("matches");
+  const locQ = (col, ev) => {
+    const qs = (Array.isArray(ev) ? ev : []).filter((e) => isObj(e) && isStr(e.file) && isStr(e.quote) && ctx.colByPath(e.file));
+    return qs.find((e) => ctx.colByPath(e.file).col === col) ?? qs[0] ?? null;
+  };
+  const occ = (e) => {
+    if (!e) return [];
+    const c = ctx.colByPath(e.file), hay = ctx.normFile(c), nq = normQ(e.quote), out = [];
+    if (!nq) return out;
+    for (let at = hay.indexOf(nq); at >= 0 && out.length < 50; at = hay.indexOf(nq, at + 1)) out.push({ col: c.col, a: at, b: at + nq.length });
+    return out;
+  };
+  const termsOf = (x) => new Set((isObj(x) && Array.isArray(x.searched) ? x.searched : []).filter(isStr).map((t) => normQ(t).toLowerCase()).filter(Boolean));
+  const relate = (p, f) => {
+    const fl = parseLocator(ctx, f.locator, null);
+    if (f.lens !== p.d.lens || f.check !== p.d.check || fl.col !== p.loc.col) return null;
+    const xq = locQ(p.loc.col, p.d.evidence), yq = locQ(fl.col, f.evidence);
+    const xa = anchorOf(ctx, p.loc.norm, p.d.evidence), ya = isStr(f.anchor) ? f.anchor : anchorOf(ctx, f.locator, f.evidence);
+    const sameUnit = xa === ya || p.loc.norm === f.locator;
+    if (xq && yq) {
+      const yo = occ(yq);
+      if (!yo.length) return sameUnit ? { rel: "maybe", how: "anchor", at: xa } : { rel: "other" };
+      const xo = occ(xq);
+      return xo.some((u) => yo.some((v) => u.col === v.col && u.a < v.b && v.a < u.b)) ? { rel: "same", how: "quote", at: xa } : { rel: "other" };
+    }
+    if (!xq && !yq) {
+      if (p.loc.norm !== f.locator) return { rel: "other" };
+      const ty = termsOf(f.absence);
+      return [...termsOf(p.d.absence)].some((t) => ty.has(t)) ? { rel: "same", how: "absence", at: p.loc.norm } : { rel: "other" };
+    }
+    return sameUnit ? { rel: "maybe", how: "anchor", at: xa } : { rel: "other" };
+  };
+  const foldEntries = [...foldP.values()].sort((x, y) => cmpStr(x.id, y.id));
+  const famOf = (x0, id) => id === x0 || (id.startsWith(x0 + "-") && /^\d+$/.test(id.slice(x0.length + 1)));
+  const draftsSorted = [...live0].sort((x, y) => cmpStr(x.id, y.id));
+  const rel = new Map();
+  for (const p of draftsSorted) {
+    const list = [];
+    for (const f of foldEntries) {
+      if (!(famOf(p.id, f.id) || COUNTED.has(f.status) || f.status === "fixed")) continue;
+      if (withdrawnDrafts.some((w) => w.id === f.id)) continue;
+      const r = relate(p, f);
+      if (r && r.rel !== "other") list.push({ y: f.id, ...r });
+    }
+    rel.set(p.id, list);
+  }
+  const draftIdSet = new Set(live0.map((p) => p.id));
+  for (const k of Object.keys(M)) if (!draftIdSet.has(k)) throw fail("MATCH_INVALID", `reconcile.json matches.${k}: ${k} is not a finding draft of this run, so the answer has no effect. Nothing was written.`, { id: k });
+  const rekey = new Map();
+  const claimed = new Map();
+  const matchBad = (x, message, details) => fail("MATCH_INVALID", `reconcile.json matches.${x}: ${message}. Nothing was written.`, { id: x, ...details });
+  const answered = new Set();
+  for (const p of draftsSorted) {
+    const m = M[p.id];
+    if (m === undefined) continue;
+    const list = rel.get(p.id);
+    if (!list.length) throw matchBad(p.id, "it has no candidate (no earlier finding of the same check shares its evidence or its unit), so the answer has no effect", { candidates: [] });
+    answered.add(p.id);
+    if (isObj(m) && nonEmpty(m.distinct) && m.same_as === undefined) continue;
+    if (!(isObj(m) && isStr(m.same_as) && m.distinct === undefined)) throw matchBad(p.id, 'give {"same_as": "<id>"} or {"distinct": "<reason>"}', {});
+    const c = list.find((z) => z.y === m.same_as);
+    if (!c) throw matchBad(p.id, `${m.same_as} is not one of its candidates (${list.map((z) => z.y).join(", ")})`, { same_as: m.same_as, candidates: list.map((z) => z.y) });
+    if (claimed.has(c.y)) throw matchBad(p.id, `${c.y} is already matched by ${claimed.get(c.y)}`, { same_as: c.y });
+    claimed.set(c.y, p.id);
+    if (c.y !== p.id) rekey.set(p.id, { ...c, kind: famOf(p.id, c.y) ? "family" : "same_as", auto: false });
+  }
+  const matched = new Set(answered);
+  // a draft whose computed id is a `same` candidate keeps that id first
+  for (const p of draftsSorted) {
+    if (matched.has(p.id) || claimed.has(p.id) || !rel.get(p.id).some((c) => c.y === p.id && c.rel === "same")) continue;
+    claimed.set(p.id, p.id); matched.add(p.id);
+  }
+  const sameUsers = new Map();
+  for (const p of draftsSorted) if (!matched.has(p.id)) for (const c of rel.get(p.id)) if (c.rel === "same" && !claimed.has(c.y)) sameUsers.set(c.y, [...(sameUsers.get(c.y) ?? []), p.id]);
+  for (const p of draftsSorted) {
+    if (matched.has(p.id)) continue;
+    const same = rel.get(p.id).filter((c) => c.rel === "same" && !claimed.has(c.y));
+    if (same.length === 1 && sameUsers.get(same[0].y).length === 1) {
+      claimed.set(same[0].y, p.id); matched.add(p.id);
+      if (same[0].y !== p.id) rekey.set(p.id, { ...same[0], kind: famOf(p.id, same[0].y) ? "family" : "same_as", auto: true });
+    }
+  }
+  const usedIds = new Set([...model.L.lines.filter((l) => isStr(l.id)).map((l) => l.id), ...live0.map((p) => p.id)]);
+  for (const p of draftsSorted) {
+    if (matched.has(p.id)) {
+      if (!answered.has(p.id) || !isObj(M[p.id]) || M[p.id].distinct === undefined) continue;
+    } else if (rel.get(p.id).some((c) => !claimed.has(c.y))) { need(p.id, "match"); continue; }
+    if (!foldP.has(p.id)) continue;
+    // the computed id belongs to an earlier finding this draft is not: give the draft its own id
+    let n = 2;
+    while (usedIds.has(`${p.id}-${n}`)) n++;
+    const y = `${p.id}-${n}`;
+    usedIds.add(y);
+    rekey.set(p.id, { y, kind: "split", how: null, at: anchorOf(ctx, p.loc.norm, p.d.evidence), auto: !answered.has(p.id) });
+  }
+  const live = live0.map((p) => (rekey.has(p.id) ? { ...p, drafted: p.id, id: rekey.get(p.id).y, rk: rekey.get(p.id) } : p)).sort((a, b) => cmpStr(a.id, b.id));
+  const liveIds = new Set(live.map((p) => p.id));
+  const blocked = new Set(needs.filter((x) => x.need === "match").map((x) => x.id));
+  const research = runResearch(ctx);
+
+  // B4: was the gap's own evidence already in run r's text? (contract §10, rule 4) Run r's text copy (text.json,
+  // checked against r's snapshot hash) is read; without one, r's line hashes. A quote-based gap was there when ANY of
+  // its quotes was in r's text: one new quote next to an old one proves nothing. An absence-only gap was there when
+  // its locator file existed and no searched term was in r's text of the listed files.
+  const evQuotes = (ev) => (Array.isArray(ev) ? ev : []).filter((e) => isObj(e) && isStr(e.quote) && ctx.colByPath(e.file));
+  const runCache = new Map();
+  const runText = (r) => {
+    if (!runCache.has(r)) {
+      const s = P && r === P.run ? snapP : readWorkOpt(ctx.dir, `.lvr/review/runs/run-${r}/snapshot.json`);
+      runCache.set(r, isObj(s) && Array.isArray(s.files) ? { snap: s, text: loadSnapText(ctx, r, s), norm: new Map() } : null);
+    }
+    return runCache.get(r);
+  };
+  const quoteIn = (rt, c, quote) => {
+    const f = snapFile(rt.snap, c.col);
+    if (!f?.exists) return false;
+    if (rt.text.has(c.col)) {
+      if (!rt.norm.has(c.col)) rt.norm.set(c.col, normQ(rt.text.get(c.col)));
+      return rt.norm.get(c.col).includes(normQ(quote));
+    }
+    const hs = quoteLineHashes(ctx, c, quote), have = new Set(f.lines ?? []);
+    return hs.length > 0 && hs.every((h) => have.has(h));
+  };
+  const heldIn = (p, r) => {
+    const rt = runText(r);
+    if (!rt) return { held: false, why: `run ${r} has no snapshot` };
+    const ev = evQuotes(p.d.evidence);
+    if (ev.length) {
+      const i = ev.findIndex((e) => quoteIn(rt, ctx.colByPath(e.file), e.quote));
+      if (i >= 0) return { held: true, why: `evidence quote ${i + 1} ("${trunc(normQ(ev[i].quote), 60)}") was already in ${ctx.colByPath(ev[i].file).key} in run ${r}` };
+      return { held: false, why: `none of its ${ev.length} evidence quote(s) was in run ${r}'s text` };
+    }
+    if (!snapFile(rt.snap, p.loc.col)?.exists) return { held: false, why: `${p.loc.key} did not exist in run ${r}` };
+    const a = isObj(p.d.absence) && Array.isArray(p.d.absence.files) && Array.isArray(p.d.absence.searched) ? p.d.absence : { files: [], searched: [] };
+    let read = 0;
+    for (const f of a.files) {
+      const c = isStr(f) ? ctx.colByPath(f) : null;
+      if (!c || !rt.text.has(c.col)) continue;
+      read++;
+      const lo = normQ(rt.text.get(c.col)).toLowerCase();
+      const t = a.searched.find((x) => isStr(x) && normQ(x) !== "" && lo.includes(normQ(x).toLowerCase()));
+      if (t) return { held: false, why: `"${t}" was in ${c.key} in run ${r} and is gone now` };
+    }
+    return { held: true, why: read ? `the searched terms were already absent from ${a.files.join(", ")} in run ${r}` : `${p.loc.key} existed in run ${r}, which kept no text copy to show a searched term was there` };
+  };
+  // B4: world-changed needs the cited source in a research_logged event of this run (and, for a newer page, its date there).
+  const worldChanged = (p) => {
+    if (!isStr(p.d.fact)) return null;
+    for (const t of scanTags(p.d.fact)) {
+      const pc = t.kind === "cite" ? parseCite(t, ctx.F) : { err: true };
+      if (pc.err) continue;
+      const src = research.filter((r) => r.url === normUrl(pc.url));
+      if (!src.length) continue;
+      const pub = pc.date ? parseDay(pc.date).day : null;
+      const dated = src.find((r) => [r.published, r.updated].some((x) => isStr(x) && parseDay(x).ok && parseDay(x).day === pub));
+      if (pub !== null && pub > Pday && dated) return `the cited source is dated ${pc.date}, after run ${P.run} (${P.header.date}), and ${dated.id ?? "a research_logged event"} of this run read it`;
+      const k = citeClock(pc, ctx.F, ctx.today);
+      if (k.expiresDay !== undefined && k.expiresDay > Pday && k.expiresDay <= ctx.today.day) return `a cited fact crossed its freshness limit on ${k.expires}, and ${src[0].id ?? "a research_logged event"} of this run read it again`;
+    }
+    return null;
+  };
+  const hintOf = (p) => {
+    if (!P) return ["initial", "no earlier scored run of this scope"];
+    if (!(P.header.checks ?? []).includes(p.d.check)) return ["checklist-gap", `${p.d.check} was not in run ${P.run}'s checklist`];
+    if (p.d.caused_by && appliedSince(p.d.caused_by)) return ["new-due-to-change", `caused by the applied fix of ${p.d.caused_by}`];
+    const h = heldIn(p, P.run);
+    if (!h.held) return ["new-due-to-change", h.why];
+    const wc = worldChanged(p);
+    if (wc) return ["world-changed", wc];
+    return ["missed-earlier", `${h.why}, and ${p.d.check} existed then${isStr(p.d.fact) ? " (its cited fact is not a newer page read by a research_logged event of this run)" : ""}`];
+  };
+  // the earliest scored run from which the gap's evidence was there without a break
+  const shouldSince = (p) => {
+    let earliest = null;
+    for (const r of scoredRuns(model, ctx.scope).filter((x) => x.run < N).reverse()) {
+      if (!heldIn(p, r.run).held) break;
+      earliest = r.run;
+    }
+    return earliest;
+  };
+
+  const fresh = [];
+  const findingLines = [];
+  const statusLines = [];
+  const apologyLines = [];
+  const rkHow = (p) => (p.rk.how === "quote" ? `same lens and check, and its evidence overlaps ${p.id}'s in today's text` : p.rk.how === "absence" ? `same lens, check and locator, and a searched term in common with ${p.id}` : `same lens, check and anchor ${p.rk.at}; ${p.id}'s evidence is gone from today's text`);
+  const rkReason = (p) => {
+    if (p.rk.kind === "split") return `split: drafted as ${p.drafted}, the id of an earlier, different gap; this gap gets its own id ${p.id}${p.rk.auto ? "" : " (distinct in reconcile.json)"}`;
+    const tag = p.rk.kind === "family" ? "split" : "same_as";
+    return `${tag}: drafted as ${p.drafted} (claim_key ${p.ck}, locator ${p.loc.norm}); ${rkHow(p)}${p.rk.auto ? "" : " (matched in reconcile.json)"}`;
+  };
+  const mkStatus = (id, status, reason, verify, by) => mkLine("status", { run: N, id, status, reason, verify: verify ?? null, by: by ?? null });
+  for (const p of live) {
+    const d = p.d;
+    const prior = foldP.get(p.id);
+    const base = { id: p.id, ...(p.rk ? { drafted_as: p.drafted } : {}), lens: d.lens, check: d.check, severity: p.severity };
+    if (blocked.has(p.id)) { fresh.push({ ...base, transition: "undecided", class_hint: null, hint_reason: "waits for its matches answer in reconcile.json", class: null, status: null }); continue; }
+    let transition, status, cls, hint = null, hintReason = null, firstRun = N, since = null, reasonOut = null;
+    if (prior && COUNTED.has(prior.status)) { transition = "carried"; status = prior.status; }
+    else if (prior && prior.status === "fixed") { transition = "regressed"; status = "regressed"; }
+    else if (prior && (prior.status === "withdrawn" || prior.status === "superseded")) {
+      transition = "reopened"; status = "open";
+      if (!nonEmpty(R("reopened")[p.id]?.reason)) need(p.id, "reopen-reason");
+    } else { transition = "new"; status = "open"; }
+    if (transition === "new") {
+      [hint, hintReason] = hintOf(p);
+      // B4: the class is derived. reconcile.json may confirm it, or raise new-due-to-change / world-changed to
+      // missed-earlier (the gap was findable before); any other override is refused.
+      const ov = R("classes")[p.id];
+      cls = hint; reasonOut = hintReason;
+      if (ov !== undefined && !(isObj(ov) && ov.class === hint)) {
+        const up = isObj(ov) && ov.class === "missed-earlier" && (hint === "new-due-to-change" || hint === "world-changed");
+        if (!up) throw fail("CLASS_OVERRIDE_REFUSED", `${p.id}: the class comes from the ledger and the snapshots (${hint}: ${hintReason}). reconcile.json may confirm it, or raise new-due-to-change or world-changed to missed-earlier; ${isObj(ov) ? ov.class : "this value"} is refused. Nothing was written.`, { id: p.id, hint, hint_reason: hintReason, class: isObj(ov) ? ov.class ?? null : null });
+        cls = ov.class;
+        if (nonEmpty(ov.reason)) reasonOut = ov.reason; else need(p.id, "class-reason");
+      }
+      if (MISSED.has(cls)) since = shouldSince(p);
+    } else {
+      cls = prior.class; hint = prior.class_hint; reasonOut = prior.class_reason; firstRun = prior.first_run; since = prior.should_since;
+      if (p.severity !== prior.severity && !nonEmpty(R("severity_reasons")[p.id])) need(p.id, "severity-reason");
+    }
+    // B6: a carried or re-keyed id records this run's text; only its identity (locator, claim_key) stays
+    const line = mkLine("finding", {
+      run: N, id: p.id, lens: d.lens, check: d.check, locator: p.rk && prior ? prior.locator : p.loc.norm, claim_key: p.rk && prior ? prior.claim_key : p.ck, also: (Array.isArray(d.also) ? d.also : []).map((a) => parseLocator(ctx, a, null).norm),
+      claim: d.claim ?? null, evidence: d.evidence ?? [], absence: d.absence ?? null, fact: d.fact ?? null, evidence_level: d.evidence_level ?? null, load_bearing: d.load_bearing === true,
+      impact: d.impact, impact_reason: d.impact_reason ?? null, likelihood: d.likelihood, likelihood_reason: d.likelihood_reason ?? null, one_way_door: d.one_way_door === true, detect: d.detect, detect_quote: d.detect_quote ?? null,
+      severity: p.severity, chain: d.chain ?? [], fix: d.fix, fix_class: d.fix_class, verify: d.verify, ripple: d.ripple ?? [], owner: d.owner ?? null,
+      conflicts_with: d.conflicts_with ?? [], order: d.order ?? null, found_by: d.found_by ?? null, caused_by: d.caused_by ?? null, status, class: cls, class_hint: hint, class_reason: reasonOut, first_run: firstRun, should_since: since,
+      text_changed_reason: d.text_changed_reason ?? null, withdrawn_reason: null,
+    });
+    findingLines.push(line);
+    if (p.rk) statusLines.push(mkStatus(p.id, status, rkReason(p), null, p.drafted));
+    if (transition === "regressed") statusLines.push(mkStatus(p.id, "regressed", "found again after it was fixed", null, null));
+    if (transition === "reopened") statusLines.push(mkStatus(p.id, "open", R("reopened")[p.id]?.reason ?? null, null, null));
+    if (transition === "new" && MISSED.has(cls)) {
+      const a = (Array.isArray(rec.apologies) ? rec.apologies : []).find((x) => isObj(x) && x.id === p.id);
+      if (!(a && ROOT_OK.has(a.root_cause) && nonEmpty(a.text))) need(p.id, "apology");
+      const lc = a && learned.items.find((x) => x.id === a.learned);
+      if (!(lc && lc.lens === d.lens)) need(p.id, "learned-check");
+      if (a && ROOT_OK.has(a.root_cause) && nonEmpty(a.text) && lc && lc.lens === d.lens) apologyLines.push(mkLine("apology", { run: N, id: p.id, class: cls, should_since: since, root_cause: a.root_cause, text: a.text, learned: a.learned }));
+    }
+    if (p.rk?.kind === "same_as") { hint = "same_as"; hintReason = `drafted as ${p.drafted}: ${rkHow(p)}; only the wording differs`; }
+    fresh.push({ ...base, transition, class_hint: hint, hint_reason: hintReason, class: cls, status });
+  }
+  // withdrawn drafts
+  const withdrawnOut = [];
+  for (const p of withdrawnDrafts) {
+    const prior = p.id ? foldP.get(p.id) : null;
+    if (prior && COUNTED.has(prior.status)) { statusLines.push(mkStatus(p.id, "withdrawn", p.d.withdrawn_reason ?? null, null, null)); withdrawnOut.push({ id: p.id, status: "withdrawn" }); }
+    else withdrawnOut.push({ id: p.id, status: "ignored (never counted)" });
+  }
+  // disappeared ids
+  const disappeared = [];
+  const memo = {};
+  for (const [id, prior] of [...foldP.entries()].sort((a, b) => cmpStr(a[0], b[0]))) {
+    if (!COUNTED.has(prior.status) || liveIds.has(id) || withdrawnDrafts.some((p) => p.id === id)) continue;
+    const ev = await evalPred(ctx, prior.verify, memo);
+    // B6: fixed needs a passing verify AND a change to its own files since P; a passing verify on unchanged text fixes nothing
+    const qs = evQuotes(prior.evidence);
+    const locs = [prior.locator, ...(Array.isArray(prior.also) ? prior.also : []), ...qs.map((e) => e.file), ...(isObj(prior.absence) && Array.isArray(prior.absence.files) ? prior.absence.files : [])].map((x) => parseLocator(ctx, x, null)).filter((x) => x.col);
+    const filesChanged = uniq(locs.filter((l) => { const a = snapFile(snapP, l.col), b = snapFile(snap, l.col); return (a?.sha256 ?? null) !== (b?.sha256 ?? null); }).map((l) => l.key));
+    const stands = qs.length > 0 && qs.every((e) => !quoteProblem(ctx, e.file, e.quote));
+    let hint, status = prior.status, why;
+    if (ev.result === "pass" && filesChanged.length) { hint = "fixed"; status = "fixed"; }
+    else if (ev.result === "pass") { hint = "sweep-miss"; why = `its verify passes, but none of its files changed since run ${P.run}, so nothing was fixed`; }
+    else if (!filesChanged.length) { hint = "sweep-miss"; why = `none of its files changed since run ${P.run}`; }
+    else if (stands) { hint = "sweep-miss"; why = `its evidence is still in today's text`; }
+    else { hint = "partial"; status = "partial"; }
+    const ov = R("disappeared")[id];
+    let reason = ev.detail;
+    if (isObj(ov) && ["fixed", "withdrawn", "partial"].includes(ov.status)) {
+      if (ov.status === "fixed") {
+        if (!filesChanged.length) throw fail("DISPOSITION_REFUSED", `reconcile.json disappeared.${id}: none of its files changed since run ${P.run}, so it cannot be fixed. Nothing was written.`, { id, status: "fixed" });
+        if (isStr(ov.quote) && !quoteAnywhere(ctx, ov.quote, ov.file)) { status = "fixed"; reason = `quote: ${trunc(ov.quote, 80)}`; } else need(id, "disposition");
+      }
+      else if (ov.status === "withdrawn") { if (nonEmpty(ov.reason)) { status = "withdrawn"; reason = ov.reason; } else need(id, "disposition"); }
+      else { status = "partial"; if (nonEmpty(ov.reason)) reason = ov.reason; }
+    }
+    if (status !== prior.status) statusLines.push(mkStatus(id, status, reason, ev.result, null));
+    else if (hint === "sweep-miss") statusLines.push(mkStatus(id, status, `sweep-miss: not found in this run although ${why} (${trunc(ev.detail, 80)})`, ev.result, null));
+    disappeared.push({ id, prev_status: prior.status, verify: ev.result, files_changed: filesChanged, hint, status });
+  }
+  // scope carry (first full run after scope-only runs)
+  const scopeCarry = [];
+  if (ctx.scope === "full") {
+    const foldSO = foldAt(model, "scope-only", N - 1);
+    for (const [id, f] of [...foldSO.entries()].sort((a, b) => cmpStr(a[0], b[0]))) {
+      if (!COUNTED.has(f.status)) continue;
+      const sc = R("scope_carry")[id];
+      if (isObj(sc) && sc.status === "fixed" && isStr(sc.quote) && !quoteAnywhere(ctx, sc.quote, sc.file)) { scopeCarry.push({ id, status: "fixed", by: null }); statusLines.push(mkStatus(id, "fixed", `scope carry: ${trunc(sc.quote, 80)}`, null, null)); }
+      else if (isObj(sc) && sc.status === "superseded" && isStr(sc.by) && liveIds.has(sc.by)) { scopeCarry.push({ id, status: "superseded", by: sc.by }); statusLines.push(mkStatus(id, "superseded", "scope carry: superseded by a full-run finding", null, sc.by)); }
+      else need(id, "disposition");
+    }
+  }
+  // apply runs: approvals and applies
+  const approvalLines = [];
+  // (apply runs only: applyGate above has refused anything unapproved or unknown)
+  for (const a of apply ? approvalsDoc.approvals : []) {
+    approvalLines.push(mkLine("approval", { run: N, id: a.id, decision: a.decision, words: a.words, at: a.at ?? null, decision_id: a.decision_id ?? null }));
+    if (a.decision === "accept") statusLines.push(mkStatus(a.id, "accepted", `accepted by the user (decision ${a.decision_id}): ${a.words}`, null, null));
+  }
+  const applyLines = (apply ? applyDoc?.applied ?? [] : []).map((a) => mkLine("apply", { run: N, id: a.id, files: a.files, result: a.result, decision_id: a.decision_id ?? null }));
+
+  statusLines.sort((a, b) => cmpStr(a.id, b.id) || cmpStr(a.status, b.status));
+  const header = mkLine("run", {
+    run: N, scope: ctx.scope, mode: apply ? "apply" : "review", date: ctx.last.started_at.slice(0, 10), prev_run: P ? P.run : null,
+    independence: ["same-session", "new-session", "subagent"].includes(cells?.independence) ? cells.independence : "same-session", procedure: "script",
+    lenses_sha256: snap.lenses_sha256, learned_sha256: snap.learned_sha256, freshness_sha256: snap.freshness_sha256, snapshot_sha256: snap.snapshot_sha256, checks: [...inp.checks.keys()].sort(),
+  });
+  const lines = [header, ...findingLines, ...statusLines];
+  let cellsLine = null;
+  if (inp.hasCells) {
+    const cov = coverageCheck(ctx, inp);
+    cellsLine = mkLine("cells", {
+      run: N, cells_sha256: sha256(canonJson(cells)), r_cells: { total: cov.counts.r_cells, filled: cov.counts.filled },
+      counts: { clean: cov.counts.clean, findings: cov.counts.findings, na: cov.counts.na, blocked: cov.counts.blocked, carried: cov.counts.carried },
+      passes: (Array.isArray(cells.passes) ? cells.passes : []).filter(isObj).map((x) => ({ pass: x.pass ?? null, order: x.order ?? null, new: x.new ?? null })), saturated: cov.saturation.saturated, premortem: cov.premortem,
+      fresh_pass: isObj(cells.fresh_pass) ? { agent_id: cells.fresh_pass.agent_id ?? null, confirmed: cells.fresh_pass.confirmed ?? null, only_fresh: cells.fresh_pass.only_fresh ?? null, only_main: cells.fresh_pass.only_main ?? null } : null,
+    });
+    lines.push(cellsLine);
+  }
+  lines.push(...apologyLines.sort((a, b) => cmpStr(a.id, b.id)), ...approvalLines, ...applyLines);
+  const out = {
+    run: N, prev_run: P ? P.run : null, scope: ctx.scope, fresh, disappeared, scope_carry: scopeCarry, withdrawn: withdrawnOut, needs,
+    matches: draftsSorted.filter((p) => rel.get(p.id).some((c) => c.y !== p.id) || rekey.has(p.id) || needs.some((x) => x.id === p.id && x.need === "match")).map((p) => { const k = rekey.get(p.id); return { id: p.id, candidates: rel.get(p.id).map((c) => c.y), relation: Object.fromEntries(rel.get(p.id).map((c) => [c.y, c.rel])), same_as: k && k.kind !== "split" ? k.y : null, split: k?.kind === "split" ? k.y : null, how: k?.how ?? null, at: k?.at ?? null, auto: k ? k.auto : null }; }),
+    counts: { fresh: fresh.length, same_as: [...rekey.values()].filter((k) => k.kind === "same_as").length, split: [...rekey.values()].filter((k) => k.kind !== "same_as").length, carried: fresh.filter((f) => f.transition === "carried").length, regressed: fresh.filter((f) => f.transition === "regressed").length, reopened: fresh.filter((f) => f.transition === "reopened").length, new: fresh.filter((f) => f.transition === "new").length, disappeared: disappeared.length, fixed: disappeared.filter((d) => d.status === "fixed").length, partial: disappeared.filter((d) => d.status === "partial").length, sweep_miss: disappeared.filter((d) => d.hint === "sweep-miss").length, needs: needs.length },
+  };
+  return { out, lines, header };
+}
+
+async function cmdReviewLedgerDiff({ dir, flags }) {
+  const ctx = reviewCtx(dir, flags);
+  const inp = runInputs(ctx, { needCells: !!flags.write });
+  inp.hasCells = fs.existsSync(path.join(dir, ctx.runRel, "cells.json"));
+  const { out, lines } = await computeDiff(ctx, inp);
+  let changed = false;
+  if (flags.write) {
+    if (out.needs.length) throw fail("RECONCILE_INCOMPLETE", `The run cannot be written yet: ${out.needs.length} item(s) need an answer in reconcile.json.`, { needs: out.needs });
+    changed = writeRunLines(dir, ctx.run, RUN_OWNED, lines);
+  }
+  return { ...out, written: !!flags.write, changed };
+}
+
+
+// ----- score (spec 08 §7, scale.md)
+const SEV_RANK = { blocking: 0, major: 1, minor: 2, note: 3 };
+function lensScoreOf(c, coreAbsent, clean) {
+  if (coreAbsent) return 1;
+  const { blocking: B, major: M, minor: m } = c;
+  if (B >= 3) return 2;
+  if (B === 2) return 3;
+  if (B === 1) return M >= 3 ? 3 : 4;
+  if (M >= 6) return 5;
+  if (M >= 4) return 6;
+  if (M >= 2) return 7;
+  if (M === 1) return 8;
+  if (m >= 6) return 8;
+  if (m >= 1) return 9;
+  return clean ? 10 : 9;
+}
+const overallOf = (scores) => { const v = Object.values(scores); const n = v.length; if (!n) return 0; const sum = v.reduce((a, b) => a + b, 0); return Math.floor((sum + n * Math.min(...v)) / (2 * n)); };
+const sevCounts = (list) => { const c = { blocking: 0, major: 0, minor: 0 }; for (const f of list) if (f.severity in c) c[f.severity]++; return c; };
+const scoreLineOf = (model, n) => model.runs.get(n)?.score ?? null;
+
+function scoreCompute(ctx, model, cells, claimsDoc) {
+  const N = ctx.run;
+  const fold = foldAt(model, ctx.scope, N, true);
+  const counted = countedIn(fold);
+  const lensScores = {}, lensCounts = {}, na = {}, unscored = {}, caps = [];
+  const claimById = new Map((claimsDoc.claims ?? []).map((c) => [c.id, c]));
+  const lbs = Array.isArray(cells.load_bearing) ? cells.load_bearing.filter(isObj) : [];
+  const unverifiedLb = lbs.filter((lb) => claimById.get(lb.claim)?.source === "marker");
+  // a draft id re-keyed to another id (same_as, split) is read as that id
+  const alias = new Map(model.L.lines.filter((x) => x.run === N && x.t === "status" && isStr(x.reason) && /^(same_as|split):/.test(x.reason) && isStr(x.by)).map((x) => [x.by, x.id]));
+  for (const l of ctx.lensesInScope()) {
+    const lc = lensCells(ctx, l);
+    if (!lc) continue;
+    const cl = isObj(cells.lenses) ? cells.lenses[l.id] : undefined;
+    const mine = counted.filter((f) => f.lens === l.id);
+    // B3: na never hides a counted finding, and a lens that applies cannot be skipped cell by cell
+    if (isObj(cl) && cl.status === "na" && !mine.length && !naProblem(ctx, l, cl.na_reason, null)) { na[l.id] = cl.na_reason; continue; }
+    const cc = isObj(cl?.cells) ? cl.cells : {};
+    const rCols = lc.R.filter((c) => ctx.col(c));
+    if (!rCols.length && !mine.length) { unscored[l.id] = "the lens has no R cell in this scope"; continue; }
+    const naCols = rCols.filter((c) => cc[c]?.state === "na");
+    if (rCols.length && naCols.length === rCols.length && !mine.length) {
+      if (lensNaAllowed(ctx, l) && naCols.every((c) => cc[c].reason === l.applies.reason)) { na[l.id] = l.applies.reason; continue; }
+      unscored[l.id] = `every R cell (${naCols.length}) is na, but the lens applies`;
+      continue;
+    }
+    const notes = mine.filter((f) => f.severity === "note");
+    const real = mine.filter((f) => f.severity !== "note");
+    const cnt = sevCounts(real);
+    const blocked = lc.R.filter((c) => cc[c]?.state === "blocked");
+    if (lc.R.length && blocked.length === lc.R.length) { unscored[l.id] = `all ${blocked.length} R cells blocked (${uniq(blocked.map((c) => cc[c].reason)).join(", ")})`; continue; }
+    const coreAbsent = real.some((f) => f.check === `${l.id}.0`);
+    const attacksOk = lbs.every((lb) => !(Array.isArray(lb.lenses) && lb.lenses.includes(l.id)) || (Array.isArray(cl?.attacks) && cl.attacks.some((a) => isObj(a) && a.claim === lb.claim && nonEmpty(a.attack) && nonEmpty(a.result))));
+    const cellOk = (col) => {
+      const x = cc[col];
+      if (!isObj(x)) return false;
+      if (x.state === "clean") return nonEmpty(x.quote) && nonEmpty(x.tried);
+      if (x.state === "na" || x.state === "carried") return true;
+      if (x.state === "findings") return nonEmpty(x.quote) && (x.ids ?? []).every((id) => { const f = fold.get(alias.get(id) ?? id); return !f || f.severity === "note" || !COUNTED.has(f.status); });
+      return false;
+    };
+    const clean = blocked.length === 0 && lc.R.every(cellOk) && attacksOk;
+    let score = lensScoreOf(cnt, coreAbsent, clean);
+    const capList = [];
+    if (blocked.length && score > 8) { score = 8; capList.push({ lens: l.id, cap: 8, reason: `${blocked.length} blocked cell(s)` }); }
+    if (l.id === "L01" && unverifiedLb.length && score > 6) { score = 6; capList.push({ lens: l.id, cap: 6, reason: `${unverifiedLb.length} load-bearing claim(s) still unverified` }); }
+    caps.push(...capList);
+    lensScores[l.id] = score;
+    lensCounts[l.id] = { ...cnt, note: notes.length, core_absent: coreAbsent, clean, blocked: blocked.length, cap: capList.length ? capList[capList.length - 1].cap : null };
+  }
+  const ids = Object.keys(lensScores);
+  const n = ids.length;
+  const vals = Object.values(lensScores);
+  const sum = vals.reduce((a, b) => a + b, 0);
+  const min = n ? Math.min(...vals) : 0;
+  const overall = overallOf(lensScores);
+  const passes = Array.isArray(cells.passes) ? cells.passes.filter((x) => isObj(x) && Number.isInteger(x.new)) : [];
+  const allCounted = counted.filter((f) => f.severity !== "note");
+  const blockingCounted = allCounted.filter((f) => f.severity === "blocking").length;
+  const l01cap = caps.some((c) => c.cap === 6);
+  const reasons = [];
+  let verdict;
+  if (passes.length < 2) reasons.push("fewer than 2 sweep passes");
+  if (passes.length && passes[passes.length - 1].new > 0) reasons.push("the last pass still found something new");
+  if (reasons.length) verdict = "INCOMPLETE";
+  else if (n && blockingCounted === 0 && min >= 8 && overall >= 8 && !l01cap && !Object.keys(unscored).length) { verdict = "BUILD-READY"; reasons.push(`0 counted blocking findings, min ${min} >= 8, overall ${overall} >= 8`); }
+  else if (n && blockingCounted === 0 && min >= 5) {
+    verdict = "FIX-THEN-BUILD";
+    if (min < 8) reasons.push(`min lens score ${min} < 8`);
+    if (overall < 8) reasons.push(`overall ${overall} < 8`);
+    if (l01cap) reasons.push("L01 capped at 6: a load-bearing claim is still unverified");
+    if (Object.keys(unscored).length) reasons.push(`unscored lens: ${Object.keys(unscored).join(", ")}`);
+  } else {
+    verdict = "NOT-READY";
+    if (!n) reasons.push("no lens could be scored");
+    if (blockingCounted) reasons.push(`${blockingCounted} counted blocking finding(s)`);
+    if (n && min < 5) reasons.push(`min lens score ${min} < 5`);
+  }
+  const open = sevCounts(counted.filter((f) => OPENISH.has(f.status)));
+  const accepted = sevCounts(counted.filter((f) => f.status === "accepted"));
+  const missed = [...fold.values()].filter((f) => f.first_run === N && MISSED.has(f.class)).length;
+  // corrected history
+  const history = [];
+  for (const r of scoredRuns(model, ctx.scope).filter((x) => x.run < N)) {
+    const sk = r.score;
+    const add = [...fold.values()].filter((f) => MISSED.has(f.class) && f.should_since !== null && f.should_since <= r.run && r.run < f.first_run && f.severity !== "note" && f.status !== "withdrawn" && f.status !== "superseded");
+    const scores = { ...(sk.lens_scores ?? {}) };
+    for (const [lid, base] of Object.entries(sk.lens_counts ?? {})) {
+      if (!(lid in scores)) continue;
+      const mine = add.filter((f) => f.lens === lid);
+      if (!mine.length) continue;
+      const c = sevCounts(mine);
+      const merged = { blocking: base.blocking + c.blocking, major: base.major + c.major, minor: base.minor + c.minor };
+      let s = lensScoreOf(merged, base.core_absent || mine.some((f) => f.check === `${lid}.0`), false);
+      if (base.cap !== null && s > base.cap) s = base.cap;
+      scores[lid] = s;
+    }
+    history.push({ run: r.run, overall: sk.overall, corrected: overallOf(scores) });
+  }
+  const first = history.length ? history[0].corrected : overall;
+  return {
+    lens_scores: lensScores, lens_counts: lensCounts, na, unscored, caps, mean: n ? Math.round((sum / n) * 100) / 100 : 0, min, overall, verdict, verdict_reasons: reasons,
+    open, accepted, missed_earlier: missed, score_if_caught_in_run1: first, corrected_history: history, n, sum, counted_blocking: blockingCounted, fold,
+  };
+}
+const SCOPE_WORDS = { "BUILD-READY": "scope sound: lock it", "FIX-THEN-BUILD": "fix before locking", "NOT-READY": "do not lock yet" };
+const verdictText = (scope, v) => (scope === "scope-only" && SCOPE_WORDS[v] ? SCOPE_WORDS[v] : v);
+
+function coverageGate(ctx, inp) {
+  const r = coverageCheck(ctx, inp);
+  for (const d of inp.dups) if (!r.errors.some((e) => e.code === "DUPLICATE_FINDING" && e.id === d.id)) r.errors.push({ code: "DUPLICATE_FINDING", lens: null, col: null, id: d.id, message: `${d.id} appears twice.` });
+  for (const c of inp.collisions) r.errors.push({ code: "ID_COLLISION", lens: null, col: null, id: c.assigned, message: `${c.id} collides with a different finding in the ledger (assigned ${c.assigned}).` });
+  return r;
+}
+function cmdReviewScore({ dir, flags }) {
+  const ctx = reviewCtx(dir, flags);
+  const inp = runInputs(ctx);
+  const cov = coverageGate(ctx, inp);
+  if (cov.errors.length) throw fail("COVERAGE_INVALID", `Coverage is not valid (${cov.errors.length} error(s)): run \`review coverage --run ${ctx.run}\`.`, { errors: cov.errors.slice(0, 20) });
+  if (!inp.model.runs.has(ctx.run)) throw fail("LEDGER_DIFF_MISSING", `Run ${ctx.run} has no lines in the ledger: run \`review ledger-diff --run ${ctx.run} --write\` first.`, { run: ctx.run });
+  const s = scoreCompute(ctx, inp.model, inp.cells, inp.claimsDoc);
+  const { n, sum, counted_blocking } = s;
+  const pub = { ...s };
+  for (const k of ["fold", "n", "sum", "counted_blocking"]) delete pub[k];
+  let changed = false;
+  if (flags.write) {
+    const line = mkLine("score", { run: ctx.run, scope: ctx.scope, ...pub });
+    changed = writeRunLines(dir, ctx.run, new Set(["score"]), [line]);
+  }
+  return { run: ctx.run, scope: ctx.scope, ...pub, verdict_text: verdictText(ctx.scope, s.verdict), arithmetic: { n, sum, min: s.min, formula: `floor((${sum} + ${n} * ${s.min}) / (2 * ${n}))` }, counted_blocking, written: !!flags.write, changed };
+}
+
+// ----- stability (spec 08 §11)
+function stabilityCompute(ctx, model, learned) {
+  const N = ctx.run;
+  const P = prevScored(model, ctx.scope, N);
+  if (!P) return { run: N, prev_run: null, stable: true, lenses: [], drift: [] };
+  const sN = scoreLineOf(model, N);
+  if (!sN) throw fail("SCORE_MISSING", `Run ${N} has no score line: run \`review score --run ${N} --write\` first.`, { run: N });
+  const sP = P.score;
+  const snapN = loadSnap(ctx, N), snapP = loadSnap(ctx, P.run);
+  const sameInputs = snapN.lenses_sha256 === snapP.lenses_sha256 && snapN.learned_sha256 === snapP.learned_sha256 && snapN.freshness_sha256 === snapP.freshness_sha256;
+  const foldP = foldAt(model, ctx.scope, P.run);
+  const foldN = foldAt(model, ctx.scope, N, true);
+  const runLines = model.L.lines.filter((l) => l.run === N);
+  const lenses = [];
+  const drift = [];
+  for (const l of ctx.lensesInScope()) {
+    const lc = lensCells(ctx, l);
+    if (!lc) continue;
+    const cols = uniq([...lc.R, ...lc.o, ...learned.items.filter((i) => i.lens === l.id).flatMap((i) => i.applies)]).filter((c) => ctx.col(c));
+    const changedCols = cols.filter((c) => { const a = snapFile(snapP, c), b = snapFile(snapN, c); return !a || !b || a.sha256 !== b.sha256 || a.exists !== b.exists; });
+    const strict = changedCols.length === 0 && sameInputs;
+    const idsOf = (fold) => new Map(countedIn(fold).filter((f) => f.lens === l.id).map((f) => [f.id, f]));
+    const a = idsOf(foldP), b = idsOf(foldN);
+    const trans = { fixed: 0, partial: 0, regressed: 0, withdrawn: 0, new: {} };
+    for (const sl of runLines) if (sl.t === "status" && !/^(same_as|split|sweep-miss):/.test(sl.reason ?? "") && (foldN.get(sl.id) ?? foldP.get(sl.id))?.lens === l.id && sl.status in trans) trans[sl.status]++;
+    for (const f of foldN.values()) if (f.lens === l.id && f.first_run === N) trans.new[f.class] = (trans.new[f.class] ?? 0) + 1;
+    const prev = sP.lens_scores?.[l.id] ?? null, now = sN.lens_scores?.[l.id] ?? null;
+    const mine = [];
+    let explainedAny = false;
+    if (strict) {
+      const D = (id, kind, message) => mine.push({ lens: l.id, id, kind, message });
+      for (const [id, f] of [...b.entries()].sort((x, y) => cmpStr(x[0], y[0]))) {
+        if (!a.has(id)) {
+          const ok = f.first_run === N && ((MISSED.has(f.class) && runLines.some((x) => x.t === "apology" && x.id === id)) || f.class === "world-changed");
+          if (ok) explainedAny = true; else D(id, "new-id", `${id} is new (${f.class}) although every file of ${l.id} is unchanged.`);
+        } else if (a.get(id).severity !== f.severity) D(id, "severity", `${id} changed severity ${a.get(id).severity} -> ${f.severity} with unchanged files.`);
+      }
+      for (const id of [...a.keys()].sort(cmpStr)) {
+        if (b.has(id)) continue;
+        const f = foldN.get(id);
+        const ok = f?.status === "withdrawn" && runLines.some((x) => x.t === "status" && x.id === id && x.status === "withdrawn" && nonEmpty(x.reason));
+        if (ok) explainedAny = true; else D(id, "id-gone", `${id} is ${f?.status ?? "gone"} although every file of ${l.id} is unchanged.`);
+      }
+      if (!mine.length && !explainedAny && prev !== now) D(null, "score", `${l.id} scored ${prev} -> ${now} with unchanged files and the same findings.`);
+    }
+    drift.push(...mine);
+    lenses.push({ lens: l.id, prev, now, strict, files_changed: changedCols, transitions: trans, explained: mine.length === 0 });
+  }
+  return { run: N, prev_run: P.run, stable: drift.length === 0, lenses, drift };
+}
+function cmdReviewStability({ dir, flags }) {
+  const ctx = reviewCtx(dir, flags);
+  const model = ledgerModel(readLedger(dir));
+  return stabilityCompute(ctx, model, loadLearned(dir));
+}
+
+// ----- render (spec 08 §11)
+const mdCell = (s) => String(s ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
+const oneLine = (s) => String(s ?? "").replace(/\s+/g, " ").trim();
+const sortFindings = (a, b) => SEV_RANK[a.severity] - SEV_RANK[b.severity] || cmpStr(a.lens, b.lens) || cmpStr(a.id, b.id);
+
+function buildCore(ctx, model, sc, cellsLine) {
+  const { fold } = sc;
+  const all = [...fold.values()];
+  const counted = all.filter((f) => COUNTED.has(f.status));
+  const real = counted.filter((f) => f.severity !== "note").sort(sortFindings);
+  const out = [];
+  const P = (s = "") => out.push(s);
+  const vt = verdictText(ctx.scope, sc.verdict);
+  P("## Verdict");
+  P();
+  const minLens = Object.entries(sc.lens_scores).sort((a, b) => a[1] - b[1] || cmpStr(a[0], b[0]))[0];
+  P(`**${vt}** · overall ${sc.overall}/10 · lowest lens ${minLens ? `${minLens[0]} = ${minLens[1]}/10` : "none"}`);
+  P();
+  if (real.length) { const w = real[0]; P(`Worst finding: ${w.id} (${w.severity}, ${w.lens}, ${w.check}): ${oneLine(w.claim ?? w.fact)}`); } else P("Worst finding: none counted.");
+  P();
+  for (const r of sc.verdict_reasons) P(`- ${r}`);
+  P();
+  P("## Must fix");
+  P();
+  const must = real.filter((f) => f.status !== "accepted");
+  if (!must.length) P("Nothing to fix.");
+  for (const f of must) P(`- [${f.severity}] ${f.id} · ${f.lens} · ${f.check} · ${f.status} · \`${f.locator}\`: ${oneLine(f.claim ?? f.fact)} Fix (${f.fix_class}): ${oneLine(f.fix)}`);
+  P();
+  P("## Lens scores");
+  P();
+  P("| Lens | Name | Score | B | M | m | Notes | Remark |");
+  P("|---|---|---|---|---|---|---|---|");
+  for (const l of ctx.lensesInScope()) {
+    if (!lensCells(ctx, l)) continue;
+    const c = sc.lens_counts[l.id];
+    const cap = sc.caps.filter((x) => x.lens === l.id).map((x) => `cap ${x.cap}: ${x.reason}`).join("; ");
+    if (c) P(`| ${l.id} | ${mdCell(l.name)} | ${sc.lens_scores[l.id]} | ${c.blocking} | ${c.major} | ${c.minor} | ${c.note} | ${mdCell([c.core_absent ? "core artifact absent" : "", cap].filter(Boolean).join("; "))} |`);
+    else if (l.id in sc.na) P(`| ${l.id} | ${mdCell(l.name)} | na | | | | | ${mdCell(sc.na[l.id])} |`);
+    else P(`| ${l.id} | ${mdCell(l.name)} | unscored | | | | | ${mdCell(sc.unscored[l.id])} |`);
+  }
+  P();
+  P(`Overall = floor((sum + n × min) / (2 × n)) = floor((${sc.sum} + ${sc.n} × ${sc.min}) / ${2 * sc.n}) = ${sc.overall}.`);
+  P();
+  P("## Findings");
+  P();
+  let any = false;
+  for (const l of ctx.lensesInScope()) {
+    const mine = counted.filter((f) => f.lens === l.id).sort(sortFindings);
+    if (!mine.length) continue;
+    any = true;
+    P(`### ${l.id} ${l.name}`);
+    P();
+    for (const f of mine) {
+      P(`- **${f.id}** · ${f.check} · ${f.severity} · ${f.status} · ${f.class}${isStr(f.class_hint) && f.class_hint !== f.class ? ` (script hint ${f.class_hint}; reason: ${oneLine(f.class_reason)})` : ""} · \`${f.locator}\``);
+      P(`  - Claim: ${oneLine(f.claim ?? f.fact)}`);
+      P(`  - Fix (${f.fix_class}): ${oneLine(f.fix)}`);
+      P(`  - Verify: ${predKind(f.verify)}`);
+    }
+    P();
+  }
+  if (!any) { P("No findings."); P(); }
+  const closed = all.filter((f) => !COUNTED.has(f.status)).length;
+  if (closed) { P(`Closed (fixed, withdrawn or superseded): ${closed}.`); P(); }
+  P("## Accepted risks");
+  P();
+  const acc = real.filter((f) => f.status === "accepted");
+  if (!acc.length) P("None.");
+  for (const f of acc) P(`- [${f.severity}] ${f.id} · ${f.lens}: ${oneLine(f.claim ?? f.fact)}`);
+  P();
+  P("## Limitations");
+  P();
+  const lim = [];
+  for (const arr of ["core", "enhancer"]) for (const b of ctx.st.boosters?.[arr] ?? []) if (isObj(b) && b.status && b.status !== "installed") lim.push(`Booster ${b.name} (${arr}) is ${b.status}.`);
+  for (const a of ctx.st.agents_delegated ?? []) if (isObj(a) && a.status === "failed") lim.push(`Delegation ${a.id} failed${a.reason ? `: ${oneLine(a.reason)}` : ""}.`);
+  for (const [lid, c] of Object.entries(sc.lens_counts)) if (c.blocked) lim.push(`${lid} has ${c.blocked} blocked cell(s).`);
+  for (const [lid, r] of Object.entries(sc.unscored)) lim.push(`${lid} is unscored: ${r}.`);
+  const lbU = all.filter((f) => f.load_bearing && COUNTED.has(f.status) && (f.evidence_level ?? 0) <= 1);
+  for (const f of lbU) lim.push(`Load-bearing claim unverified: ${f.id}.`);
+  if (!lim.length) P("None recorded."); else for (const x of lim) P(`- ${x}`);
+  P();
+  P("## Coverage");
+  P();
+  if (cellsLine) {
+    P(`- R cells: ${cellsLine.r_cells.filled}/${cellsLine.r_cells.total}`);
+    P(`- clean ${cellsLine.counts.clean} · findings ${cellsLine.counts.findings} · na ${cellsLine.counts.na} · blocked ${cellsLine.counts.blocked} · carried ${cellsLine.counts.carried}`);
+  } else P("- no cells line was written");
+  P();
+  return out.join("\n");
+}
+
+function buildReport(ctx, model, sc, cellsLine, cells, P) {
+  const N = ctx.run;
+  const hdr = model.runs.get(N).header;
+  const core = buildCore(ctx, model, sc, cellsLine);
+  const lines = [];
+  const L = (s = "") => lines.push(s);
+  L(`# Review report: ${ctx.st.project?.name ?? ctx.st.project?.slug ?? "project"}`);
+  L();
+  L(`**${verdictText(ctx.scope, sc.verdict)}** (overall ${sc.overall}/10).`);
+  L();
+  L("## Run header");
+  L();
+  L(`- Run ${N} · ${hdr.date} · scope ${hdr.scope} · mode ${hdr.mode} · previous run ${hdr.prev_run ?? "none"}`);
+  L(`- Independence: ${hdr.independence}`);
+  const passes = Array.isArray(cells?.passes) ? cells.passes.filter(isObj) : [];
+  L(`- Saturation curve (new findings per pass): ${passes.length ? passes.map((p) => `${p.pass ?? "?"}:${p.new}`).join(", ") : "none"}`);
+  const runLines = model.L.lines.filter((l) => l.run === N);
+  const fr = runLines.filter((l) => l.t === "finding");
+  const newByClass = {};
+  for (const f of fr) if (f.first_run === N) newByClass[f.class] = (newByClass[f.class] ?? 0) + 1;
+  const misses = runLines.filter((l) => l.t === "status" && isStr(l.reason) && l.reason.startsWith("sweep-miss")).map((l) => l.id);
+  if (misses.length) L(`- Sweep misses (not found again, but not fixed either; kept as they were): ${misses.join(", ")}`);
+  for (const x of runLines.filter((l) => l.t === "status" && isStr(l.reason) && l.reason.startsWith("same_as:"))) L(`- Same gap, new wording: ${x.id} was ${oneLine(x.reason.slice(8).trim())}`);
+  for (const x of runLines.filter((l) => l.t === "status" && isStr(l.reason) && l.reason.startsWith("split:"))) L(`- Own id: ${x.id} was ${oneLine(x.reason.slice(6).trim())}`);
+  for (const f of fr.filter((l) => l.first_run === N)) L(`- New ${f.id} (${f.lens}, ${f.check}): ${f.class}${f.class_hint && f.class_hint !== f.class ? `, raised from the script hint ${f.class_hint}` : ""}. Reason: ${oneLine(f.class_reason ?? "none")}`);
+  L(`- Reconcile: ${fr.length} finding line(s), new by class: ${Object.keys(newByClass).length ? Object.entries(newByClass).map(([k, v]) => `${k} ${v}`).join(", ") : "none"}; status changes: ${runLines.filter((l) => l.t === "status").length}`);
+  const ap = runLines.filter((l) => l.t === "apology");
+  for (const a of ap) L(`- Apology for ${a.id} (${a.class}, ${a.should_since ? `should have been found since run ${a.should_since}` : "its text changed since the last run, so no earlier score is corrected"}): root cause ${a.root_cause}; learned check ${a.learned}. ${oneLine(a.text)}`);
+  for (const a of ap) L(`- Maintainer issue text: check for ${a.id} was missing or skipped (${a.root_cause}); learned check ${a.learned} added.`);
+  L();
+  L("<!-- core:start -->");
+  const body = core;
+  L(body.replace(/\n+$/, ""));
+  L("<!-- core:end -->");
+  L();
+  L("## Run evidence");
+  L();
+  L("### Checked and sound");
+  L();
+  let n = 0;
+  for (const [lid, cl] of Object.entries(isObj(cells?.lenses) ? cells.lenses : {}).sort((a, b) => cmpStr(a[0], b[0]))) {
+    for (const [col, c] of Object.entries(isObj(cl?.cells) ? cl.cells : {}).sort((a, b) => cmpStr(a[0], b[0]))) {
+      if (isObj(c) && c.state === "clean") { n++; L(`- ${lid} ${col}: "${oneLine(c.quote)}" (tried: ${oneLine(c.tried)})`); }
+    }
+    for (const a of Array.isArray(cl?.attacks) ? cl.attacks : []) if (isObj(a)) L(`- ${lid} attack on ${a.claim}: ${oneLine(a.attack)} => ${oneLine(a.result)}`);
+  }
+  if (!n) L("- none");
+  L();
+  L("### Attempted and blocked");
+  L();
+  let nb = 0;
+  for (const [lid, cl] of Object.entries(isObj(cells?.lenses) ? cells.lenses : {}).sort((a, b) => cmpStr(a[0], b[0]))) for (const [col, c] of Object.entries(isObj(cl?.cells) ? cl.cells : {}).sort((a, b) => cmpStr(a[0], b[0]))) if (isObj(c) && c.state === "blocked") { nb++; L(`- ${lid} ${col}: ${c.reason}: ${oneLine(c.note)}`); }
+  if (!nb) L("- none");
+  L();
+  L("### Pre-mortem");
+  L();
+  const pm = Array.isArray(cells?.premortem) ? cells.premortem.filter(isObj) : [];
+  if (!pm.length) L("- none");
+  for (const c of pm) L(`- ${c.horizon}: ${oneLine(c.cause)} -> ${c.maps_to}`);
+  L();
+  L("### Realistic numbers (heuristic)");
+  L();
+  const real = readWorkOpt(ctx.dir, `${ctx.runRel}/realistic.json`);
+  const rows = Array.isArray(real) ? real : Array.isArray(real?.rows) ? real.rows : [];
+  if (!rows.length) L("- none");
+  for (const r of rows) if (isObj(r)) L(`- ${r.item} (${r.file}): plan ${r.plan_value} ${r.unit ?? ""} × ${r.factor} (${r.rule}) = ${r.realistic}; reference class: ${r.reference_class ?? "none: novel project"}`);
+  L();
+  L("### Fairness numbers");
+  L();
+  L(`- score_now: ${sc.overall}`);
+  L(`- score_if_caught_in_run1: ${sc.score_if_caught_in_run1}`);
+  if (sc.corrected_history.length) for (const h of sc.corrected_history) L(`- run ${h.run}: ${h.overall} (corrected ${h.corrected})`);
+  void P;
+  L();
+  return { text: lines.join("\n"), core: body.replace(/\n+$/, "") };
+}
+
+function cmdReviewRender({ dir, flags }) {
+  const ctx = reviewCtx(dir, flags);
+  const N = ctx.run;
+  const learned = loadLearned(dir);
+  const model = ledgerModel(readLedger(dir));
+  if (!model.runs.has(N)) throw fail("LEDGER_DIFF_MISSING", `Run ${N} has no lines in the ledger.`, { run: N });
+  const scl = scoreLineOf(model, N);
+  if (!scl) throw fail("SCORE_MISSING", `Run ${N} has no score line: run \`review score --run ${N} --write\` first.`, { run: N });
+  const stab = stabilityCompute(ctx, model, learned);
+  if (!stab.stable) throw fail("SCORE_DRIFT", `The plan files did not change but the findings or scores did (${stab.drift.length} difference(s)): nothing was rendered.`, { drift: stab.drift.slice(0, 20), prev_run: stab.prev_run });
+  const cells = readWorkOpt(dir, `${ctx.runRel}/cells.json`);
+  const claimsDoc = readWorkOpt(dir, `${ctx.runRel}/claims.json`) ?? { claims: [] };
+  const sc = scoreCompute(ctx, model, cells ?? { lenses: {} }, claimsDoc);
+  // the ledger's score line is the record; the live fold must agree with it
+  if (sc.overall !== scl.overall || sc.verdict !== scl.verdict) throw fail("SCORE_DRIFT", "The score line no longer matches the ledger: run `review score --write` again.", { line: { overall: scl.overall, verdict: scl.verdict }, now: { overall: sc.overall, verdict: sc.verdict } });
+  const cellsLine = model.L.lines.find((l) => l.t === "cells" && l.run === N) ?? null;
+  const { text, core } = buildReport(ctx, model, sc, cellsLine, cells, null);
+  const bodySha = sha256(core);
+  const reportRel = `.lvr/review/REVIEW-${ctx.last.started_at.slice(0, 10)}-${N}.md`;
+  const changed = putReviewFile(dir, reportRel, text);
+  const doneLine = mkLine("run_done", { run: N, report: reportRel, body_sha256: bodySha, verdict: sc.verdict });
+  writeRunLines(dir, N, new Set(["run_done"]), [doneLine]);
+  const ledgerSha = sha256(fs.readFileSync(path.join(dir, REVIEW_LEDGER)));
+  const payload = { run: N, verdict: sc.verdict, score: sc.overall, open: sc.open, missed_earlier: sc.missed_earlier, report: reportRel, lens_scores: sc.lens_scores, ledger_sha256: ledgerSha };
+  const out = { run: N, report: reportRel, body_sha256: bodySha, changed, review_done_payload: payload };
+  if (flags.journal) {
+    const cur = loadState(dir);
+    const last = cur.kind === "valid" ? cur.state.review?.last : null;
+    if (last && last.run === N && last.done_at !== null) out.journal = "already-done";
+    else out.journal = checkpoint(dir, "review_done", payload);
+  }
+  return out;
+}
+
+
+const REVIEW_CMDS = {
+  "review snapshot": { help: "Hash every column file, unit and line of the run's scope. --run N [--scope full|scope-only] [--lenses PATH] [--freshness PATH]", flags: ["run", "scope", "lenses", "freshness"], run: async (c) => cmdReviewSnapshot(c) },
+  "review claims": { help: "Write the claim register (money, versions, dates, absolutes, hedges) of the scope. --run N", flags: ["run", "scope", "lenses", "freshness"], run: async (c) => cmdReviewClaims(c) },
+  "review coverage": { help: "Check cells.json, findings.json and every quote. Always exit 0; valid + errors. --run N", flags: ["run", "scope", "lenses", "freshness"], run: async (c) => cmdReviewCoverage(c) },
+  "review ids": { help: "Validate finding drafts and compute ids and severity. --run N [--in FILE] [--write]", flags: ["run", "scope", "in", "write", "lenses", "freshness"], run: async (c) => cmdReviewIds(c) },
+  "review ripple": { help: "List every scope line that holds a term. --run N (--text T)... [--claim CL-...]...", flags: ["run", "scope", "text", "claim", "lenses", "freshness"], run: async (c) => cmdReviewRipple(c) },
+  "review verify": { help: "Evaluate the verify predicates of findings against the current files. --run N [--id RV-...]...", flags: ["run", "scope", "id", "lenses", "freshness"], run: async (c) => cmdReviewVerify(c) },
+  "review ledger-diff": { help: "Reconcile this run against the previous scored run (re-keys the same gap in new words, derives classes; an apply run needs approved approvals.json); --write appends the run lines. --run N [--write]", flags: ["run", "scope", "write", "lenses", "freshness"], run: async (c) => cmdReviewLedgerDiff(c) },
+  "review score": { help: "Compute lens scores, overall and verdict (a pure function of the fold). --run N [--write]", flags: ["run", "scope", "write", "lenses", "freshness"], run: async (c) => cmdReviewScore(c) },
+  "review stability": { help: "Compare run N with the previous scored run: strict lenses must not drift. --run N", flags: ["run", "scope", "lenses", "freshness"], run: async (c) => cmdReviewStability(c) },
+  "review render": { help: "Write REVIEW-<date>-<N>.md and the run_done line; refuses on SCORE_DRIFT. --run N [--journal]", flags: ["run", "scope", "journal", "lenses", "freshness"], run: async (c) => cmdReviewRender(c) },
+  "review freshness": { help: "List every cite with its age, limit and expiry; flag the ones that crossed their limit since the last run. --run N [--since YYYY-MM-DD]", flags: ["run", "scope", "since", "lenses", "freshness"], run: async (c) => cmdReviewFreshness(c) },
+};
+
 // ---------------------------------------------------------------- 12. commands
 const need = (flags, k) => {
   if (flags[k] === undefined || flags[k] === true) throw fail("MISSING_FLAG", `Flag --${k} is required.`, { flag: k });
@@ -4882,6 +7010,8 @@ const COMMANDS = {
     },
   },
 };
+
+Object.assign(COMMANDS, REVIEW_CMDS);
 
 function usage(group) {
   const lines = ["lvr.mjs - Lazy Vibers Recipe helper (Node >= 22, no dependencies)", "", "Usage: node lvr.mjs <group> <cmd> [flags]", ""];

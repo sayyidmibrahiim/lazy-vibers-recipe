@@ -13,7 +13,7 @@ skills/
 ├── lvr-init-new-idea/        S0 intake + interview loop (S1–S8) + S9 compiler
 ├── lvr-continue/             Resume parked/interrupted pipeline, journal replay
 ├── lvr-handoff/              Gap lint (20 files), blueprint.json, builder harness stubs
-├── lvr-recheck-plan/         Adversarial audit (R1–R6), research refresh, fixes in place
+├── lvr-review-plan/          Critical plan review: 15 lenses, coverage matrix, score + verdict, findings ledger (formerly lvr-recheck-plan)
 ├── lvr-add-feature/          Post-lock feature mini-pipeline, impact matrix, append-only
 ├── lvr-build/                Milestone executor, exact verification capture, build log
 ├── lvr-personal-brand/       Gated brand kit (BRAND.md, LINKEDIN-PROFILE.md, CONTENT-PLAN.md)
@@ -23,7 +23,7 @@ skills/
 
 The loose `lvr-*.md` files at the top of `skills/` are the repo's canonical copies, mirrored verbatim into each skill's `references/`; `scripts/lvr.mjs` at the repo root is mirrored the same way into each skill's `scripts/`. Each `lvr-*/` directory is a self-contained skill with its own `SKILL.md`, `references/` and `scripts/` folder.
 
-Keeping the copies in sync (maintainers): edit only the sources (`skills/lvr-conventions.md`, `skills/lvr-principles.md`, `scripts/lvr.mjs`), then run `npm run sync:skills` to copy them into every skill and `npm run check:skills` to confirm (exit 0 = every copy is byte-identical; exit 1 names the drifted file). The sources themselves are hand-written snapshots of `docs/spec/` (the source of truth); that drift is a review item, not a byte check.
+Keeping the copies in sync (maintainers): edit only the sources (`skills/lvr-conventions.md`, `skills/lvr-principles.md`, `skills/lvr-freshness.json`, `scripts/lvr.mjs`, and `docs/spec/08-review.md`, which ships only to `lvr-review-plan` as `references/contract.md`), then run `npm run sync:skills` to copy them into every skill and `npm run check:skills` to confirm (exit 0 = every copy is byte-identical; exit 1 names the drifted file). The sources themselves are hand-written snapshots of `docs/spec/` (the source of truth); that drift is a review item, not a byte check.
 
 ## Skills catalog
 
@@ -32,7 +32,7 @@ Keeping the copies in sync (maintainers): edit only the sources (`skills/lvr-con
 | **lvr-init-new-idea** | `/lvr-init-new-idea` | S0–S9 | Starts a new product from a raw idea, runs Folder Gate, boots boosters, conducts the interview. |
 | **lvr-continue** | `/lvr-continue` | S0–S9 | Resumes an existing LVR run, repairs state from journal if needed, drives next step. |
 | **lvr-handoff** | `/lvr-handoff` | Post-S9 | Validates 20 bundle files against gaps, emits `blueprint.json`, writes the `CLAUDE.md`/`GEMINI.md` stubs pointing at `AGENTS.md`, composes the builder entry prompt. |
-| **lvr-recheck-plan** | `/lvr-recheck-plan` | Audit | Runs R1–R6 adversarial checklist, refreshes stale research live, applies confirmed fixes. |
+| **lvr-review-plan** | `/lvr-review-plan` | Review | Reviews the finished plan through 15 lenses with quoted evidence, scores it 0–10 with an honest verdict, keeps a findings ledger across runs; read-only except `--apply` with approved fixes; `--scope-only` at the S7 lock. Formerly `/lvr-recheck-plan`. |
 | **lvr-add-feature** | `/lvr-add-feature` | Extend | Mini-pipeline to capture, research, analyze impact, and append a post-lock feature. |
 | **lvr-build** | `/lvr-build` | Build | Executes milestones in order, runs exact verification procedures, captures output in build log. |
 | **lvr-personal-brand** | `/lvr-personal-brand` | Post-build | Generates a 3-file brand kit in `brand/`; machine-gated by verified milestones + live check. |
@@ -53,6 +53,8 @@ npx skills add <owner>/lazy-vibers-recipe
 - It does not install the loose top-level `lvr-*.md` source copies and does not create `.lvr/` anywhere — project folders are created by the skill at runtime.
 
 ## Updating
+
+**Renamed skill.** `lvr-recheck-plan` is now `lvr-review-plan` (`/lvr-review-plan`). No harness manifest supports a command alias, so the old command is gone. When you update a manual or `npx skills` install, delete the old `lvr-recheck-plan/` folder from your skills directory and install `lvr-review-plan/`. Old projects keep working: their `.lvr/recheck/` reports stay readable, and their `recheck_*` journal events still replay.
 
 **Update all LVR skills together.** The skills share one project state file (`.lvr/state.json`, format version 2). A project made by a newer LVR is refused by an older skill with `SCHEMA_TOO_NEW` (nothing is changed, never downgraded), so a mix of old and new skills will stop working on projects the new ones touched. A project from an older LVR (or the pre-rename `.lvp/` folder) is migrated automatically the first time any updated skill opens it: the old files are kept in `.lvr/migrations/`, and an old `.lvp/` folder is only removed if you say yes.
 
@@ -86,12 +88,16 @@ lvr-init-new-idea/
     ├── bundle/ (bundle file templates for S9)
     └── sections/ (question banks and guides for S1–S5, S7, S8; S6 and S9 run from SKILL.md)
 
-lvr-recheck-plan/
+lvr-review-plan/
 ├── SKILL.md
 └── references/
     ├── principles.md
     ├── conventions.md
-    └── audit-checklist.md
+    ├── lenses.md        (the 15 lenses and their checks)
+    ├── lenses.json      (the same checks, machine-readable, for `lvr review`)
+    ├── scale.md         (severity lookup, lens score, overall score, verdict, uplift heuristic)
+    ├── protocol.md      (run steps P0–P6, Run-N reconcile, --apply, --scope-only, hand procedures)
+    └── contract.md      (work-file shapes, ids, ledger schema, `lvr review` commands and error codes)
 
 lvr-add-feature/
 ├── SKILL.md

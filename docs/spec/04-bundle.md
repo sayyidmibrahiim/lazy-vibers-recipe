@@ -45,7 +45,7 @@ The 20-file list above is fixed. The v1 skills change the bundle by editing thos
 | Skill | Bundle effect | Side artifacts (never in the bundle) |
 |---|---|---|
 | `/lvr-handoff` | regenerates `blueprint.json`, refreshes the entry prompt; rewrites a `CLAUDE.md` / `GEMINI.md` that is not exactly the stub, after copying it to `<file>.bak-<date>` (never lost silently) | `HANDOFF-PROMPT.md`, `CLAUDE.md.bak-<date>`, `GEMINI.md.bak-<date>` |
-| `/lvr-recheck-plan` | fixes confirmed findings in place; regenerates `blueprint.json` when stale | `.lvr/recheck/RECHECK-<date>.md` |
+| `/lvr-review-plan` (formerly `/lvr-recheck-plan`) | none in review mode (read-only, R3). `--apply` edits only the files of user-approved fixes, and regenerates `blueprint.json` with `blueprint emit` | `.lvr/review/` (`LEDGER.jsonl`, `learned-checks.md`, `REVIEW-<date>-<N>.md`, `runs/`); legacy `.lvr/recheck/RECHECK-<date>.md` |
 | `/lvr-add-feature` | appends the requirement, flow, scope, milestone, verification, decision, assumption, research, and cost rows | `.lvr/docs/sections/S4-additions.md` |
 | `/lvr-build` | appends `## Build log — <ts>` sections to the end of `VERIFICATION.md`; never edits a requirement or an acceptance criterion | `state.project.status`, `state.milestones[].verified`, `state.deployment` |
 | `/lvr-personal-brand` | none — the bundle is read-only here | `brand/BRAND.md`, `brand/LINKEDIN-PROFILE.md`, `brand/CONTENT-PLAN.md` |

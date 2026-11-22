@@ -37,7 +37,7 @@ Before any check or file write:
 1. **Project exists** — `TARGET/.lvr/state.json` exists and parses. Missing/unreadable → `/lvr-init-new-idea` or `/lvr-continue`.
 2. **Scope locked** — per the conventions §5 definition: a `scope_locked` journal event **and** S7 done. Not locked → `/lvr-continue` to S7.
 3. **S8–S9 done** — both Sections `status` "done". Not → `/lvr-continue` to finish the plan and compile the bundle.
-4. **Bundle present** — `AGENTS.md`, `MILESTONES.md`, `VERIFICATION.md`, `CODE_STYLE.md`, `SECURITY.md`, `DECISIONS.md`, `HANDOVER.md` all exist and are non-empty. Missing → finish S9 or run `/lvr-recheck-plan`.
+4. **Bundle present** — `AGENTS.md`, `MILESTONES.md`, `VERIFICATION.md`, `CODE_STYLE.md`, `SECURITY.md`, `DECISIONS.md`, `HANDOVER.md` all exist and are non-empty. Missing → finish S9 or run `/lvr-review-plan`.
 5. **Milestones exist** — `state.milestones[]` and `MILESTONES.md` are non-empty and share the same ids. Not → `/lvr-continue` to S8.
 6. **Handoff warning, not a refusal** — when `state.handoff` is null, say plainly: "The bundle was not verified by `/lvr-handoff` yet. I can build, but the plan may carry gaps. Run `/lvr-handoff` first, or say continue." Continue only after an explicit answer.
 
@@ -45,7 +45,7 @@ Before any check or file write:
 
 Run `references/build-loop.md` §1. Every item must pass. Preflight runs before `build_started`: a failure journals `build_blocked` only — no state field changes, `project.status` stays as it is (replay treats `build_blocked` as informational). Failures:
 
-- a plan/bundle defect (missing procedure, id mismatch, open blocking recheck finding) → journal `build_blocked` with the item, name the owning skill (`/lvr-recheck-plan`, `/lvr-add-feature`, or the user), and stop;
+- a plan/bundle defect (missing procedure, id mismatch, open blocking review finding) → journal `build_blocked` with the item, name the owning skill (`/lvr-review-plan`, `/lvr-add-feature`, or the user), and stop;
 - a missing tool or credential the bundle knew about (S2 account, API key) → surface it now with the exact missing item; never start coding around it.
 
 ## Step 3 — Open
@@ -74,7 +74,7 @@ Journal `milestone_started` (payload: id, goal). One checkpoint.
 2. Implement the deliverables in the project folder, outside `.lvr/`, following `CODE_STYLE.md` and `SECURITY.md`.
 3. Run the verification procedure exactly as written; capture command, exit code, full output, timestamp (`references/build-loop.md` §3).
 4. Never edit bundle documents, assertions, or expected outputs to make a check pass. Never substitute a command.
-5. A procedure that is wrong or impossible is a bundle defect: stop, journal `build_blocked`, and recommend `/lvr-recheck-plan` (R3.3).
+5. A procedure that is wrong or impossible is a bundle defect: stop, journal `build_blocked`, and recommend `/lvr-review-plan` (lens L12, check L12.1).
 
 ## Step 6 — Record the result
 

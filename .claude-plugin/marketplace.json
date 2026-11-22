@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "lazy-vibers-recipe",
-      "description": "Seven LVR pipeline skills: init, continue, handoff, recheck, add-feature, build, personal-brand.",
+      "description": "Seven LVR pipeline skills: init, continue, handoff, review, add-feature, build, personal-brand.",
       "source": "./",
       "category": "productivity"
     }

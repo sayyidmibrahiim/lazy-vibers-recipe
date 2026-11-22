@@ -1,5 +1,5 @@
 # 38: lvr-review-plan — critical, consistent plan review (rename of recheck-plan, R4)
-Status: ready-for-agent · Blocked by: 02, 26, 27 · Type: task · Agent: Opus (skill text) → Sonnet (scripts)
+Status: claimed (2026-11-21) · Blocked by: 02, 26, 27 · Type: task · Agent: Opus (skill text) → Sonnet (scripts)
 Source: research/L-critical-review-design.md §5 (the full design). Owner requirement: critical, honest, gap-hunting, several steps ahead, skeptical, assume-worse; ONE review must catch all gaps and give all fixes; on re-run be honest; apologize for anything missed earlier.
 
 - [ ] 15 lenses, including:

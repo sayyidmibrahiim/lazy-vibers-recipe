@@ -1,6 +1,6 @@
 ---
 name: lvr-init-new-idea
-description: Opens a new LVR pipeline for a brand-new product idea — runs the Folder Gate, declares and probes the model tier, boots the core Boosters, and captures the idea in S0 intake. Use when the user wants to start a new product or idea from scratch; refuses to run in a folder that already holds a project and routes to /lvr-continue or /lvr-recheck-plan instead.
+description: Opens a new LVR pipeline for a brand-new product idea — runs the Folder Gate, declares and probes the model tier, boots the core Boosters, and captures the idea in S0 intake. Use when the user wants to start a new product or idea from scratch; refuses to run in a folder that already holds a project and routes to /lvr-continue or /lvr-review-plan instead.
 ---
 
 # lvr-init-new-idea
@@ -55,7 +55,7 @@ List `<cwd>`. Ignore exactly these OS junk files: `.DS_Store`, `Thumbs.db`, `des
 
 If the folder contains project markers and no `.lvr/` → refuse. Markers: `.git`, `package.json`, `Cargo.toml`, `pubspec.yaml`, `pyproject.toml`, `go.mod`, `.solution`, `*.csproj` — or any similar manifest or lockfile indicating an existing codebase.
 
-- Say: "This folder looks like an existing project (found: \<markers\>). I won't start a new LVR idea inside it. Create or move to an empty folder and run `/lvr-init-new-idea` there. If what you want is an adversarial audit of this project's existing plan, that's `/lvr-recheck-plan`."
+- Say: "This folder looks like an existing project (found: \<markers\>). I won't start a new LVR idea inside it. Create or move to an empty folder and run `/lvr-init-new-idea` there. If what you want is a critical review of this project's existing plan, that's `/lvr-review-plan`."
 - Nothing is written to disk (there is no LVR journal here to record the refusal). Stop the skill.
 
 ### Check 4 — is this a projects root?
@@ -503,9 +503,11 @@ Purpose: freeze the MVP — every feature F-NN → `in-MVP` or Parking Lot (reco
 1. Walk every F-NN from the S4 record, one by one: `in-MVP` or Parking Lot — guided by the S4 priorities (must → in-MVP by default; should/could → proposed for the lot), the S2 budget, and the S6 risk outcomes.
 2. Parked items get a one-line reason each — recorded, never deleted, never silently dropped.
 3. **MVP-size sanity**: if the in-MVP list holds more than ~8 features, say so plainly ("more than a first version builds well") and offer a concrete cut; the user decides — the warning never auto-cuts.
-4. Present the final list — in-MVP plus Parking Lot — and ask for explicit confirmation of the whole list.
+4. **Scope review** (on by default, skippable): when `<this skill dir>/../lvr-review-plan/SKILL.md` exists, offer it in one plain line ("Before you lock this, I can run a quick critical check of the scope. It takes a few minutes; you can skip it."). Unless the user skips, load that skill and run its `--scope-only` mode on the split exactly as shown (its `references/protocol.md` §10: lenses L01, L02, L04, L08, L10, L15). Then tell the user its verdict in plain words: "scope sound: lock it", "fix before locking" or "do not lock yet", with the blocking and major findings. The user decides: a fix changes the split (present it again), and an accepted risk becomes a decision at the lock. The review never edits the plan and never locks for the user. Skill missing → say once "The review skill is not installed, so I'll lock without the extra check." and go on.
+   Script: `LVR journal append --type review_started --payload '{"run":<N>,"scope":"scope-only"}'` → the review skill's `LVR review …` steps → `review_done` (payload from `LVR review render --run <N>`). `<N>` = `state.review.runs` + 1 (1 when `review` is null).
+5. Present the final list — in-MVP plus Parking Lot — and ask for explicit confirmation of the whole list.
 
-**First batch** — the F-NN walk producing the proposed split; the first user turn is the size warning (when it fires) and the confirmation.
+**First batch** — the F-NN walk producing the proposed split; the first user turn is the size warning (when it fires), the scope review offer and its outcome, then the confirmation.
 
 **The lock moment** — `scope_locked` fires only after the user explicitly confirms the final list (a plain yes to "is this the first version?"; a skip is not a lock — the skip attempt is journaled like any answer, `answer_recorded` with `skipped: true`, before the re-ask). On confirmation, one checkpoint: journal `scope_locked` (payload: the in-MVP feature ids) + state write (no field change; `project.status` is already "review" since Section start). Then write the record and close S7 (`section_done`, second checkpoint): scope counts as locked only once both exist (conventions §5). From the lock on, the feature list is frozen: changes go through /lvr-add-feature, never quiet edits. Refused confirmation → exit criterion unmet → engine step 5: the Section is marked `blocked` with the contested items named.
 
@@ -524,6 +526,7 @@ Script: `LVR journal append --type scope_locked --payload '{"in_mvp":["F-01"],"p
 - [ ] Each parked item carries a one-line reason.
 - [ ] The user explicitly confirmed the final list; `scope_locked` is journaled.
 - [ ] The MVP-size sanity check ran; when > ~8 features, the warning and the user's call are recorded.
+- [ ] The scope review ran, was skipped by the user, or is not installed, and the record's `## Scope review` says which.
 
 **Section Record** — `PROJECT_DIR/.lvr/docs/sections/S7-scope.md`:
 
@@ -538,6 +541,11 @@ Script: `LVR journal append --type scope_locked --payload '{"in_mvp":["F-01"],"p
 
 ## Size check
 <in-MVP count; when > ~8: the warning given + the user's call>
+
+## Scope review
+- Run <N> · <"scope sound: lock it" | "fix before locking" | "do not lock yet"> · blocking <n>, major <n>, minor <n> · report `.lvr/review/REVIEW-<date>-<N>.md`
+- User's call: <fixed: what changed | accepted: D-NNN | went ahead as is>
+(or one line: "skipped by the user (S7.qNN)" / "review skill not installed")
 
 ## Lock
 - Confirmed: <S7.qNN> · decision <D-NNN> · journaled `scope_locked` <ts>

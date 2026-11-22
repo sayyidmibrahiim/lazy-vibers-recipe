@@ -1,6 +1,6 @@
 # Install: Lazy Vibers Recipe (LVR)
 
-Seven skills (`lvr-init-new-idea`, `lvr-continue`, `lvr-handoff`, `lvr-recheck-plan`, `lvr-add-feature`, `lvr-build`, `lvr-personal-brand`). The only real copy lives in `skills/<name>/`; every manifest in this repo points at that folder. There are no symlinks in the repo.
+Seven skills (`lvr-init-new-idea`, `lvr-continue`, `lvr-handoff`, `lvr-review-plan`, `lvr-add-feature`, `lvr-build`, `lvr-personal-brand`). `lvr-review-plan` was called `lvr-recheck-plan` before the review redesign. No manifest format here supports a command alias, so delete an old `lvr-recheck-plan/` folder when you update a copied install. The only real copy lives in `skills/<name>/`; every manifest in this repo points at that folder. There are no symlinks in the repo.
 
 Repo: `sayyidmibrahiim/lazy-vibers-recipe` (version 0.9.0, pre-release). Verification dates below are 2026-11-19.
 

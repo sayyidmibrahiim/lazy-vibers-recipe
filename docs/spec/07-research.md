@@ -179,7 +179,7 @@ Every research step (one topic, any number of queries) is journaled once, found 
 ### 6.1 Files
 
 - `--all` scans, when present, in this order: `.lvr/docs/sections/*.md` (by name), `.lvr/docs/research/*.md` (by name), then the bundle Markdown files in conventions §8 order: `AGENTS.md`, `OVERVIEW.md`, `DECISIONS.md`, `SPEC/prd.md`, `SPEC/requirements.md`, `SPEC/data-model.md`, `SPEC/api.md`, `SPEC/architecture.md`, `USER_FLOWS.md`, `CODE_STYLE.md`, `SECURITY.md`, `RESEARCH.md`, `SCOPE.md`, `MILESTONES.md`, `VERIFICATION.md`, `ASSUMPTIONS.md`, `HANDOVER.md`, `CAPABILITIES.md`. It also checks `decisions[]` in `.lvr/state.json` for I11.
-- Never scanned: `blueprint.json`, `CLAUDE.md`, `GEMINI.md`, `HANDOFF-PROMPT.md`, `brand/`, `.lvr/recheck/`.
+- Never scanned: `blueprint.json`, `CLAUDE.md`, `GEMINI.md`, `HANDOFF-PROMPT.md`, `brand/`, `.lvr/recheck/`, `.lvr/review/`.
 - Ignored inside a file: fenced code blocks (```` ``` ```` or `~~~`), inline code spans, HTML comments, and in `VERIFICATION.md` every `## Build log — …` section.
 
 ### 6.2 Zones (where a missing source is a finding)
@@ -274,7 +274,8 @@ Fixed items, emitted when at least one file was scanned, each `{ "id", "group": 
 - `/lvr-continue` — the web research check before any Section work; finishes a missing or partial Domain Brief before the next batch.
 - `/lvr-handoff` — gap lint group I: `lint run` runs the `cite check --all` checks and adds the I findings and `needs_model` items to its output (`--group I` alone is allowed; `--journal` journals them as `gap_found` like any finding). Prose fallback: `references/lint-checklist.md` group I.
 - `crosscheck` — rule X8 "Every claim carries a valid, fresh citation or a logged unverified marker" = ids I1–I13. X6 (E4) defers to group I: E4 accepts a date, a `[cite: …]` tag or an `[unverified: …]` marker, never a bare `unverified` (which I9 forbids).
-- `/lvr-recheck-plan`, `/lvr-add-feature` — research follows the same syntax, limits and events; `cite check` lists expired facts (their full rework: tickets 33 and 29).
+- `/lvr-review-plan` (formerly `/lvr-recheck-plan`) — lens L01 runs `cite check --all` and `lvr review freshness`, fetches every load-bearing fact again (`research_logged`, `purpose: recheck`), and refreshes expired Domain Brief items; no web research → stop (§1.0). Contract: `08-review.md`.
+- `/lvr-add-feature` — research follows the same syntax, limits and events; `cite check` lists expired facts (full rework: ticket 29).
 
 ## 8. Script changes this spec asks for (phase 2)
 

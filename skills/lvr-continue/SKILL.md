@@ -85,11 +85,11 @@ Replay the whole journal in `seq` order onto a fresh state object (shape per con
 | `milestone_verified` | set `milestones[<id>].verified = true` + `verified_at` from the payload |
 | `deployment_verified` | `deployment = { "status": "live", "url", "verified_at" }` from the payload |
 | `build_started`, `milestone_started`, `milestone_failed`, `build_blocked`, `build_done` | informational apart from the status transitions in the row above — verified milestones come from `milestone_verified` |
-| `recheck_*`, `feature_*` (including `impact_analysis`), `brand_*` | informational — the report and bundle files on disk own the detail; a payload's `decisions[]` / `milestones[]` are still folded in (conventions §3) |
+| `recheck_*` (legacy, from /lvr-recheck-plan before its rename to /lvr-review-plan), `feature_*` (including `impact_analysis`), `brand_*` | informational — the report and bundle files on disk own the detail; a payload's `decisions[]` / `milestones[]` are still folded in (conventions §3) |
 | `doc_generated` | bundle-file progress (compare against the conventions §8 list); a 0-byte file counts as missing required structure and is reported wherever it is found (rebuild report, progress summary, Step 5c offer), never as existing-and-skipped |
 | `handoff_started`, `gap_found`, `handoff_done` | handoff progress; `handoff_done` fills `handoff` = { "status": "done", "completed_at" } |
 | `error` | `project.status` = "error" and `project.error` = `{seq, ts, skill, step, message, previous_status}` (a second `error` keeps the first `previous_status`); the next restoring event clears it and, when it is a `session_start`, stores the detail in that session's `recovered_error` |
-| `resume`, and the opening events `session_start`, `handoff_started`, `recheck_started`, `feature_started`, `brand_started` | restore the status remembered at the last `error` (conventions §2); otherwise no state effect (`section_start`, `section_done`, `section_blocked`, `answer_recorded` restore it too, before their own effect) |
+| `resume`, and the opening events `session_start`, `handoff_started`, `review_started` (legacy `recheck_started`), `feature_started`, `brand_started` | restore the status remembered at the last `error` (conventions §2); otherwise no state effect (`section_start`, `section_done`, `section_blocked`, `answer_recorded` restore it too, before their own effect) |
 | `context_guard_triggered`, `truncation_recovered` | informational — no state effect |
 | `session_start`, `session_end` | `sessions[]`: `session_start` appends an entry (skill, harness, `session_id` or its reason, model, tier, cwd, `started_at`); `session_end` closes the open one (`ended_at`, `end_reason`, `end_note`). The current session is the last entry with `ended_at` null; the Sections, delegations and boosters of later events are attributed to it (conventions §2) |
 | `booster_installed`, `booster_uninstalled`, `agent_delegated`, `framework_selected`, `review_started`, `review_done`, `release_checked`, `schema_migrated` | the v2 fields `boosters.installed[]`, `agents_delegated[]`, `framework_decision`, `review`, `release_check`; `schema_migrated` has no state effect (conventions §2 and §3 list each payload) |
@@ -192,7 +192,7 @@ Offer `/lvr-handoff` — its precondition (S1–S8 done + scope locked) is met. 
 
 ### e. Bundled (`handoff` done), building, or complete
 
-Offer the next skill: `/lvr-build` (execute the next unverified milestone), `/lvr-add-feature` (a new feature through a mini-pipeline), or `/lvr-recheck-plan` (an adversarial audit of decisions + bundle). They are separate skills — point at them; do not improvise them here. When every milestone is verified and `state.deployment.status` = "live", also point at `/lvr-personal-brand`.
+Offer the next skill: `/lvr-build` (execute the next unverified milestone), `/lvr-add-feature` (a new feature through a mini-pipeline), or `/lvr-review-plan` (a critical review of the plan: 15 lenses, a score and a verdict). They are separate skills — point at them; do not improvise them here. When every milestone is verified and `state.deployment.status` = "live", also point at `/lvr-personal-brand`.
 
 ## Idempotency
 

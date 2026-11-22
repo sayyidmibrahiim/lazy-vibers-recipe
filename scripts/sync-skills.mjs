@@ -4,7 +4,8 @@
 //   node scripts/sync-skills.mjs --check  report drift without writing; exit 1 when anything is off
 // Sources: scripts/lvr.mjs -> skills/<s>/scripts/lvr.mjs; skills/lvr-conventions.md and lvr-principles.md
 // -> skills/<s>/references/; skills/lvr-boosters.json -> references/boosters.json (once it exists);
-// skills/lvr-freshness.json -> references/freshness.json.
+// skills/lvr-freshness.json -> references/freshness.json; docs/spec/08-review.md -> skills/lvr-review-plan/references/contract.md
+// (that skill only: the installed review skill needs the work-file and ledger contract, and installs do not ship docs/).
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -26,6 +27,7 @@ const sources = [
   { src: path.join(SKILLS, "lvr-principles.md"), dest: (s) => path.join(s, "references", "principles.md") },
   { src: path.join(SKILLS, "lvr-boosters.json"), dest: (s) => path.join(s, "references", "boosters.json"), optional: true },
   { src: path.join(SKILLS, "lvr-freshness.json"), dest: (s) => path.join(s, "references", "freshness.json") },
+  { src: path.join(ROOT, "docs", "spec", "08-review.md"), dest: (s) => path.join(s, "references", "contract.md"), only: "lvr-review-plan" },
 ];
 
 const copied = [];
@@ -33,13 +35,14 @@ const drift = [];
 const problems = [];
 let unchanged = 0;
 
-for (const { src, dest, optional } of sources) {
+for (const { src, dest, optional, only } of sources) {
   if (!fs.existsSync(src)) {
     if (!optional) problems.push(`Missing source: ${rel(src)}`);
     continue;
   }
   const bytes = fs.readFileSync(src);
   for (const skill of skillDirs) {
+    if (only && path.basename(skill) !== only) continue;
     const target = dest(skill);
     const exists = fs.existsSync(target);
     if (exists && Buffer.compare(bytes, fs.readFileSync(target)) === 0) { unchanged++; continue; }

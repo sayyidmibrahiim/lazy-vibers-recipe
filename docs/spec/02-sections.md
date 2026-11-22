@@ -70,6 +70,7 @@ Each Section has: **purpose**, **question strategy**, **booster routing**, **out
 - Purpose: freeze MVP. Every feature F-01… → `in-MVP` or `parking-lot`. Parking lot is recorded, never deleted.
 - Status: `project.status` → `review` at Section start (`section_start` S7).
 - Output: `S7-scope.md`; becomes `SCOPE.md`. Journal: `scope_locked` at the explicit confirmation.
+- Scope review (spec 08 §14): after the walk and the size check, and before the lock question, a light review (lenses L01, L02, L04, L08, L10, L15) runs on the proposed split when `/lvr-review-plan` is installed. It is on by default and skippable. It journals `review_started`/`review_done` (`scope: scope-only`) and gives a scope verdict ("scope sound: lock it" / "fix before locking" / "do not lock yet"). The user decides. The outcome goes into the S7 record's `## Scope review`.
 - Exit: user explicitly confirms the MVP list.
 - **Scope locked** (one definition, used by every skill): a `scope_locked` event exists in the journal **and** `pipeline.sections.S7.status` = `done`. Either fact alone is not a lock: the event precedes the record checkpoint, and an S7 closed without the event never had its explicit confirmation.
 

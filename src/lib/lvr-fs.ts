@@ -59,7 +59,7 @@ export interface LvrState {
 export interface LvrDocItem {
   id: string;
   title: string;
-  category: "overview" | "spec" | "bundle" | "recheck" | "brand" | "profile";
+  category: "overview" | "spec" | "bundle" | "review" | "brand" | "profile";
   content: string;
   relativePath: string;
 }
@@ -214,15 +214,33 @@ export function readLvrProject(targetDir: string): LvrProjectDetail | null {
       }
     }
 
-    // Recheck reports (.lvr/recheck/*.md)
+    // Plan review reports (.lvr/review/REVIEW-<date>-<N>.md), newest run first
+    const reviewDir = path.join(resolved, ".lvr", "review");
+    if (existsSync(reviewDir)) {
+      const runOf = (f: string) => Number(/-(\d+)\.md$/.exec(f)?.[1] ?? 0);
+      const files = readdirSync(reviewDir)
+        .filter((f) => /^REVIEW-.+\.md$/.test(f))
+        .sort((a, b) => runOf(b) - runOf(a) || b.localeCompare(a));
+      for (const file of files) {
+        docs.push({
+          id: `review-${file.replace(/\.md$/, "")}`,
+          title: `Review: ${file.replace(/\.md$/, "")}`,
+          category: "review",
+          content: readFileSync(path.join(reviewDir, file), "utf-8"),
+          relativePath: `.lvr/review/${file}`,
+        });
+      }
+    }
+
+    // Legacy audit reports from /lvr-recheck-plan (.lvr/recheck/*.md)
     const recheckDir = path.join(resolved, ".lvr", "recheck");
     if (existsSync(recheckDir)) {
       const files = readdirSync(recheckDir).filter((f) => f.endsWith(".md")).sort().reverse();
       for (const file of files) {
         docs.push({
           id: `recheck-${file.replace(/\.md$/, "")}`,
-          title: `Audit: ${file.replace(/\.md$/, "")}`,
-          category: "recheck",
+          title: `Audit lama: ${file.replace(/\.md$/, "")}`,
+          category: "review",
           content: readFileSync(path.join(recheckDir, file), "utf-8"),
           relativePath: `.lvr/recheck/${file}`,
         });

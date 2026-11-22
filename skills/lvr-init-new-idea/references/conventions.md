@@ -18,7 +18,8 @@ One folder = one idea = one product. Never mix two ideas or two products in one 
 │   ├── docs/
 │   │   ├── sections/     Section Records: S0-intake.md, S1-context.md, ...
 │   │   └── research/     domain-brief.md: Domain Brief + per-Section scan items (section 10)
-│   ├── recheck/          Recheck reports: RECHECK-<date>.md (audit artifacts)
+│   ├── review/           Plan review (section 11): LEDGER.jsonl, learned-checks.md, REVIEW-<date>-<N>.md, runs/run-<N>/
+│   ├── recheck/          Legacy RECHECK-<date>.md reports from /lvr-recheck-plan (read-only history)
 │   └── migrations/       v1-to-v2-<stamp>/: copies of the old state.json + journal.ndjson kept by a migration (never deleted by LVR)
 ├── (after S9: Blueprint Bundle files + builder code live here)
 ├── HANDOFF-PROMPT.md     Builder entry prompt from /lvr-handoff (side artifact, never part of the bundle)
@@ -139,7 +140,7 @@ Append-only; never rewritten. Every state mutation emits at least one event; `an
 
 Event types: `session_start`, `session_end`, `folder_gate_passed`, `folder_gate_rejected`, `folder_gate_subfolder_created`, `tier_declared`, `capability_probe_passed`, `capability_probe_failed`, `context_guard_triggered`, `truncation_recovered`, `tier_changed`, `booster_check`, `booster_install_ok`, `booster_install_failed`, `booster_choice`, `booster_installed`, `booster_uninstalled`, `section_start`, `section_done`, `section_blocked`, `answer_recorded`, `loop_back_opened`, `loop_back_closed`, `scope_locked`, `doc_generated`, `handoff_started`, `gap_found`, `handoff_done`, `recheck_started`, `recheck_finding`, `recheck_research_refresh`, `recheck_fix_applied`, `recheck_done`, `review_started`, `review_done`, `feature_started`, `feature_captured`, `feature_research`, `impact_analysis`, `feature_scope_decision`, `feature_applied`, `feature_done`, `build_started`, `milestone_started`, `milestone_verified`, `milestone_failed`, `build_blocked`, `deployment_verified`, `release_checked`, `build_done`, `framework_selected`, `agent_delegated`, `brand_started`, `brand_file_generated`, `brand_done`, `error`, `resume`, `research_logged`, `context_research`, `schema_migrated` (written only by `state migrate`).
 
-Every event type is replayable; replay always builds a v2 State. Types with no state effect (`folder_gate_rejected`, `impact_analysis`, `brand_file_generated`, `recheck_finding`, `schema_migrated`, …) are informational.
+Every event type is replayable; replay always builds a v2 State. Types with no state effect (`folder_gate_rejected`, `impact_analysis`, `brand_file_generated`, `recheck_finding`, `schema_migrated`, …) are informational. The five `recheck_*` types are legacy: /lvr-recheck-plan was renamed /lvr-review-plan, which writes `review_started`/`review_done` instead; old journals still replay them.
 
 v2 events (payload → State effect; "current session" = the last `sessions[]` entry with `ended_at` null):
 
@@ -165,7 +166,7 @@ Event ownership — every skill run: preflight (`version`; `state migrate --chec
 | /lvr-init-new-idea | `session_start` (Journal line 1, after the Folder Gate) | a Section Record, research file or bundle file cannot be written after the Section's work began | `done`, `paused`, `context_guard`, `error` |
 | /lvr-continue | `session_start`, `resume` | a recovery step fails after a partial write; otherwise as /lvr-init-new-idea | as /lvr-init-new-idea |
 | /lvr-handoff | `session_start`, `handoff_started` | `blueprint.json`, the stubs or `HANDOFF-PROMPT.md` cannot be written after the lint started | `done`, `cancelled`, `error` |
-| /lvr-recheck-plan | `session_start`, `recheck_started` (`review_started` after the review redesign) | fixes stop half-applied; the report or ledger cannot be written | `done`, `cancelled`, `error` |
+| /lvr-review-plan | `session_start`, `review_started` | an `--apply` run stops with fixes half-applied; the report or ledger cannot be written | `done`, `cancelled`, `error` |
 | /lvr-add-feature | `session_start`, `feature_started` | bundle edits stop after some files changed and before `feature_applied` | `done`, `cancelled`, `error` |
 | /lvr-build | `session_start`, then `build_blocked` or `build_started` | its own bookkeeping fails (the `VERIFICATION.md` log or the State cannot be written); a failing product is `milestone_failed`/`build_blocked`, never `error` | `done`, `paused`, `cancelled`, `error` |
 | /lvr-personal-brand | `session_start`, `brand_started` | a brand file cannot be written mid-kit | `done`, `cancelled`, `error` |
@@ -215,7 +216,7 @@ Mandatory first step of idea init. Check in this order:
 
 1. cwd contains `.lvr/state.json` (or the old `.lvp/state.json` / `.lvp/journal.ndjson`) → refuse init. Print the progress summary and recommend /lvr-continue (it migrates an old project).
 2. cwd is empty (ignore OS junk: `.DS_Store`, `Thumbs.db`, `desktop.ini`) → proceed in place.
-3. cwd has project markers (`.git`, `package.json`, `Cargo.toml`, `pubspec.yaml`, `pyproject.toml`, `go.mod`, `.solution`, `*.csproj`, …) and no `.lvr/` → refuse: an existing project lives here. Recommend running init in an empty or new folder; offer the generic audit skill (/lvr-recheck-plan) for that project.
+3. cwd has project markers (`.git`, `package.json`, `Cargo.toml`, `pubspec.yaml`, `pyproject.toml`, `go.mod`, `.solution`, `*.csproj`, …) and no `.lvr/` → refuse: an existing project lives here. Recommend running init in an empty or new folder; offer the plan review skill (/lvr-review-plan) for that project.
 4. cwd has at least one subdirectory with project markers (e.g. a projects root) → create the subfolder `./<slug>/` (slug from the idea, confirm with the user) and proceed there. Journal: `folder_gate_subfolder_created`.
 5. cwd is non-empty with no markers (loose files) → ask the user: proceed here or create a subfolder (recommend the subfolder).
 
@@ -294,7 +295,7 @@ Checkpoint moments: every session start and end · every answer · every Section
 
 ## 10. Research and citations
 
-Principles 1 and 14 in operational form. Full contract (exact parsing, finding messages, output shape): `docs/spec/07-research.md` in the LVR repository.
+Principles 1 and 14 in operational form. This section is all a skill needs: `LVR cite check` and `LVR research log` implement the exact parsing and finding messages (maintainers: `docs/spec/07-research.md` in the LVR repository, not shipped).
 
 **Web research is required.** Web search and page fetch must both work (harness tools or an MCP server). The check: one neutral search, then fetch result pages one at a time, up to 3 different results — pass when at least one returns readable text (one site's 403 or login wall is not a failure; take the next result). No web → say the cause, give the enable steps, stop; never continue on memory.
 
@@ -336,3 +337,16 @@ Principles 1 and 14 in operational form. Full contract (exact parsing, finding m
 - `failed` has no `sources`; a source's `published`/`updated` is not after its `accessed` date or today; a source URL is a public site.
 - `id` = `RQ-NNN`, assigned by the script. Both events fill the `pipeline.research` index (section 2) and are valid before `state.json` exists.
 - Script: `LVR research log --in -` (add `--context` for `context_research`). Check: `LVR cite check --all` or `--file <path>` — findings I1–I13; fix every one. Without Node, run the checks by reading, per `lvr-handoff/references/lint-checklist.md` group I.
+
+## 11. Plan review (`/lvr-review-plan`)
+
+Formerly /lvr-recheck-plan. Full contract: `references/contract.md` of the `lvr-review-plan` skill (work files, ids, ledger, commands and error codes). That skill's references also hold the lenses, the scale and the run protocol.
+
+- **Read-only.** A review writes only `.lvr/review/**` and journal events. It edits bundle files only in `--apply` mode, and only with fixes the user approved (each file journaled `doc_generated` with `by: "lvr-review-plan"`).
+- **Shape.** 15 lenses (L01 truth and freshness … L15 second-order effects) × the bundle files form the coverage matrix. Every required cell ends as findings, clean with a verbatim quote, or n/a with a reason. `lvr review coverage` rejects quotes that are not in the file.
+- **Ids and ledger.** Finding id = `RV-<lens>-` + 8 hex of sha256(`check|locator|claim_key`), stable across runs: reconcile re-keys the same gap in new words (the same quoted text) to its first id (`same_as`); a different gap at the same place gets its own id. `.lvr/review/LEDGER.jsonl` is append-only. Status (`open`, `partial`, `regressed`, `fixed`, `accepted`, `withdrawn`, `superseded`) is kept apart from the first-seen class (`initial`, `new-due-to-change`, `world-changed`, `missed-earlier`, `checklist-gap`).
+- **Score.** Severity = lookup(impact × likelihood, raised when nothing would detect it). Lens score 0–10 from the finding counts. Overall = floor((mean + min) / 2). `BUILD-READY` needs 0 blocking, min ≥ 8 and overall ≥ 8. Unchanged files must give unchanged scores (score drift, code `SCORE_DRIFT`, blocks the report otherwise).
+- **Run-N.** Sweep blind first, then reconcile. The class of a new finding is derived from the ledger and the snapshots, never chosen. Every `missed-earlier` or `checklist-gap` finding gets an apology, a root cause and a learned check (`.lvr/review/learned-checks.md`). n/a never hides a finding, and `--apply` records only approved fixes.
+- **State.** `review_started` (`run`, `scope`: `full | scope-only`; optional `mode`: `review | apply`) opens `review.last`, and `review_done` closes it (section 3). `review.last.open.blocking` is what /lvr-build's preflight reads.
+- **Scope-only.** At the S7 lock, /lvr-init-new-idea runs a light review (lenses L01, L02, L04, L08, L10, L15) on the scope proposal before asking for the lock, when the review skill is installed. It is skippable, and the outcome is written in the S7 record.
+- **Commands.** `LVR review snapshot|claims|coverage|ids|ripple|verify|ledger-diff|score|stability|render|freshness`. A command that answers `UNKNOWN_COMMAND` falls back to the skill's hand procedure.

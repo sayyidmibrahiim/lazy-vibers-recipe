@@ -1,0 +1,2692 @@
+{
+  "schema_version": 1,
+  "note": "Machine copy of lenses.md (same folder). Check ids are append-only; retire, never renumber. Read by lvr.mjs review * (contract.md, same folder).",
+  "columns": {
+    "full": [
+      {
+        "col": "AGENTS",
+        "path": "AGENTS.md"
+      },
+      {
+        "col": "OVERVIEW",
+        "path": "OVERVIEW.md"
+      },
+      {
+        "col": "DECISIONS",
+        "path": "DECISIONS.md"
+      },
+      {
+        "col": "PRD",
+        "path": "SPEC/prd.md"
+      },
+      {
+        "col": "REQ",
+        "path": "SPEC/requirements.md"
+      },
+      {
+        "col": "DATA",
+        "path": "SPEC/data-model.md"
+      },
+      {
+        "col": "API",
+        "path": "SPEC/api.md"
+      },
+      {
+        "col": "ARCH",
+        "path": "SPEC/architecture.md"
+      },
+      {
+        "col": "FLOWS",
+        "path": "USER_FLOWS.md"
+      },
+      {
+        "col": "STYLE",
+        "path": "CODE_STYLE.md"
+      },
+      {
+        "col": "SEC",
+        "path": "SECURITY.md"
+      },
+      {
+        "col": "RESEARCH",
+        "path": "RESEARCH.md"
+      },
+      {
+        "col": "SCOPE",
+        "path": "SCOPE.md"
+      },
+      {
+        "col": "MILE",
+        "path": "MILESTONES.md"
+      },
+      {
+        "col": "VERIF",
+        "path": "VERIFICATION.md"
+      },
+      {
+        "col": "ASSUMP",
+        "path": "ASSUMPTIONS.md"
+      },
+      {
+        "col": "HANDOVER",
+        "path": "HANDOVER.md"
+      },
+      {
+        "col": "CAPS",
+        "path": "CAPABILITIES.md"
+      },
+      {
+        "col": "BP",
+        "path": "blueprint.json"
+      },
+      {
+        "col": "CLAUDE",
+        "path": "CLAUDE.md"
+      },
+      {
+        "col": "GEMINI",
+        "path": "GEMINI.md"
+      },
+      {
+        "col": "STATE",
+        "path": ".lvr/state.json"
+      },
+      {
+        "col": "BRIEF",
+        "path": ".lvr/docs/research/domain-brief.md"
+      }
+    ],
+    "scope_only": [
+      {
+        "col": "S0",
+        "record_of": "S0",
+        "default": ".lvr/docs/sections/S0-intake.md"
+      },
+      {
+        "col": "S1",
+        "record_of": "S1",
+        "default": ".lvr/docs/sections/S1-context.md"
+      },
+      {
+        "col": "S2",
+        "record_of": "S2",
+        "default": ".lvr/docs/sections/S2-kondisi.md"
+      },
+      {
+        "col": "S3",
+        "record_of": "S3",
+        "default": ".lvr/docs/sections/S3-data.md"
+      },
+      {
+        "col": "S4",
+        "record_of": "S4",
+        "default": ".lvr/docs/sections/S4-fitur.md"
+      },
+      {
+        "col": "S5",
+        "record_of": "S5",
+        "default": ".lvr/docs/sections/S5-research.md"
+      },
+      {
+        "col": "BRIEF",
+        "path": ".lvr/docs/research/domain-brief.md"
+      },
+      {
+        "col": "STATE",
+        "path": ".lvr/state.json"
+      },
+      {
+        "col": "PROPOSAL",
+        "path": ".lvr/review/runs/run-<N>/scope-proposal.md"
+      }
+    ]
+  },
+  "packs": [
+    "base",
+    "web",
+    "mobile",
+    "game",
+    "rag",
+    "mcp-server",
+    "automation",
+    "skill-plugin",
+    "cli",
+    "browser-extension",
+    "chatbot-agent"
+  ],
+  "lenses": [
+    {
+      "id": "L01",
+      "name": "Claim truth and freshness",
+      "core_question": "is every factual claim true today, from a source?",
+      "owner_section": "S5",
+      "applies": "always",
+      "core": {
+        "full": [
+          "RESEARCH"
+        ],
+        "scope_only": [
+          "S5"
+        ]
+      },
+      "scope_only": true,
+      "cells": {
+        "full": {
+          "R": [
+            "OVERVIEW",
+            "DECISIONS",
+            "ARCH",
+            "SEC",
+            "RESEARCH",
+            "CAPS",
+            "ASSUMP",
+            "BRIEF"
+          ],
+          "o": [
+            "PRD",
+            "API",
+            "HANDOVER",
+            "BP",
+            "STATE"
+          ]
+        },
+        "scope_only": {
+          "R": [
+            "S2",
+            "S3",
+            "S5",
+            "BRIEF"
+          ],
+          "o": [
+            "S1",
+            "S4",
+            "PROPOSAL"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "L01.0",
+          "title": "RESEARCH.md (or, scope-only, the S5 record) exists and holds sourced claims",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "file presence",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L01.1",
+          "title": "Every price, fee, quota, limit, version, legal, regulation, market and statistic claim carries a valid cite group, a recorded answer id, or a logged `[unverified: <cat> · RQ-NNN]` marker",
+          "impact": "I3",
+          "impact_note": "(I4 when a decision or cost line rests on it)",
+          "scope_only": true,
+          "pack": null,
+          "signals": "`cite check --all` I1 I3 I4 I9; `review claims` `source: none`",
+          "old": [
+            "R2.1",
+            "R2.5"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L01.2",
+          "title": "No claim's provenance is model memory, and no recommendation leans on an unsourced \"best practice\"",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "I2, I12",
+          "old": [
+            "R2.5"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L01.3",
+          "title": "Every cite is within its `freshness.json` limit on the review date. Expired facts are researched again now",
+          "impact": "I3",
+          "impact_note": "(I4 for a price, legal or regulation fact behind an MVP cost or legal decision)",
+          "scope_only": true,
+          "pack": null,
+          "signals": "`review freshness`; I6, I10",
+          "old": [
+            "R2.2",
+            "R2.3",
+            "R2.4"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L01.4",
+          "title": "Every load-bearing fact has evidence level 3: a primary source, or two independent fresh sources",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "I7; claims `evidence_level`",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L01.5",
+          "title": "Every load-bearing fact is fetched again in this run and compared. A changed value is a finding that names the old and new values",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "`research_logged` with `purpose: recheck` per fact",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L01.6",
+          "title": "Where sources conflict, the conflict is recorded and resolved in the text (the freshest primary source wins), never picked silently",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "`conflicts[]` in the research log",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L01.7",
+          "title": "Every regulation claim carries a fresh amendment check",
+          "impact": "I3",
+          "impact_note": "(I4 when it gates launch)",
+          "scope_only": true,
+          "pack": null,
+          "signals": "I8, I6",
+          "old": [
+            "R2.4"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L01.8",
+          "title": "No `designer_filled` decision rests on an unverified fact. It is user-confirmed, or it is an S6 blocking risk",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "I11",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L01.9",
+          "title": "Every Domain Brief item has a target Section and became a question or a decision. Expired brief items are refreshed",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "I13; `cite check --file .lvr/docs/research/domain-brief.md`",
+          "old": [],
+          "retired": false
+        }
+      ]
+    },
+    {
+      "id": "L02",
+      "name": "Unknown-unknowns",
+      "core_question": "what does the domain know that the plan does not say?",
+      "owner_section": "S5",
+      "applies": "always",
+      "core": {
+        "full": [
+          "RESEARCH"
+        ],
+        "scope_only": [
+          "S5"
+        ]
+      },
+      "scope_only": true,
+      "cells": {
+        "full": {
+          "R": [
+            "BRIEF",
+            "RESEARCH",
+            "PRD",
+            "SEC",
+            "ASSUMP",
+            "SCOPE"
+          ],
+          "o": [
+            "DECISIONS",
+            "OVERVIEW",
+            "REQ",
+            "FLOWS",
+            "STATE"
+          ]
+        },
+        "scope_only": {
+          "R": [
+            "BRIEF",
+            "S1",
+            "S3",
+            "S5"
+          ],
+          "o": [
+            "S0",
+            "S4",
+            "PROPOSAL"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "L02.0",
+          "title": "RESEARCH.md (scope-only: the S5 record) exists",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "file presence",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L02.1",
+          "title": "A Domain Brief exists, and each item became a question, a cited decision, or a parked note",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "BRIEF presence; I13",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L02.2",
+          "title": "Domain checklist. Each item is addressed with a quote, consciously parked, or na with a reason: regulation and licensing · abuse, fraud and spam · moderation of user content · offline and poor network · localization (language, currency, time zone, number format) · accessibility · store or platform policy · payments, refunds and tax · minors and age rules · data residency · support and disputes",
+          "impact": "I3",
+          "impact_note": "(I4 for regulation, payments or minors when they apply)",
+          "scope_only": true,
+          "pack": null,
+          "signals": "one cell note per item",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L02.3",
+          "title": "For the comparable products in RESEARCH.md (at least 3; research more if fewer), list what each had to handle that this plan does not mention. Sources: public docs, changelogs, policy pages, post-mortems",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "fresh cites",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L02.4",
+          "title": "Write the three questions a domain expert would ask first. Each is answered in the plan (quote) or is a finding",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L02.5",
+          "title": "Assumption map: every important, weakly evidenced assumption (evidence level 2 or lower) is in ASSUMPTIONS.md with how to test it, and the riskiest one is tested by an early milestone (full review only)",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "claims register",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L02.6",
+          "title": "Inversion: list what would guarantee failure for this product type and market. The plan avoids each one (quote), or it is a finding",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        }
+      ]
+    },
+    {
+      "id": "L03",
+      "name": "Product-type fit",
+      "core_question": "does the plan meet the failure modes of its product type?",
+      "owner_section": "S1",
+      "applies": "always",
+      "core": {
+        "full": [
+          "product_type"
+        ],
+        "scope_only": null
+      },
+      "scope_only": false,
+      "cells": {
+        "full": {
+          "R": [
+            "PRD",
+            "REQ",
+            "ARCH",
+            "SEC",
+            "MILE",
+            "VERIF"
+          ],
+          "o": [
+            "DATA",
+            "API",
+            "FLOWS",
+            "HANDOVER",
+            "CAPS",
+            "STATE"
+          ]
+        },
+        "scope_only": null
+      },
+      "checks": [
+        {
+          "id": "L03.0",
+          "title": "A product type is stated somewhere in the plan",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "`state.product`; PRD text",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.1",
+          "title": "The type in state, PRD and architecture agree. A multi-type product (web + mobile) covers each type",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.2",
+          "title": "Base pack: the release target is named (URL, store, registry or marketplace), the release proof is defined (how to show it is live or installable), the update path is defined, and the platform accounts are listed with their cost",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.10",
+          "title": "Hosting, domain and TLS are named with their cost",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "web",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.11",
+          "title": "Browser support and responsive layout are stated",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "web",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.12",
+          "title": "Cookie or consent banner is decided where the market requires one",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "web",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.13",
+          "title": "A performance budget (page weight or load time) has a check",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "web",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.20",
+          "title": "Store accounts, fees and review guidelines are researched and cited",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "mobile",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.21",
+          "title": "Every device permission has a reason shown to the user",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "mobile",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.22",
+          "title": "Offline and background behaviour is defined",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "mobile",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.23",
+          "title": "Minimum OS versions and device classes are stated",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "mobile",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.24",
+          "title": "Store listing assets and privacy labels are planned",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "mobile",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.30",
+          "title": "The core loop is defined and playable by M1",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "game",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.31",
+          "title": "Economy and balance numbers have a tuning plan",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "game",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.32",
+          "title": "Save, load and progress loss are handled",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "game",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.33",
+          "title": "Age rating and platform certification are researched",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "game",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.34",
+          "title": "A frame-rate or device performance target has a check",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "game",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.40",
+          "title": "Rights to use the corpus are cited",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "rag",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.41",
+          "title": "The chunking and embedding choice has a reason",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "rag",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.42",
+          "title": "An evaluation set with expected answers and a pass threshold exists",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "rag",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.43",
+          "title": "A hallucination guard exists: answers cite their source, and the system refuses when no source is found",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "rag",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.44",
+          "title": "Re-indexing and its cost are planned",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "rag",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.50",
+          "title": "Tool schemas validate their input",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "mcp-server",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.51",
+          "title": "The auth and transport choice (stdio or HTTP) has a reason",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "mcp-server",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.52",
+          "title": "Rate limits and timeouts are set",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "mcp-server",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.53",
+          "title": "Prompt injection through tool output and other untrusted content is handled",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "mcp-server",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.54",
+          "title": "It is tested against at least one named client",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "mcp-server",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.60",
+          "title": "Where credentials are stored is decided",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "automation",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.61",
+          "title": "Retries and idempotency are defined (a re-run does not double-send)",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "automation",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.62",
+          "title": "Execution quota and plan limits are cited",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "automation",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.63",
+          "title": "An error branch with an alert exists",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "automation",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.64",
+          "title": "The trigger choice (webhook or polling) has a reason",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "automation",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.70",
+          "title": "The trigger description says when the skill fires and when it does not",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "skill-plugin",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.71",
+          "title": "A harness compatibility list exists",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "skill-plugin",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.72",
+          "title": "Install, update and uninstall paths are defined",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "skill-plugin",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.73",
+          "title": "Tool and permission scope is minimal",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "skill-plugin",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.80",
+          "title": "Install channels and supported OSes are stated",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "cli",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.81",
+          "title": "The flags, exit codes and stdout/stderr contract is defined",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "cli",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.82",
+          "title": "Config and secrets locations are defined",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "cli",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.83",
+          "title": "Help text and error messages are planned",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "cli",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.90",
+          "title": "The manifest version is stated and permissions are minimal",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "browser-extension",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.91",
+          "title": "The store review policy is researched",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "browser-extension",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.92",
+          "title": "Host permissions and content-script injection risks are handled",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "browser-extension",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.93",
+          "title": "Cross-browser support is stated",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "browser-extension",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.100",
+          "title": "System prompt guardrails and refusal rules are defined",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "chatbot-agent",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.101",
+          "title": "Destructive tools need confirmation",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "chatbot-agent",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.102",
+          "title": "An eval set with red-team prompts exists",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "chatbot-agent",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.103",
+          "title": "Cost per conversation and context limits are modeled",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "chatbot-agent",
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L03.104",
+          "title": "A path to a human or a fallback exists",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": "chatbot-agent",
+          "signals": null,
+          "old": [],
+          "retired": false
+        }
+      ]
+    },
+    {
+      "id": "L04",
+      "name": "Scope and MVP discipline",
+      "core_question": "is the MVP the smallest thing that proves the idea, and is scope locked and traceable?",
+      "owner_section": "S7",
+      "applies": "always",
+      "core": {
+        "full": [
+          "SCOPE"
+        ],
+        "scope_only": [
+          "PROPOSAL"
+        ]
+      },
+      "scope_only": true,
+      "cells": {
+        "full": {
+          "R": [
+            "SCOPE",
+            "REQ",
+            "PRD",
+            "MILE",
+            "OVERVIEW",
+            "FLOWS"
+          ],
+          "o": [
+            "DECISIONS",
+            "BP",
+            "STATE"
+          ]
+        },
+        "scope_only": {
+          "R": [
+            "PROPOSAL",
+            "S4",
+            "S1"
+          ],
+          "o": [
+            "S0",
+            "S2",
+            "S5",
+            "STATE"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "L04.0",
+          "title": "SCOPE.md (scope-only: the proposal) exists",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "file presence",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L04.1",
+          "title": "Every S4 feature, and every S4-additions capture, is classified in-MVP or Parking Lot exactly once. Full review: scope is locked (conventions §5)",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "lint F1–F4",
+          "old": [
+            "R6.2"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L04.2",
+          "title": "Each in-MVP feature names its user job (who, and what for) and a kill criterion (what result would drop it)",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L04.3",
+          "title": "Traceability. Every in-MVP F-NN has a requirements block, a USER_FLOWS section, a SCOPE row and exactly one milestone. Every parked F-NN has a requirements row marked parked, a USER_FLOWS heading marked parked, and a scope row with a reason",
+          "impact": "I3",
+          "impact_note": "(I4 when a feature has no milestone)",
+          "scope_only": false,
+          "pack": null,
+          "signals": "crosscheck X1; lint B5 B9 F1–F4",
+          "old": [
+            "R3.2"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L04.4",
+          "title": "No orphans: no requirement without a feature, and no milestone without a covered feature (parked features need no milestone)",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "lint D1, F-group",
+          "old": [
+            "R4.8"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L04.5",
+          "title": "Smallest proof: an in-MVP feature that the core value does not need is a finding (its fix is a decision: park it)",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L04.6",
+          "title": "Hidden creep: a non-functional line (admin panel, analytics, multi-language, export) that adds work without an F-id or a milestone",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "`review claims`",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L04.7",
+          "title": "Parking Lot rows are intact: none deleted, renumbered or quietly moved into the MVP",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        }
+      ]
+    },
+    {
+      "id": "L05",
+      "name": "Builder dry-run (buildability)",
+      "core_question": "can a builder agent run M0 from the bundle alone, without guessing?",
+      "owner_section": "S9",
+      "applies": "always",
+      "core": {
+        "full": [
+          "AGENTS",
+          "MILE"
+        ],
+        "scope_only": null
+      },
+      "scope_only": false,
+      "cells": {
+        "full": {
+          "R": [
+            "AGENTS",
+            "ARCH",
+            "MILE",
+            "VERIF",
+            "STYLE",
+            "REQ",
+            "DATA",
+            "API",
+            "HANDOVER",
+            "CLAUDE",
+            "GEMINI"
+          ],
+          "o": [
+            "OVERVIEW",
+            "DECISIONS",
+            "SEC",
+            "CAPS",
+            "FLOWS",
+            "BP"
+          ]
+        },
+        "scope_only": null
+      },
+      "checks": [
+        {
+          "id": "L05.0",
+          "title": "AGENTS.md and MILESTONES.md exist",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "file presence",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L05.1",
+          "title": "All 20 bundle entries exist and are non-empty",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "lint A0–A18; crosscheck X7",
+          "old": [
+            "R3.1"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L05.2",
+          "title": "AGENTS.md states what the product is, the load order (DECISIONS → SPEC → MILESTONES → VERIFICATION), the working rules, and a file map. It needs no LVR skill",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "lint G1–G6",
+          "old": [
+            "R3.7",
+            "R5.1"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L05.3",
+          "title": "Local run is complete: prerequisites with versions, install steps, env vars with placeholder values (no real secrets), the run command, and the expected output",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R5.2"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L05.4",
+          "title": "No bundle file requires reading `.lvr/` (appending open questions to the journal is the only allowed use)",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R5.5"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L05.5",
+          "title": "Every relative file pointer resolves",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "lint B-group pointers",
+          "old": [
+            "R5.7"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L05.6",
+          "title": "CODE_STYLE.md and SECURITY.md are specific to the chosen stack, not generic filler",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R5.3"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L05.7",
+          "title": "Dry-run of M0, then M1: walk each deliverable and acceptance step as a builder who holds only the bundle files. Every point where a decision, value, command, path, credential, version or expected result is missing is one finding, located at that step",
+          "impact": "I3",
+          "impact_note": "(I4 when M0 cannot start)",
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L05.8",
+          "title": "No vague words in anything the builder must follow: \"appropriate\", \"etc.\", \"similar\", \"as needed\", \"TBD\", \"TODO\", \"should probably\", \"some\". Each one inside a requirement, step or acceptance criterion is a finding",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "`review claims` hedges",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L05.9",
+          "title": "Every in-MVP feature can be built with the recorded stack, accounts, devices and budget. Nothing needs an account, service or device that the S2 record lacks",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R4.1"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L05.10",
+          "title": "CLAUDE.md and GEMINI.md are exactly the one-line pointer. When handoff is done, HANDOFF-PROMPT.md exists and holds the full builder rule set",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "lint G-group; `handoff stubs`",
+          "old": [
+            "R3.8",
+            "R3.10",
+            "R5.6"
+          ],
+          "retired": false
+        }
+      ]
+    },
+    {
+      "id": "L06",
+      "name": "Data and state",
+      "core_question": "is every entity, owner, lifecycle, migration, retention, backup and PII path defined?",
+      "owner_section": "S3",
+      "applies": {
+        "flag": "stores_data",
+        "na_when": false,
+        "reason": "stores-data-false"
+      },
+      "core": {
+        "full": [
+          "DATA"
+        ],
+        "scope_only": null
+      },
+      "scope_only": false,
+      "cells": {
+        "full": {
+          "R": [
+            "DATA",
+            "REQ",
+            "SEC",
+            "ARCH",
+            "API"
+          ],
+          "o": [
+            "FLOWS",
+            "HANDOVER",
+            "VERIF",
+            "MILE"
+          ]
+        },
+        "scope_only": null
+      },
+      "checks": [
+        {
+          "id": "L06.0",
+          "title": "SPEC/data-model.md exists",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "file presence",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L06.1",
+          "title": "Every entity the requirements touch is in the data model with fields, keys and relations, and no model entity is unused",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L06.2",
+          "title": "Each entity has a create, read, update and delete owner (which feature, which role)",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L06.3",
+          "title": "Lifecycle: retention, deletion (including deletion on user request), and what happens to existing data on a schema change. There must be a migration story, never \"delete the database\"",
+          "impact": "I3",
+          "impact_note": "(I4 when real user data is lost)",
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L06.4",
+          "title": "Concurrency and duplicates: two writes at once, a double submit, and retries are handled with idempotency keys or unique constraints",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L06.5",
+          "title": "Backup and restore: where, how often, and how a restore is tested",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L06.6",
+          "title": "Every personal field is in the SECURITY.md PII inventory with its protection",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R4.3"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L06.7",
+          "title": "Import, export and data portability are planned, or a decision says they are not needed",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        }
+      ]
+    },
+    {
+      "id": "L07",
+      "name": "Security, privacy, legal and ToS",
+      "core_question": "what is the worst thing an attacker, a user or a regulator can do?",
+      "owner_section": "S3",
+      "applies": "always",
+      "core": {
+        "full": [
+          "SEC"
+        ],
+        "scope_only": null
+      },
+      "scope_only": false,
+      "cells": {
+        "full": {
+          "R": [
+            "SEC",
+            "DATA",
+            "API",
+            "ARCH",
+            "RESEARCH",
+            "DECISIONS",
+            "CAPS"
+          ],
+          "o": [
+            "REQ",
+            "FLOWS",
+            "HANDOVER",
+            "ASSUMP",
+            "PRD"
+          ]
+        },
+        "scope_only": null
+      },
+      "checks": [
+        {
+          "id": "L07.0",
+          "title": "SECURITY.md exists",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "file presence",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L07.1",
+          "title": "Authentication and authorization per route, tool or screen: who may do what, with admin paths named",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R4.3"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L07.2",
+          "title": "Secrets: where each one lives and who rotates it. Never in the repo; the example env file has placeholders only",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L07.3",
+          "title": "Privacy: the PII inventory matches the data model. A privacy-policy decision exists whenever there is a login, PII or a store presence. Consent is planned where the region requires it",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R4.3"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L07.4",
+          "title": "Region rules for the confirmed market (data residency, consumer, age and sector rules) are cited and fresh",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "I6 I8",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L07.5",
+          "title": "The legal and ToS position of every integration, scraping or automation flow is cited, and either resolved or accepted as a `user_confirmed` decision with the cost written",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R4.4",
+            "R1.6"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L07.6",
+          "title": "Dependency licenses fit the product (no NC or copyleft surprise in a closed product), and NC items are runtime-only",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R4.5"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L07.7",
+          "title": "Untrusted input is handled: injection (SQL, prompt, HTML), uploads, rate limits and abuse controls on public endpoints",
+          "impact": "I3",
+          "impact_note": "(I4 on a public write endpoint)",
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L07.8",
+          "title": "Payments: the product stores no card data unless the plan covers the required compliance, and refunds and chargebacks are handled",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        }
+      ]
+    },
+    {
+      "id": "L08",
+      "name": "Cost and capacity",
+      "core_question": "do money and quota hold at 10× and at 0.1× usage, and who pays when they don't?",
+      "owner_section": "S5",
+      "applies": "always",
+      "core": {
+        "full": [
+          "RESEARCH"
+        ],
+        "scope_only": [
+          "S5"
+        ]
+      },
+      "scope_only": true,
+      "cells": {
+        "full": {
+          "R": [
+            "RESEARCH",
+            "OVERVIEW",
+            "BP",
+            "ARCH",
+            "DECISIONS"
+          ],
+          "o": [
+            "REQ",
+            "CAPS",
+            "HANDOVER",
+            "SCOPE",
+            "STATE"
+          ]
+        },
+        "scope_only": {
+          "R": [
+            "S2",
+            "S5",
+            "PROPOSAL"
+          ],
+          "o": [
+            "S3",
+            "S4"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "L08.0",
+          "title": "A cost table exists",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "file and heading presence",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L08.1",
+          "title": "A per-unit cost model exists for every usage-priced item (LLM tokens, API calls, messages, storage, egress, seats): unit, price and assumed volume",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "`review claims` money",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L08.2",
+          "title": "At 10× the stated volume, the monthly cost, every free-tier cliff and every quota are computed, and the plan says who pays and what breaks",
+          "impact": "I3",
+          "impact_note": "(I4 when the ceiling breaks with no cap)",
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L08.3",
+          "title": "At 0.1× the volume, fixed costs (minimum plans, annual commitments) still fit the budget",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L08.4",
+          "title": "The recurring total fits the S2 budget ceiling, and every one-time cost is shown",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R4.2"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L08.5",
+          "title": "Every usage-based cost has a cap or an alert (a spending limit or a quota alarm). No bill is unbounded",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L08.6",
+          "title": "Totals agree: the `blueprint.json` costs, the RESEARCH.md table and the OVERVIEW.md totals",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "lint E1–E4; crosscheck X6; `blueprint emit --check`",
+          "old": [
+            "R2.6"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L08.7",
+          "title": "One realistic bad month (traffic spike, abuse, a retry loop) is priced with the uplift rules (scale.md U2, U3)",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        }
+      ]
+    },
+    {
+      "id": "L09",
+      "name": "Schedule and milestone sizing",
+      "core_question": "are milestones small and honestly sized, with an outside view?",
+      "owner_section": "S8",
+      "applies": "always",
+      "core": {
+        "full": [
+          "MILE"
+        ],
+        "scope_only": null
+      },
+      "scope_only": false,
+      "cells": {
+        "full": {
+          "R": [
+            "MILE",
+            "VERIF",
+            "SCOPE",
+            "OVERVIEW"
+          ],
+          "o": [
+            "ARCH",
+            "REQ",
+            "DECISIONS",
+            "STATE",
+            "BP"
+          ]
+        },
+        "scope_only": null
+      },
+      "checks": [
+        {
+          "id": "L09.0",
+          "title": "MILESTONES.md exists",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "file presence",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L09.1",
+          "title": "M0 is a walking skeleton: the real stack, the real data store, one real user task end to end, and one scripted check",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R4.6"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L09.2",
+          "title": "Each milestone fits one focused builder session, and no milestone bundles unrelated features",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R4.6"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L09.3",
+          "title": "Each estimate names a reference class (or says \"none: novel\") and shows the uplift-adjusted figure (scale.md U1)",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L09.4",
+          "title": "The order follows dependencies, the critical path is visible, and the riskiest assumption is tested early (L02.5)",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L09.5",
+          "title": "A failure is budgeted for every integration step that assumes it \"works first try\" (U4)",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L09.6",
+          "title": "External waits are scheduled: store review, domain and DNS, API key approval, legal review",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        }
+      ]
+    },
+    {
+      "id": "L10",
+      "name": "Dependencies, integrations and one-way doors",
+      "core_question": "what external thing can break us, and what can't be undone?",
+      "owner_section": "S5",
+      "applies": "always",
+      "core": {
+        "full": [
+          "ARCH"
+        ],
+        "scope_only": [
+          "S5"
+        ]
+      },
+      "scope_only": true,
+      "cells": {
+        "full": {
+          "R": [
+            "ARCH",
+            "CAPS",
+            "RESEARCH",
+            "DECISIONS",
+            "SEC",
+            "HANDOVER"
+          ],
+          "o": [
+            "API",
+            "DATA",
+            "STYLE",
+            "ASSUMP"
+          ]
+        },
+        "scope_only": {
+          "R": [
+            "S5",
+            "S2",
+            "S3"
+          ],
+          "o": [
+            "PROPOSAL",
+            "S4",
+            "STATE"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "L10.0",
+          "title": "SPEC/architecture.md (scope-only: the S5 record) exists",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "file presence",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L10.1",
+          "title": "Every external dependency has a license, an install line, a pinned version and a fallback for when it is unavailable",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R4.5"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L10.2",
+          "title": "Versions are current, and no dependency reaches end of life within a year (cited)",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "I6 (version)",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L10.3",
+          "title": "The rate limits and quotas of each integration are cited at the lowest tier the plan uses (U5)",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L10.4",
+          "title": "The cost of moving away from each core vendor is written",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L10.5",
+          "title": "One-way doors: each irreversible step (domain, store listing, production data schema, public API, pricing promise, vendor contract, messages sent to users) has its undo cost and who holds the handle, traced rather than asserted",
+          "impact": "I3",
+          "impact_note": "(`one_way_door: true`)",
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L10.6",
+          "title": "Every account, key and approval the build needs is listed with its owner and lead time",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R4.1"
+          ],
+          "retired": false
+        }
+      ]
+    },
+    {
+      "id": "L11",
+      "name": "Internal coherence",
+      "core_question": "do all files say the same thing?",
+      "owner_section": "S9",
+      "applies": "always",
+      "core": {
+        "full": [
+          "DECISIONS"
+        ],
+        "scope_only": null
+      },
+      "scope_only": false,
+      "cells": {
+        "full": {
+          "R": [
+            "AGENTS",
+            "OVERVIEW",
+            "DECISIONS",
+            "PRD",
+            "REQ",
+            "ARCH",
+            "FLOWS",
+            "SCOPE",
+            "MILE",
+            "VERIF",
+            "ASSUMP",
+            "BP",
+            "STATE"
+          ],
+          "o": [
+            "DATA",
+            "API",
+            "STYLE",
+            "SEC",
+            "RESEARCH",
+            "HANDOVER",
+            "CAPS",
+            "CLAUDE",
+            "GEMINI"
+          ]
+        },
+        "scope_only": null
+      },
+      "checks": [
+        {
+          "id": "L11.0",
+          "title": "DECISIONS.md exists",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "file presence",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L11.1",
+          "title": "Every `decisions[]` entry has an id, a section, a summary, a non-empty rationale and a valid status",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "`state validate`",
+          "old": [
+            "R1.1"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L11.2",
+          "title": "DECISIONS.md mirrors `decisions[]`: the same ids and statuses, nothing extra",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "crosscheck X2; lint C1–C3",
+          "old": [
+            "R1.2"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L11.3",
+          "title": "ASSUMPTIONS.md lists every assumed and `designer_filled` decision with why and how to confirm it, and each one is still valid",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "X3; lint C4 C5",
+          "old": [
+            "R1.3",
+            "R1.4"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L11.4",
+          "title": "No two decisions contradict each other, and no decision contradicts the locked scope",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "lint H4 (needs_model)",
+          "old": [
+            "R1.5"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L11.5",
+          "title": "The display name, feature names, stack and entity names are identical across files",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "X4; lint B21",
+          "old": [
+            "R3.4"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L11.6",
+          "title": "Counts and numbers agree across files (feature count, milestone count, prices, limits)",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "`review ripple`",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L11.7",
+          "title": "Every file is English GFM with ASCII diagrams only: no Mermaid and no unfilled placeholders",
+          "impact": "I1",
+          "impact_note": "(I2 for a placeholder)",
+          "scope_only": false,
+          "pack": null,
+          "signals": "lint B19",
+          "old": [
+            "R3.5"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L11.8",
+          "title": "OVERVIEW.md Limitations lists every degraded booster (by tier), every failed delegation and every blocked-then-resolved Section",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "`state.boosters`, `agents_delegated`",
+          "old": [
+            "R3.6"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L11.9",
+          "title": "`blueprint.json` matches state and bundle",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "`blueprint emit --check` drift; lint H1–H3",
+          "old": [
+            "R3.9"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L11.10",
+          "title": "State is consistent: `state.json` is valid, Section statuses match their records, milestone ids, goals and order match MILESTONES.md, `project.status` matches progress, and the journal is healthy",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "`state validate`; `replay`; `journal check`",
+          "old": [
+            "R6.1",
+            "R6.3",
+            "R6.4",
+            "R6.5"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L11.11",
+          "title": "Every accepted S6 risk points at a `user_confirmed` decision with the accepted cost written",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R1.6"
+          ],
+          "retired": false
+        }
+      ]
+    },
+    {
+      "id": "L12",
+      "name": "Verification and testability",
+      "core_question": "can \"done\" be proved by a command?",
+      "owner_section": "S8",
+      "applies": "always",
+      "core": {
+        "full": [
+          "VERIF"
+        ],
+        "scope_only": null
+      },
+      "scope_only": false,
+      "cells": {
+        "full": {
+          "R": [
+            "VERIF",
+            "MILE",
+            "REQ"
+          ],
+          "o": [
+            "FLOWS",
+            "API",
+            "DATA",
+            "STYLE",
+            "SEC"
+          ]
+        },
+        "scope_only": null
+      },
+      "checks": [
+        {
+          "id": "L12.0",
+          "title": "VERIFICATION.md exists",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "file presence",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L12.1",
+          "title": "Every acceptance criterion has a procedure with exact commands and expected outputs (or an observable visual fact and how to look)",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "crosscheck X5; lint D3–D5",
+          "old": [
+            "R3.3"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L12.2",
+          "title": "Every critical path has at least one negative test (wrong password, empty cart, quota hit)",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L12.3",
+          "title": "Test data: where it comes from and how to reset it",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L12.4",
+          "title": "Every external integration has a check that fails loudly when it silently breaks",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L12.5",
+          "title": "The global smoke test is one real end-to-end pass, and \"definition of verified\" is stated",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "lint D6",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L12.6",
+          "title": "Every check can be run by the builder alone, with no judgement words such as \"looks good\"",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        }
+      ]
+    },
+    {
+      "id": "L13",
+      "name": "Operability and failure modes (FMEA)",
+      "core_question": "what fails in production, and who notices?",
+      "owner_section": "S9",
+      "applies": "always",
+      "core": {
+        "full": [
+          "ARCH",
+          "HANDOVER"
+        ],
+        "scope_only": null
+      },
+      "scope_only": false,
+      "cells": {
+        "full": {
+          "R": [
+            "ARCH",
+            "HANDOVER",
+            "SEC",
+            "VERIF"
+          ],
+          "o": [
+            "DATA",
+            "API",
+            "MILE",
+            "CAPS"
+          ]
+        },
+        "scope_only": null
+      },
+      "checks": [
+        {
+          "id": "L13.0",
+          "title": "SPEC/architecture.md and HANDOVER.md exist",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "file presence",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L13.1",
+          "title": "FMEA table: each component × failure mode has severity, occurrence and detection, plus a mitigation or a verification step. Every failure point named in the architecture has one",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R4.7"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L13.2",
+          "title": "Backup and restore are tested, not only described",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L13.3",
+          "title": "Monitoring and alerting say who notices an outage, and how fast",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L13.4",
+          "title": "Rollback: how to undo a bad deploy",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L13.5",
+          "title": "Rotation and expiry of secrets, certificates, API keys and tokens are planned",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L13.6",
+          "title": "HANDOVER.md covers run, deploy, update, backup, where secrets live, and who to ask",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [
+            "R5.4"
+          ],
+          "retired": false
+        },
+        {
+          "id": "L13.7",
+          "title": "Single points of failure (one server, one maintainer, one key holder) are named with their recovery",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        }
+      ]
+    },
+    {
+      "id": "L14",
+      "name": "UX and flow completeness",
+      "core_question": "does every path a real user takes exist in the spec?",
+      "owner_section": "S4",
+      "applies": {
+        "flag": "has_ui",
+        "na_when": false,
+        "reason": "has-ui-false"
+      },
+      "core": {
+        "full": [
+          "FLOWS"
+        ],
+        "scope_only": null
+      },
+      "scope_only": false,
+      "cells": {
+        "full": {
+          "R": [
+            "FLOWS",
+            "REQ",
+            "PRD"
+          ],
+          "o": [
+            "API",
+            "SEC",
+            "MILE",
+            "VERIF"
+          ]
+        },
+        "scope_only": null
+      },
+      "checks": [
+        {
+          "id": "L14.0",
+          "title": "USER_FLOWS.md exists",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "file presence",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L14.1",
+          "title": "Every in-MVP F-id has a flow with a numbered script, and every flow maps to an F-id",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": "crosscheck X1",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L14.2",
+          "title": "Each screen or command in the flows has its empty, loading, error, offline and success states",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L14.3",
+          "title": "First run and onboarding, permission denied and session expired are covered",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L14.4",
+          "title": "Destructive actions ask for confirmation, and can be undone where possible",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L14.5",
+          "title": "Basic accessibility (contrast, keyboard, screen reader) and the market's language, currency and date formats are covered",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L14.6",
+          "title": "Each flow's failure path ends where the user can act",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": false,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        }
+      ]
+    },
+    {
+      "id": "L15",
+      "name": "Second- and third-order effects and adoption",
+      "core_question": "what happens after it works?",
+      "owner_section": "S1",
+      "applies": "always",
+      "core": {
+        "full": [
+          "PRD"
+        ],
+        "scope_only": [
+          "S1"
+        ]
+      },
+      "scope_only": true,
+      "cells": {
+        "full": {
+          "R": [
+            "PRD",
+            "OVERVIEW",
+            "SCOPE",
+            "HANDOVER",
+            "RESEARCH"
+          ],
+          "o": [
+            "BRIEF",
+            "DECISIONS",
+            "SEC"
+          ]
+        },
+        "scope_only": {
+          "R": [
+            "S1",
+            "PROPOSAL",
+            "S5"
+          ],
+          "o": [
+            "S0",
+            "S4"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "id": "L15.0",
+          "title": "SPEC/prd.md (scope-only: the S1 record) exists",
+          "impact": "I4",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": "file presence",
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L15.1",
+          "title": "The success metric is defined and measurable, and the plan says how it will be measured",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L15.2",
+          "title": "Every pre-mortem cause (protocol P2) is mapped. This lens owns the unmapped ones",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L15.3",
+          "title": "Who maintains it after launch is named, with time per week and cost",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L15.4",
+          "title": "Behaviour change: how users could game, abuse or work around it, and what happens at success (load, support, moderation)",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L15.5",
+          "title": "Platform dependency: what happens when the main platform changes its terms, price or API",
+          "impact": "I3",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        },
+        {
+          "id": "L15.6",
+          "title": "Adoption: how the first users find it and start using it, and what stops them",
+          "impact": "I2",
+          "impact_note": null,
+          "scope_only": true,
+          "pack": null,
+          "signals": null,
+          "old": [],
+          "retired": false
+        }
+      ]
+    }
+  ]
+}

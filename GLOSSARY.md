@@ -64,9 +64,21 @@ _Avoid_: rules, policy, system prompt
 Katalog skill/plugin/MCP eksternal yang sudah diverifikasi (kualitas, lisensi, aktivitas), sumber rekomendasi per-stack dan per-Section. Contoh isi: docs/research/agent-skill-catalog.md.
 _Avoid_: skill list, marketplace
 
-**Recheck**:
-Audit adversarial (`/lvr-recheck-plan`) atas Blueprint Bundle yang sudah jadi: setiap keputusan, harga, milestone, dan tautan antar-file diperiksa ulang, bukti basi di-refresh dengan sumber terbaru, temuan dicatat sebagai `RC-NN` dengan severity, lalu perbaikan yang dikonfirmasi diterapkan di tempat. Bukan lint yang memuji.
-_Avoid_: review (sendirian), QA pass, sanity check
+**Plan Review**:
+Review kritis (`/lvr-review-plan`, dulu `/lvr-recheck-plan`) atas rencana yang sudah jadi: 15 Lens memeriksa setiap file bundle dengan bukti kutipan, setiap temuan diberi severity dari tabel baku, lalu rencana diberi skor 0–10 dan verdict jujur (`BUILD-READY`, `FIX-THEN-BUILD`, `NOT-READY`, `INCOMPLETE`). Tidak pernah mengubah rencana, kecuali mode `--apply` dengan perbaikan yang disetujui user. Ada mode ringan `--scope-only` sebelum scope dikunci di S7. Bukan lint yang memuji.
+_Avoid_: recheck (nama lama), QA pass, sanity check
+
+**Lens**:
+Satu sudut pandang kritis dalam Plan Review (L01 kebenaran dan kesegaran fakta … L15 efek samping jangka panjang), dengan daftar cek, file yang wajib dibaca, dan aturan bukti sendiri. Daftar lengkap ada di `lenses.md` milik skill review.
+_Avoid_: kategori, checklist group
+
+**Coverage Matrix**:
+Tabel Lens × file bundle dalam Plan Review. Setiap sel wajib berakhir sebagai temuan, bersih (dengan kutipan persis dari file), n/a (dengan alasan), atau terblokir. Sel kosong berarti review belum selesai.
+_Avoid_: checklist, progress table
+
+**Review Ledger**:
+Catatan temuan `.lvr/review/LEDGER.jsonl` yang hanya ditambah, tidak pernah diubah. Setiap temuan punya id stabil `RV-<lens>-<hash>` yang sama di setiap run. Dari ledger ini run berikutnya tahu mana yang sudah diperbaiki, mana yang baru muncul karena rencana berubah, dan mana yang seharusnya sudah ketemu di run sebelumnya (wajib minta maaf, sebut penyebab, dan tambah cek baru).
+_Avoid_: findings list, audit log
 
 **Impact Analysis**:
 Peta dampak `/lvr-add-feature`: setiap baris matriks menyebut file bundle yang berubah, aksi (`edit`/`append`/`none`), dan bagian atau baris persisnya. Fitur tanpa impact analysis tidak boleh masuk bundle.

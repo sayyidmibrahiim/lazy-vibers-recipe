@@ -83,4 +83,4 @@ Write `.lvr/docs/sections/S4-additions.md`, append-only:
 
 One decision line per decision made for this feature (the scope decision at Step 6, plus any design decision made during capture), appended when the decision is made, in the same shape as a Section Record's decision lines: a state rebuild reads these lines for decisions `DECISIONS.md` does not hold yet. `Files touched` is appended at close.
 
-This file is evidence for future rechecks; S9 does not compile it, and the skill applies the bundle edits itself.
+This file is evidence for future plan reviews (`/lvr-review-plan`); S9 does not compile it, and the skill applies the bundle edits itself.

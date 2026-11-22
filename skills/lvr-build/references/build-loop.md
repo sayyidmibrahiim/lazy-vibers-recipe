@@ -10,7 +10,7 @@ Before the first milestone:
 - [ ] Every entry of `state.milestones[]` has an id that also exists in `MILESTONES.md`.
 - [ ] Every milestone in `MILESTONES.md` has a matching procedure in `VERIFICATION.md`.
 - [ ] `AGENTS.md`, `DECISIONS.md`, `CODE_STYLE.md`, `SECURITY.md`, and `HANDOVER.md` exist and are non-empty.
-- [ ] No open blocking finding from the latest `.lvr/recheck/RECHECK-*.md`.
+- [ ] No open blocking review finding: `state.review.last.open.blocking` = 0 when a finished review exists (`state.review.last.done_at` set). A project reviewed only before the rename: no open blocking finding in the latest `.lvr/recheck/RECHECK-*.md`. No review at all: not a blocker.
 
 A failed preflight item is a `build_blocked` with the owning skill named, journaled before any `build_started` (no state field changes). Do not start coding around a broken plan.
 
@@ -35,13 +35,13 @@ For the selected milestone:
    - timestamp.
 5. Compare with the expected output. A partial match, a skipped assertion, or "it probably works" is a failure.
 
-If the recorded procedure is wrong or impossible (for example the command does not exist on this stack), do not invent a replacement. Report the milestone as blocked (journal `build_blocked`; it keeps `verified: false` — milestones have no blocked field), report the procedure defect, and recommend `/lvr-recheck-plan` (R3.3) — a wrong verification is a bundle finding, not a build decision.
+If the recorded procedure is wrong or impossible (for example the command does not exist on this stack), do not invent a replacement. Report the milestone as blocked (journal `build_blocked`; it keeps `verified: false` — milestones have no blocked field), report the procedure defect, and recommend `/lvr-review-plan` (check L12.1) — a wrong verification is a bundle finding, not a build decision.
 
 ## 4. Failure ladder
 
 1. First failure → fix the cause inside the milestone's scope, re-run the same procedure. Journal `milestone_failed` with the attempt number and the decisive output line.
 2. Second failure → inspect the assumption that might be wrong before editing again. If the plan itself is wrong, stop.
-3. Third attempt is not allowed. Journal `build_blocked`, keep the milestone unverified, and stop the build loop with a plain report: what failed, the exact command, the output, the suspected cause, and the next owner (`user`, `/lvr-recheck-plan`, or `/lvr-add-feature`).
+3. Third attempt is not allowed. Journal `build_blocked`, keep the milestone unverified, and stop the build loop with a plain report: what failed, the exact command, the output, the suspected cause, and the next owner (`user`, `/lvr-review-plan`, or `/lvr-add-feature`).
 
 Never weaken a check, delete an assertion, or mark a partial pass to move on.
 

@@ -28,13 +28,13 @@ Before any check, question, or file write:
 5. **Impact analysis** — every affected bundle file with its exact edit.
 6. **Scope decision** — extend milestone / new milestone / Parking Lot, confirmed.
 7. **Apply** — append-only edits, one file per turn; state decisions + milestones updated.
-8. **Close** — journal `feature_done`; recommend `/lvr-recheck-plan`, then `/lvr-handoff`.
+8. **Close** — journal `feature_done`; recommend `/lvr-review-plan`, then `/lvr-handoff`.
 
 ## Step 1 — Precondition
 
 `TARGET` = cwd (or the folder the user named). First failure stops with plain guidance; nothing is written on a refusal.
 
-1. **Project exists** — `TARGET/.lvr/state.json` exists and parses. Missing/unreadable → route to `/lvr-init-new-idea` or `/lvr-continue` as in `lvr-recheck-plan` Step 1.
+1. **Project exists** — `TARGET/.lvr/state.json` exists and parses. Missing/unreadable → route to `/lvr-init-new-idea` or `/lvr-continue` as in `lvr-review-plan` Step 1.
 2. **Scope locked** — per the conventions §5 definition: a `scope_locked` journal event **and** S7 done. Not locked → "The MVP is not frozen yet. Run `/lvr-continue` to finish S7, then add the feature."
 3. **Pipeline through S9 done** — every S1–S9 Section done. Not → name the Section and route to `/lvr-continue`. The feature needs a bundle to extend.
 4. **Bundle present** — `AGENTS.md` and `blueprint.json` exist. Missing → finish S9 first.
@@ -83,7 +83,7 @@ file | action (edit/append/none) | exact section or row | content source
 Rules:
 
 - `edit` must quote the existing text it changes; no blind rewrite.
-- No new bundle files. If the feature seems to need one, that is a finding for `/lvr-recheck-plan`, not a quiet addition.
+- No new bundle files. If the feature seems to need one, that is a finding for `/lvr-review-plan`, not a quiet addition.
 - Every new acceptance criterion gets a matching verification procedure; every new data field gets a data-model row; every new cost gets one verified number used in `RESEARCH.md`, `OVERVIEW.md`, and `blueprint.json`.
 - Journal `impact_analysis` (payload: file list). One checkpoint.
 
@@ -130,7 +130,7 @@ Script: `LVR journal append --type feature_done --payload '{…}'`
    - what the product now does (or what was parked),
    - which milestone covers it,
    - that the bundle changed and handoff artifacts may be stale.
-4. Run `/lvr-recheck-plan` next, then `/lvr-handoff` again if it had already run. Do not tell the user the bundle is build-ready before the recheck.
+4. Run `/lvr-review-plan` next, then `/lvr-handoff` again if it had already run. Do not tell the user the bundle is build-ready before the review.
 
 ## Journal events added by this skill
 

@@ -85,7 +85,7 @@ export function LvrProjectClient({
                 : "border-transparent text-ink/65 hover:text-ink"
             }`}
           >
-            Dokumen Bundle ({detail.docs.filter((d) => d.category !== "recheck" && d.category !== "brand").length})
+            Dokumen Bundle ({detail.docs.filter((d) => d.category !== "review" && d.category !== "brand").length})
           </button>
           <button
             type="button"
@@ -107,7 +107,7 @@ export function LvrProjectClient({
                 : "border-transparent text-ink/65 hover:text-ink"
             }`}
           >
-            Audit & Brand ({detail.docs.filter((d) => d.category === "recheck" || d.category === "brand").length})
+            Review & Brand ({detail.docs.filter((d) => d.category === "review" || d.category === "brand").length})
           </button>
         </div>
       </header>
@@ -126,7 +126,7 @@ export function LvrProjectClient({
 
         {tab === "bundle" && (
           <BundleDocsTab
-            docs={detail.docs.filter((d) => d.category !== "recheck" && d.category !== "brand")}
+            docs={detail.docs.filter((d) => d.category !== "review" && d.category !== "brand")}
             activeDoc={activeDoc}
             onSelectDoc={setActiveDocId}
             onCopy={copyDoc}
@@ -138,7 +138,7 @@ export function LvrProjectClient({
 
         {tab === "audit_brand" && (
           <AuditBrandTab
-            docs={detail.docs.filter((d) => d.category === "recheck" || d.category === "brand")}
+            docs={detail.docs.filter((d) => d.category === "review" || d.category === "brand")}
             activeDoc={activeDoc}
             onSelectDoc={setActiveDocId}
             onCopy={copyDoc}
@@ -472,15 +472,15 @@ function AuditBrandTab({
   onCopy: () => void;
   copied: boolean;
 }) {
-  const recheckDocs = docs.filter((d) => d.category === "recheck");
+  const reviewDocs = docs.filter((d) => d.category === "review");
   const brandDocs = docs.filter((d) => d.category === "brand");
 
   if (docs.length === 0) {
     return (
       <div className="border border-line bg-card p-12 text-center">
-        <p className="label text-ink/65">Belum Ada Artefak Audit atau Brand</p>
+        <p className="label text-ink/65">Belum Ada Review atau Brand</p>
         <p className="mt-3 text-sm text-ink/75">
-          Jalankan <code>/lvr-recheck-plan</code> untuk audit adversarial atau <code>/lvr-personal-brand</code> untuk brand kit setelah produk live.
+          Jalankan <code>/lvr-review-plan</code> untuk review kritis rencana atau <code>/lvr-personal-brand</code> untuk brand kit setelah produk live.
         </p>
       </div>
     );
@@ -490,11 +490,11 @@ function AuditBrandTab({
     <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
       {/* Sidebar Doc List */}
       <aside className="border border-line bg-card p-3">
-        {recheckDocs.length > 0 && (
+        {reviewDocs.length > 0 && (
           <>
-            <p className="label px-3 py-2 text-blueprint">Recheck Audits</p>
+            <p className="label px-3 py-2 text-blueprint">Review Rencana</p>
             <nav className="space-y-0.5">
-              {recheckDocs.map((d) => (
+              {reviewDocs.map((d) => (
                 <button
                   key={d.id}
                   type="button"

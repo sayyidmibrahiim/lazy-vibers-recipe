@@ -12,7 +12,7 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 1. Folder Gate → proceed / create subfolder / refuse with pointers; then the web research check (spec 07 §1) before anything is written — fail → explain how to enable web search + fetch, stop.
 2. S0 intake: capture idea verbatim, detect + confirm User Language, propose slug + name, confirm the market (country); then the Domain Brief (spec 07 §2).
 3. **Booster bootstrap** (core check → install → interactive failure handling; `05-boosters.md`).
-4. Sections S1–S8 in order with checkpoints, each opened by its per-Section scan and "Things you may not know" (spec 07 §2); S6 loop-backs as specified; scope lock mandatory before S8.
+4. Sections S1–S8 in order with checkpoints, each opened by its per-Section scan and "Things you may not know" (spec 07 §2); S6 loop-backs as specified; at S7, before the lock question, the light scope review (`08-review.md` §14) when `/lvr-review-plan` is installed (skippable); scope lock mandatory before S8.
 5. S9 compile the Blueprint Bundle.
 6. Suggest `/lvr-handoff`.
 
@@ -27,7 +27,7 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 **Flow**:
 1. Read `.lvr/state.json`. Missing → explain and suggest `/lvr-init-new-idea` (with Folder Gate guidance). Corrupt → rebuild by journal replay, report what was reconstructed.
 2. Print a plain-language progress summary: project name, current Section, answered/total, pending loop-backs, booster status, last activity time.
-3. Offer the right next action: retry the failed step (if this run's session recovered from an `error`: `sessions[-1].recovered_error` is not null) / resume interview / answer pending loop-back / finish S9 generation (if scope locked, bundle incomplete) / run handoff (if bundled, handoff open) / suggest `build`, `add-feature` or `recheck-plan` (if bundled, handoff done).
+3. Offer the right next action: retry the failed step (if this run's session recovered from an `error`: `sessions[-1].recovered_error` is not null) / resume interview / answer pending loop-back / finish S9 generation (if scope locked, bundle incomplete) / run handoff (if bundled, handoff open) / suggest `build`, `add-feature` or `review-plan` (if bundled, handoff done).
 4. Before any Section work: the web research check (spec 07 §1; fail → journal it, explain, stop). Then finish a missing or partial Domain Brief (S0 done) and the current Section's scan if not yet journaled.
 5. Resume the current Section exactly where it stopped (micro-batch boundary).
 
@@ -47,19 +47,22 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 
 ## v1 skills
 
-### `/lvr-recheck-plan` (v1, implemented)
+### `/lvr-review-plan` (v1, implemented; formerly `/lvr-recheck-plan`)
 
-**Precondition**: `.lvr/state.json` readable, scope locked, S1–S9 done, bundle present. Otherwise refuse with guidance to `/lvr-continue`.
+Full contract: `08-review.md`. Skill: `skills/lvr-review-plan/` (lenses, scale, protocol). Owner decisions R1–R4 apply. No manifest format supports a command alias, so `/lvr-recheck-plan` is gone. The rename is documented in README.md, INSTALL.md and skills/README.md, and old journals keep their `recheck_*` events (informational on replay).
+
+**Precondition**: `.lvr/state.json` readable, scope locked, S1–S9 done, bundle present (`AGENTS.md`, `blueprint.json`). Otherwise refuse with guidance to `/lvr-continue`. `--scope-only`: S1–S6 done and S9 not done. `--apply`: the last run is a finished full run with counted findings.
 
 **Flow**:
-1. Open: journal `recheck_started`; inventory state, journal, Section Records, all 20 bundle files.
-2. Audit: run `references/audit-checklist.md` groups R1–R6 literally — decision integrity, evidence freshness, cross-file coherence, feasibility/risk, bundle self-sufficiency, state/artifact consistency. Every failure is a finding `RC-NN` with severity, evidence, owner, fix; journal `recheck_finding`.
-3. Refresh: re-verify claims past their freshness limit (`references/freshness.json`; `cite check --all` lists them) or unsourced claims live; update every file repeating the claim; journal `recheck_research_refresh`. No web research → stop with the enable guidance (spec 07 §1); never refresh from memory. (Full alignment with spec 07: ticket 33.)
-4. Report: write `.lvr/recheck/RECHECK-<date>.md` (never overwrite a prior report); split fixes into mechanical and user-decision.
-5. Apply: mechanical one file per turn (`recheck_fix_applied`); user-decision fixes only after an explicit answer, recorded as `D-NNN`; `blueprint.json` regenerated from state + bundle when stale.
-6. Re-audit R3, R6, and every touched group; append results; journal `recheck_done`.
+1. Open: journal `review_started` (`run`, `scope`, optional `mode`). An open run resumes under its number.
+2. Blind sweep, P0–P5: snapshot and claim register → lens × file sweep over the 15 lenses (every R cell ends as findings, clean + verbatim quote, n/a + reason, or blocked) → pre-mortem at 3 horizons → consequence chains → fix closure with the apply-all simulation → saturation passes until one adds 0 findings (at least 2). Research is live (`purpose: recheck`); no web research → stop with the enable guidance (spec 07 §1).
+3. Reconcile (run 2 and later): join with `.lvr/review/LEDGER.jsonl` by stable id: carried, fixed (its `verify` passes), partial or regressed; new ids are classed `new-due-to-change`, `world-changed`, `missed-earlier` or `checklist-gap`. The last two need an apology, a root cause and a learned check.
+4. Score (severity lookup, lens score 0–10, overall = floor((mean + min)/2), verdict per R1), stability check (score drift blocks the report: `SCORE_DRIFT`), then render `.lvr/review/REVIEW-<date>-<N>.md`.
+5. Close: journal `review_done` (`run`, `verdict`, `score`, `open`, `missed_earlier`, `report`, `lens_scores`, `ledger_sha256`).
 
-**Never**: silent scope change · Parking Lot deletion · milestone verification · fabricated source/date · rewriting journal lines.
+Events: `review_started` and `review_done` only (the ledger carries the finding detail). The five `recheck_*` types stay valid for old journals and are never written again.
+
+**Never**: edit the plan outside `--apply` (R3) · apply a fix without an explicit approval · silent scope change · Parking Lot deletion · milestone verification · fabricated source, date or quote · rewriting journal or ledger lines · softening a finding or padding a clean result.
 
 ### `/lvr-add-feature` (v1, implemented)
 
@@ -72,7 +75,7 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 4. Impact analysis: every affected bundle file with exact edit; no new bundle files.
 5. Scope decision: extend milestone, append milestone, or Parking Lot; explicit answer recorded as `D-NNN user_confirmed`.
 6. Apply append-only, one file per turn, `feature_applied` per file; state decision + milestone appended; `blueprint.json` regenerated. A parked feature gets a requirements row marked parked, a Parking Lot scope row, and a `USER_FLOWS.md` section marked `(parked — see SCOPE.md)`; no milestone.
-7. Close with `/lvr-recheck-plan` then `/lvr-handoff`.
+7. Close with `/lvr-review-plan` then `/lvr-handoff`.
 
 Post-lock captures and their decision lines live in `.lvr/docs/sections/S4-additions.md`; done Section Records are never mutated.
 
@@ -83,7 +86,7 @@ Post-lock captures and their decision lines live in `.lvr/docs/sections/S4-addit
 **Precondition**: state readable, scope locked, S8–S9 done, bundle files (`AGENTS.md`, `MILESTONES.md`, `VERIFICATION.md`, `CODE_STYLE.md`, `SECURITY.md`, `DECISIONS.md`, `HANDOVER.md`) present, milestones non-empty. Handoff not done → warn, continue only on explicit answer.
 
 **Flow**:
-1. Preflight (build-loop §1): ids match, every milestone has a verification procedure, no open blocking recheck finding. A failed item journals `build_blocked` only (no state field changes) and stops before `build_started`.
+1. Preflight (build-loop §1): ids match, every milestone has a verification procedure, no open blocking review finding (`state.review.last.open.blocking` = 0; a project reviewed before the rename: its latest `.lvr/recheck/RECHECK-*.md`). A failed item journals `build_blocked` only (no state field changes) and stops before `build_started`.
 2. Journal `build_started` (`project.status` = `building`); load context in `AGENTS.md` order.
 3. Select the first `state.milestones[]` entry not `verified`; never re-run a verified milestone.
 4. Implement deliverables, run the recorded procedure exactly, capture command/exit code/output.
