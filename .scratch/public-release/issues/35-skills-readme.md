@@ -1,8 +1,12 @@
 # 35: skills/README.md rewrite
-Status: ready-for-agent · Blocked by: 18, 36 · Type: task · Agent: Sonnet
-- [ ] Install per harness and OS.
-- [ ] The skill list with `/lvr-*` names.
-- [ ] Product types.
-- [ ] Booster tiers + uninstall.
-- [ ] Web requirement (D12).
-- [ ] Credits.
+Status: done (2026-11-23) · Blocked by: 18, 36 · Type: task · Agent: Sonnet
+- [x] Install per harness and OS.
+- [x] The skill list with `/lvr-*` names.
+- [x] Product types.
+- [x] Booster tiers + uninstall.
+- [x] Web requirement (D12).
+- [x] Credits.
+
+## Comments
+
+Verified README links, install paths and catalog names, and ran the pinned local installer in a disposable Linux Codex project. It copied all seven skills without creating project state. See `runs/35-impl.md` and `runs/35-verify.md`.

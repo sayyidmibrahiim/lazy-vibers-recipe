@@ -79,3 +79,6 @@
 2026-11-23T07:10:13Z | codex/gpt-6 | task 36 | claimed; mapped handoff, build and later-run ownership to existing managed receipts | next: scope cleanup by journal and align all skill instructions
 2026-11-23T07:13:13Z | codex/gpt-6 | task 36 | cleanup ownership, scoped receipt windows and keep decisions implemented | next: same-context verify approval bounds and existing lifecycle regressions
 2026-11-23T07:16:04Z | codex/gpt-6 | task 36 | scoped cleanup fixture and all shared regressions pass; closed | next: task 35 installation and skills README
+2026-11-23T07:16:43Z | codex/gpt-6 | task 35 | claimed after cleanup lifecycle; checked installation and profile catalog sources | next: rewrite skills README and verify links, names and installation command
+2026-11-23T07:16:56Z | codex/gpt-6 | task 35 | README rewritten against the supported tools and profile catalog | next: same-context verify links, names and a local install
+2026-11-23T07:17:39Z | codex/gpt-6 | task 35 | README links, catalogs and pinned local install pass; closed | next: task 37 handoff gate, builder prompt and registry lines
