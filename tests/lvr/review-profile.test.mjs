@@ -12,9 +12,9 @@ const phrase = "The main screen must include keyboard navigation.";
 function review(t, schema) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lvr-review-profile-"));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
-  const run = (args, payload) => {
+  const run = (args, payload, status = 0) => {
     const result = spawnSync(process.execPath, [cli, "--dir", dir, ...args], { encoding: "utf8", input: JSON.stringify(payload) });
-    assert.equal(result.status, 0, result.stdout + result.stderr);
+    assert.equal(result.status, status, result.stdout + result.stderr);
     return JSON.parse(result.stdout);
   };
   const write = (relative, content) => {
@@ -57,6 +57,53 @@ test("v2 profile artifacts are stable review columns and required L03 evidence",
 test("v1 still uses the original review columns", (t) => {
   const { run } = review(t, 1);
   assert.ok(!run(["review", "snapshot", "--run", "1"]).files.some((entry) => entry.col.startsWith("PROFILE-")));
+});
+
+test("review previews English prose separately from verbatim evidence and rejects an unchecked edit", (t) => {
+  const { dir, run, write } = review(t, 1);
+  const lenses = {
+    schema_version: 1,
+    columns: { full: [{ col: "OVERVIEW", path: "OVERVIEW.md" }], scope_only: [] },
+    lenses: [{
+      id: "L01", name: "Evidence", owner_section: "S0", applies: "always", scope_only: false, checks: [],
+      core: { full: ["OVERVIEW"], scope_only: null }, cells: { full: { R: ["OVERVIEW"], o: [] }, scope_only: null },
+    }],
+  };
+  write("lenses.json", JSON.stringify(lenses));
+  const command = (action, ...flags) => ["review", action, "--run", "1", "--lenses", path.join(dir, "lenses.json"), ...flags];
+  const quote = "Pemilik sudah memeriksa daftar pemesanan.";
+  write("OVERVIEW.md", `# Booking\n\n${quote}\n`);
+  run(command("snapshot"));
+  run(command("claims"));
+  const work = ".lvr/review/runs/run-1";
+  write(`${work}/findings.json`, JSON.stringify({ run: 1, findings: [] }));
+  const cells = {
+    run: 1,
+    lenses: { L01: { cells: { OVERVIEW: { state: "clean", quote, tried: "Checked whether the owner reviewed the booking list." } } } },
+    premortem: ["first-session", "launch", "month-6"].map((horizon) => ({ horizon, cause: "The owner could skip the booking review.", maps_to: "handled", quote, file: "OVERVIEW.md" })),
+    passes: [{ pass: 1, new: 0 }, { pass: 2, new: 0 }],
+  };
+  const saveCells = () => write(`${work}/cells.json`, JSON.stringify(cells));
+  saveCells();
+  const coverage = run(command("coverage"));
+  assert.equal(coverage.valid, true, JSON.stringify(coverage.errors));
+  run(command("ledger-diff", "--write"));
+  run(command("score", "--write"));
+  const preview = run(command("render", "--preview"));
+  assert.equal(fs.existsSync(path.join(dir, preview.report)), false);
+  assert.ok(preview.text.includes("Checked whether the owner reviewed the booking list."));
+  assert.ok(preview.text.includes(`${work}/cells.json`));
+  assert.ok(!preview.text.includes(quote));
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir, work, "cells.json"))).lenses.L01.cells.OVERVIEW.quote, quote);
+
+  cells.lenses.L01.cells.OVERVIEW.tried = "Checked that the owner reviewed the booking list.";
+  saveCells();
+  assert.equal(run(command("render", "--checked-sha", preview.draft_sha256), undefined, 1).error.code, "REVIEW_DRAFT_CHANGED");
+  assert.equal(fs.existsSync(path.join(dir, preview.report)), false);
+  const checked = run(command("render", "--preview"));
+  assert.equal(run(command("render", "--checked-sha", checked.draft_sha256)).changed, true);
+  assert.equal(fs.readFileSync(path.join(dir, checked.report), "utf8"), checked.text);
+  assert.equal(run(command("render", "--preview")).completed, true);
 });
 
 test("a declared profile symlink cannot expose a file outside the project", { skip: process.platform === "win32" }, (t) => {

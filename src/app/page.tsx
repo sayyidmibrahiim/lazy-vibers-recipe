@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function formatDate(value: number): string {
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat("en-US", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -30,7 +30,7 @@ export default function Home() {
           </Link>
           {legacy ? (
             <Link href="/legacy" className="label text-ink/65 hover:text-blueprint">
-              Generator lama
+              Legacy Generator
             </Link>
           ) : (
             <span className="label text-ink/65">Viewer / v0.1</span>
@@ -41,15 +41,15 @@ export default function Home() {
       <main className="mx-auto max-w-6xl px-6">
         <section className="grid gap-14 border-b border-line py-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-20 lg:py-24">
           <div className="lg:pt-2">
-            <p className="label text-blueprint">Viewer bundle / 01</p>
+            <p className="label text-blueprint">Blueprint Viewer</p>
             <h1 className="mt-6 text-[clamp(2.7rem,6.2vw,4.7rem)] font-semibold leading-[0.96] tracking-[-0.05em]">
-              Buka blueprint.
+              Open your blueprint.
               <br />
-              Baca dengan nyaman.
+              Explore the plan.
             </h1>
             <p className="mt-7 max-w-md text-[15px] leading-7 text-ink/65">
-              Tampilan baca-saja untuk folder proyek LVR (<code>.lvr/</code> dan bundle
-              dokumennya), termasuk UI spec dan diagram ERD. Semua dirender secara lokal.
+              Browse plan files, UI specs, and diagrams from an LVR project folder.
+              The viewer renders them locally and leaves the project files untouched.
             </p>
           </div>
 
@@ -61,18 +61,17 @@ export default function Home() {
         <section className="py-14">
           <div className="flex items-end justify-between gap-6">
             <div>
-              <p className="label text-ink/65">Riwayat / 02</p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Folder dibuka</h2>
+              <h2 className="text-2xl font-semibold tracking-[-0.03em]">Recently Opened Folders</h2>
             </div>
             <span className="label pb-1 text-ink/65">
-              {projects.length.toString().padStart(2, "0")} proyek
+              {projects.length} {projects.length === 1 ? "project" : "projects"}
             </span>
           </div>
 
           {projects.length === 0 ? (
             <div className="blueprint-grid mt-8 border border-line px-6 py-14 text-center">
               <p className="text-sm text-ink/65">
-                Belum ada folder yang dibuka. Masukkan path folder proyek di atas.
+                No folders opened yet. Enter a project folder path above.
               </p>
             </div>
           ) : (
@@ -113,7 +112,7 @@ export default function Home() {
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <span className="label text-ink/65">Lazy Vibers Recipe</span>
-          <span className="label text-ink/65">Berjalan lokal</span>
+          <span className="label text-ink/65">Runs locally</span>
         </div>
       </footer>
     </div>

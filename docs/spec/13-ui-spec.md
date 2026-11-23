@@ -6,7 +6,7 @@ When the confirmed profile plan has `has_ui: true`, S4 captures the interface ch
 
 Use the profile plan's feel, voice and access questions, within the usual batch limit. Reuse a recorded accessibility or device constraint. Ask users what should happen on their first screen, which phrase they would use at a successful or failed action, and which devices, input methods, disabilities or conditions matter. Ask for one concrete example of a result to avoid. Treat sample products as references for a user need or trait, with independent layout and identity.
 
-Apply `impeccable` for product direction, `ux-copy` for messages and `antislop-human` for accessibility. Use `antislop-layoutmobile` for web screens. When an aid is unavailable, use this guide with the recorded inputs and mark the aid degraded. Keep the user's language for interface copy and preserve its meaning in the English spec. Record decisions for behavior or constraints that materially affect usability.
+Apply `impeccable` for product direction, `ux-copy` for messages and `antislop-human` for accessibility. Use `antislop-layoutmobile` for web screens. When an aid is unavailable, use this guide with the recorded inputs and mark the aid degraded. Record the target product's locale separately from the conversation language. Write the specification in English. Preserve required verbatim product copy in its localization assets or the original evidence, with a reference from the specification.
 
 ## S9 UI_SPEC.md structure
 
@@ -73,7 +73,7 @@ Enforce under 300 ms per UI transition. Disallow `ease-in`, `scale(0)` and `tran
 
 ### Copy voice and states
 
-Give final user-language text for the main action, loading, success, empty, validation, conflict and failure. Use a consistent verb for each action. A failure names what happened and a next step. Explain cause when it helps recovery. Labels are stable across screens. Mark a proposed label as proposed until the owner confirms it.
+Give English text or English summaries for the main action, loading, success, empty, validation, conflict and failure. Use a stable message key to refer to requested localized product copy. Use a consistent verb for each action. A failure names what happened and a next step. Explain cause when it helps recovery. Labels are stable across screens. Mark a proposed label as proposed until the owner confirms it.
 
 | Context | Voice | Action and message checks |
 |---|---|---|

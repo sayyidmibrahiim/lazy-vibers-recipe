@@ -1,10 +1,10 @@
-# License policy: permissive for content, NC allowed as runtime dependency
+# License policy: permissive for content, non-commercial dependencies at runtime
 
-Katalog riset (docs/research/agent-skill-catalog.md, 2026-11-07) menemukan skill berkualitas dengan lisensi campuran, termasuk CC BY-NC-SA 4.0 (non-komersial). LVP untuk pribadi/open-source, kemungkinan berbayar di masa depan belum diputuskan.
+Research on 2026-11-07 found useful skills under a range of licenses, including CC BY-NC-SA 4.0. LVP began as a personal or open-source project. A future paid offering remained undecided. [Research catalog](../research/agent-skill-catalog.md)
 
-Keputusan (diamend F0 grilling, 2026-11-08): skill berlisensi NC **boleh dipakai sebagai dependensi runtime Booster** — di-install otomatis, dipakai, dan dikreditkan — tetapi **tidak pernah di-vendor**: file di repo LVP tidak boleh memuat konten yang disalin atau diturunkan dari skill NC. Dengan begitu lisensi repo LVP tetap konsisten, dan komersialisasi nanti cukup mengganti dependensi, bukan membedah isi. Capability Registry wajib mencatat kolom `license`; dependensi NC ter-tag plus reminder komersial (mis. Product-Manager-Skills → pengganti Apache 2.0: product-on-purpose/pm-skills).
+The decision was amended during F0 on 2026-11-08. LVP may install, use, and credit non-commercial skills as runtime Booster dependencies. The repository must contain only appropriately licensed content. The Capability Registry records each license and flags non-commercial dependencies with a reminder about commercial use. For example, it records the Apache 2.0 alternative `product-on-purpose/pm-skills` for Product-Manager-Skills.
 
 ## Considered options
 
-- Bebas menyalin konten NC ke repo: membuat lisensi repo kontradiktif (MIT memberi izin komersial atas isi yang NC) dan penghapusan nanti rawan terlewat — ditolak.
-- Melarang semua NC: kualitas terbaik ada di NC — ditolak; model dependensi memberi akses tanpa kontaminasi.
+- Copying non-commercial content into the repository would conflict with the MIT license and make later removal hard to audit.
+- Banning all non-commercial dependencies would cut access to useful skills. Runtime dependencies let users choose them while keeping the repository's license consistent.

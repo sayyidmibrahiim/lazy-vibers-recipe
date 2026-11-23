@@ -1,17 +1,17 @@
-# Riset web wajib: tidak ada mode riset terdegradasi
+# Web research is required
 
-Setiap klaim, rekomendasi, dan keputusan `designer_filled` di LVR bertumpu pada riset web langsung dengan sumber terbaru yang ditemukan (keputusan pemilik D12, `.scratch/public-release/spec.md`). Keputusan: (1) **riset web = alat pencarian web yang berfungsi dan alat ambil-halaman yang berfungsi**; satu pengecekan nyata dijalankan di awal tiap skill yang mewawancarai atau meriset, dan dicatat sebagai `research_logged` dengan `purpose: "web_check"`; (2) bila pengecekan gagal, pipeline menyebut penyebabnya, memberi langkah mengaktifkan alat di harness yang dipakai, lalu **berhenti** — tidak pernah lanjut dari ingatan model; (3) setiap fakta bertanggal punya batas kesegaran per kategori (`skills/lvr-freshness.json`), fakta kunci dicek silang dengan minimal dua sumber independen, dan fakta yang tidak bisa diriset ditandai `[unverified: kategori · RQ-NNN]` di belakang riset gagal yang tercatat; (4) aturannya dicek mesin oleh `cite check` (kelompok I, aturan X8) — kontrak lengkap di `docs/spec/07-research.md`.
+LVR grounds every claim, recommendation, and `designer_filled` decision in current web research, following owner decision D12. Each interviewing or research skill checks that both web search and page retrieval work and records a `research_logged` event with `purpose: "web_check"`. If this fails, the skill explains the cause, gives the harness-specific steps to enable those tools, and stops. Dated facts follow the category limits in `skills/lvr-freshness.json`. Key facts require two independent sources. When working tools return no usable source, LVR records the failed research and marks the fact `[unverified: category · RQ-NNN]`. The `cite check` command enforces group I and rule X8. [Research contract](../spec/07-research.md)
 
-## Menggantikan sebagian ADR-0004
+## Scope of the change to ADR-0004
 
-ADR-0004 mengizinkan kegagalan install Booster diteruskan dengan "output ditandai terbatas". Untuk **riset** pilihan itu dicabut: Booster riset (Firecrawl MCP, competitor-analysis, dan sejenisnya) tetap dependensi seperti di ADR-0004, tetapi tidak ada jalur "lanjut tanpa riset". Bagian lain ADR-0004 (dua tier, bootstrap check, pilihan eksplisit untuk Booster non-riset, aturan lisensi NC) tidak berubah.
+Web research requires working tools before the pipeline proceeds. Research Boosters such as Firecrawl MCP or competitor-analysis remain dependencies. The two dependency tiers, startup checks, explicit choices for failures of other Boosters, and non-commercial license rules continue under [ADR-0004](0004-booster-dependency-model.md).
 
 ## Considered options
 
-- Mode riset terdegradasi (lanjut dengan ingatan model, ditandai terbatas): ditolak pemilik — harga, regulasi, dan versi dari ingatan model basi tanpa ketahuan, dan user non-teknis tidak bisa menilainya.
-- Wajib riset hanya untuk fakta tertentu: ditolak — user tidak bisa membedakan fakta mana yang diriset dan mana yang tidak; pengecualian jadi celah.
-- Riset wajib dengan berhenti jujur, penanda `unverified` hanya di belakang riset gagal yang tercatat (dipilih): kualitas tidak pernah bohong, dan setiap klaim tanpa sumber bisa ditemukan mesin.
+- Continuing from model memory with a limited-result label would give non-technical users little way to identify stale prices, laws, or versions.
+- Requiring research for selected facts would leave users unsure which other claims had evidence.
+- Requiring functioning search and retrieval lets users see which individual facts remain unverified and trace them to an actual attempt.
 
-## Pengetatan (tiket 40)
+## Enforcement updates from ticket 40
 
-Tujuh celah dari verifikasi tiket 26 ditutup tanpa mengubah keputusan: (1) **alat web yang error bukan riset yang gagal** — `failed` dan penanda `unverified` hanya sah bila pencarian dan pengambilan halaman berfungsi namun tidak ada yang bisa dipakai; error alat = berhenti dengan panduan mengaktifkan (satu situs yang menolak, mis. 403, tidak dihitung; coba sampai 3 hasil); (2) keputusan `designer_filled` yang bertumpu pada fakta tak terverifikasi ditelusuri lewat semua tautan (`Became`, id riset gagal, keputusan lain); (3) regulasi harus dibaca ulang dan dicek amandemennya dalam 60 hari (sumber dan amend-check sama-sama); (4) setiap pemindaian Section S1–S5 mulai dengan memeriksa kesegaran Domain Brief dan meriset ulang butir kedaluwarsa; (5) kategori harus cocok dengan faktanya (harga/tarif tidak boleh diberi kategori `market` atau `general`). Aturan lengkap: `docs/spec/07-research.md` §8.2.
+A failed tool check stops the skill with setup guidance. An unavailable page is handled by trying up to three results. A failed research event requires working tools and no usable source. LVR traces `designer_filled` decisions to the original evidence through `Became` entries, failed research IDs, and related decisions. Regulations require a fresh source and amendment check within 60 days. Each S1–S5 Section scan starts with a Domain Brief freshness check and rechecks expired entries. Categories match the type of fact, so pricing uses the price category. [Research contract, section 8.2](../spec/07-research.md#82-hardening-ticket-40-advisories-a1a19-of-the-ticket-26-verification)

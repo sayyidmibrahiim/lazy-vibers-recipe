@@ -239,6 +239,8 @@ A finding's `verify` is JSON, evaluated without a shell. Texts use N() and are c
 
 `LVR review render --run N [--journal]` runs `stability` and refuses on any drift (`SCORE_DRIFT`), and needs the score line (`SCORE_MISSING`). It writes `REVIEW-<date>-<N>.md` and appends `run_done`. Output: `{ok, cmd, run, report, body_sha256, changed, review_done_payload: {run, verdict, score, open, missed_earlier, report, lens_scores, ledger_sha256}}`. With `--journal`, it also appends `review_done` with that payload through the normal journal path.
 
+For language review, run `review render --run N --preview` to get the exact text and `draft_sha256` before any write. Review the candidate independently and correct its English prose once when needed. Save checked content with `--checked-sha <draft_sha256>`. A hash mismatch returns `REVIEW_DRAFT_CHANGED`. A saved completed report is retained. Report prose summarizes clean checks in English and refers to original quotes in `cells.json`. The quote verification and ledger evidence still use the original wording.
+
 The report has three parts (protocol.md §7). The run header lists every sweep-miss, every re-keyed id ("Same gap, new wording"), every split id ("Own id") and every new id of the run with its class and the reason (the script's hint reason, or the reason it was raised to `missed-earlier`). The core sits between the lines `<!-- core:start -->` and `<!-- core:end -->`, and `body_sha256` = sha256 of the bytes strictly between them. The core is built only from the fold, the score line and the state (boosters, delegations):
 
 1. `## Verdict`: verdict, overall, min lens, then the worst counted finding (severity order blocking > major > minor, then lens, then id).

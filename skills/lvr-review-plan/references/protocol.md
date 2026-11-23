@@ -46,7 +46,7 @@ Fixed order: lenses L01 → L15, and within a lens the columns in the Columns-ta
 - `na` with a reason from the enum and a note,
 - `blocked` with a reason and a note (caps the lens at 8).
 
-Attack protocol, for each load-bearing claim and each check that could fail: state the strongest version of the claim (steelman), then attack it with "Fails if …" and a concrete case. If the attack fails, log it as "blocked:" plus the quote or cited fact that defeats it. That counts as evidence for the plan, and it is listed under "Checked and sound". Never invent a weakness to look diligent, and never invent praise.
+For each load-bearing claim and each check that could fail, state the strongest version of the claim, then attack it with "Fails if …" and a concrete case. If the attack fails, write `blocked:` and an English explanation of the fact that defeats it. Cite the fact or identify the verified quote in the cell's evidence. The report lists the explanation under "Checked and sound". Keep exact quoted material in the evidence fields.
 
 L01 and any check that needs a fact: research live (conventions §10). Log each search as `research_logged` with `purpose: "recheck"`, and cite the result. Fetch every load-bearing fact again in this run (L01.5). No web search or page fetch → stop the run and give the enable steps. Never fall back on memory.
 
@@ -111,11 +111,11 @@ P6: `LVR review ids --run N --write`, then `LVR review coverage --run N` until `
 
 ## 7. Report
 
-`LVR review render --run N` writes `REVIEW-<YYYY-MM-DD>-<N>.md` in three parts. Part 2 is a pure function of the ledger, so an unchanged plan renders it byte-for-byte the same (`body_sha256`).
+`LVR review render --run N --preview` returns draft Markdown and its hash for the separate English check. Save the accepted content with `LVR review render --run N --checked-sha <draft_sha256>`. Part 2 is a pure function of the ledger, so an unchanged plan renders it byte-for-byte the same (`body_sha256`).
 
 1. **Run header**: project, run, date, scope, mode, previous run, independence label, the saturation curve (new findings per pass), the reconcile summary, the apologies with their root causes and learned checks, and the maintainer issue text.
 2. **Core**: the verdict line with the worst finding first, the must-fix list (severity, then lens, then id), the lens score table with the overall arithmetic, all findings by lens (id, check, severity, status, first-seen class, locator, claim, fix, verify), accepted risks, limitations (degraded boosters by tier, failed delegations, blocked cells, unverified load-bearing claims), and the coverage counts ("R cells 92/92").
-3. **Run evidence**: checked and sound (clean cells with their quotes and attacks), attempted and blocked, pre-mortem causes and where they map, realistic numbers (heuristic, with the reference class), and `score_if_caught_in_run1` with the corrected history.
+3. **Run evidence**: checked and sound (English descriptions of clean checks, references to verbatim quotes in `cells.json`, and attacks), attempted and blocked, pre-mortem causes and where they map, realistic numbers (heuristic, with the reference class), and `score_if_caught_in_run1` with the corrected history.
 
 No opening praise. The first line after the title is the verdict and the worst finding.
 

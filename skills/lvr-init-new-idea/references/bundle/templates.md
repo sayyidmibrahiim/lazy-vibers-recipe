@@ -66,7 +66,7 @@ Headings, in order: `# User flows` · one section per F-NN:
 ```markdown
 ## F-01 — <name> (in-MVP)
 <ASCII flow diagram: first tap → visible result>
-1. <click-by-click step, "posting ke IG" style — a stranger could follow it>
+1. <click-by-click step a stranger could follow>
 2. <…>
 - **Alternatives:** <key alternative paths, one line each>
 ```

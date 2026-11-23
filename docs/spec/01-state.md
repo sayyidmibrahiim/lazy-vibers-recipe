@@ -271,9 +271,9 @@ Replay always builds a v2 state. Every event type is replayable; informational t
 
 ## Section records
 
-File: `.lvr/docs/sections/S<N>-<name>.md` (e.g. `S3-data.md`). Content: the section's questions, the user's verbatim answers (User Language), and the section's decision summary (English, written by the Conductor). These are the **only** inputs S9 compiles, plus `decisions[]` and `milestones[]`.
+File: `.lvr/docs/sections/S<N>-<name>.md` (e.g. `S3-data.md`). Mark new records with `<!-- lvr:english-summary -->`. Write English question and answer summaries under `## Answers`, retaining their `S<n>.q<n>` IDs, and record decisions in English. These are the **only** inputs S9 compiles, plus `decisions[]` and `milestones[]`.
 
-Language rule: records keep answers verbatim in User Language; the Conductor adds an English summary per answer. S9 compiles English documents from the summaries; OVERVIEW.md additionally reflects the verbatim intent.
+The original questions, answers and idea stay verbatim in state and journal events. Replay can fall back to unmarked legacy records for text absent from earlier journal formats. Marked English summaries are not a source of verbatim text. S9 compiles English from summaries that faithfully reflect the original intent.
 
 ## Folder Gate (mandatory first step of `/lvr-init-new-idea`)
 

@@ -19,6 +19,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run check:language
       - run: npm run check:skills
       - run: npm run lint
       - run: npm exec -- next typegen

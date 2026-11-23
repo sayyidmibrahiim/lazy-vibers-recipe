@@ -1,0 +1,7 @@
+{
+  "files": [
+    { "col": "REQUIREMENTS", "path": "SPEC/requirements.md" },
+    { "col": "DATA", "path": "SPEC/data-model.md" },
+    { "col": "VERIFICATION", "path": "VERIFICATION.md" }
+  ]
+}

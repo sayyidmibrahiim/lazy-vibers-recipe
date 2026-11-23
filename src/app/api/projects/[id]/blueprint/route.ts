@@ -1,8 +1,7 @@
 import { legacyGuard } from "@/lib/legacy";
-import { DOC_KINDS, docPrompt, previousDocsContext } from "@/lib/blueprint";
+import { DOC_KINDS, DOCUMENT_SYSTEM_PROMPT, docPrompt, previousDocsContext, writeEnglishDocument } from "@/lib/blueprint";
 import { getDocs, getProject, getQuestions, saveAnswers, setStatus, upsertDoc } from "@/lib/db";
-import { chatDetailed, type ChatMessage } from "@/lib/llm";
-import { cleanMarkdown, ensureTitle, errorMessage } from "@/lib/text";
+import { errorMessage } from "@/lib/text";
 
 export const runtime = "nodejs";
 export const maxDuration = 600;
@@ -17,7 +16,7 @@ export async function POST(
   const project = getProject(id);
 
   if (!project) {
-    return Response.json({ error: "Proyek tidak ditemukan." }, { status: 404 });
+    return Response.json({ error: "Project not found." }, { status: 404 });
   }
 
   const body = (await request.json().catch(() => null)) as {
@@ -30,7 +29,7 @@ export async function POST(
 
   const questions = getQuestions(id);
   const answersText = questions
-    .map((question) => `T: ${question.question}\nJ: ${question.answer ?? "(dilewati)"}`)
+    .map((question) => `Question: ${question.question}\nAnswer: ${question.answer ?? "(skipped)"}`)
     .join("\n\n");
 
   const encoder = new TextEncoder();
@@ -76,53 +75,20 @@ export async function POST(
             total: DOC_KINDS.length,
           });
 
-          const messages: ChatMessage[] = [
-            {
-              role: "system",
-              content:
-                "Kamu menulis dokumen teknis. Balas hanya markdown, tanpa pagar kode dan tanpa penjelasan.",
-            },
+          const content = await writeEnglishDocument([
+            { role: "system", content: DOCUMENT_SYSTEM_PROMPT },
             {
               role: "user",
               content: docPrompt({
                 projectName: project.name,
                 idea: project.idea,
                 answers: answersText,
-                kind: definition.kind,
                 title: definition.title,
                 brief: definition.brief,
                 context: previousDocsContext(prior),
               }),
             },
-          ];
-
-          let outcome = await chatDetailed(messages, {
-            maxTokens: 6000,
-            temperature: 0.35,
-          });
-
-          if (outcome.finishReason === "length") {
-            outcome = await chatDetailed(
-              [
-                ...messages,
-                { role: "assistant", content: outcome.text },
-                {
-                  role: "user",
-                  content:
-                    "Jawaban sebelumnya terpotong karena batas token. Tulis ulang dokumen yang sama secara lengkap dan lebih ringkas, maksimal 650 kata. Pertahankan semua bagian wajib, ringkas tabel, dan pastikan kalimat terakhir selesai.",
-                },
-              ],
-              { maxTokens: 6000, temperature: 0.3 },
-            );
-          }
-
-          if (outcome.finishReason === "length") {
-            throw new Error(
-              `Model memotong ${definition.title} karena batas token. Coba generate lagi.`,
-            );
-          }
-
-          const content = ensureTitle(cleanMarkdown(outcome.text), definition.title);
+          ], definition.title, 0.35);
 
           upsertDoc({
             projectId: id,
@@ -144,7 +110,7 @@ export async function POST(
 
         if (aborted) {
           setStatus(id, "error");
-          send({ type: "error", message: "Koneksi terputus sebelum semua dokumen selesai." });
+          send({ type: "error", message: "The connection closed before all documents were ready." });
         } else {
           setStatus(id, "ready");
           send({ type: "done" });

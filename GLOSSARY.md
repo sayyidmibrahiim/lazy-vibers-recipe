@@ -1,125 +1,185 @@
 # Glossary
 
-Konteks tunggal: pipeline LVR — mengubah ide mentah menjadi blueprint lengkap yang bisa dikerjakan agent harness manapun, lalu menjadi produk jadi.
+The LVR pipeline turns a raw idea into a Blueprint Bundle that a coding agent can use to build the product.
 
 ## Language
 
-**LVR**:
-Lazy Vibers Recipe. Nama proyek/pipeline ini. Semua skill memakai prefix `lvr-`.
+**LVR**
+
+Lazy Vibers Recipe. All skills use the `lvr-` prefix.
+
 _Avoid_: lazy-vibers, LVR tools, planner
 
-**Section**:
-Tahap interview/pipeline yang berurutan dan bernomor (S0 intake, S1 context awal, S2 kondisi, S3 data & privasi, S4 fitur, S5 deep research, S6 feasibility loop, S7 scope lock, S8 milestone plan, S9 doc generation, S10 build). Satu Section punya satu tujuan keputusan.
-_Avoid_: step, fase, tahapan (pakai "Section" + nomor)
+**Section**
 
-**Section Record**:
-File `.lvr/docs/sections/SN-*.md` hasil satu Section — checkpoint materi mentah yang nanti dikompilasi S9 menjadi dokumen bundle final.
+A numbered part of the pipeline with one decision goal. The Sections are S0 intake, S1 initial context, S2 constraints, S3 data and privacy, S4 features, S5 deep research, S6 feasibility, S7 scope lock, S8 milestone planning, S9 document generation, and S10 build.
+
+_Avoid_: step, phase
+
+**Section Record**
+
+The file at `.lvr/docs/sections/SN-*.md` that summarizes a Section in English. S9 compiles the finished Bundle from these records.
+
 _Avoid_: notes, draft, log
 
-**Conductor**:
-Model orkestrasi `/lvr-init-new-idea`: skill eksternal di-load saat Section yang membutuhkannya mulai, ditutup saat selesai. Skill tidak pernah menumpuk di konteks.
+**Conductor**
+
+The coordination role in `/lvr-init-new-idea`. It loads external skills at the start of the Section that needs them and releases them at its end. This keeps the active context small.
+
 _Avoid_: router, orchestrator, loader
 
-**Checkpoint**:
-Penulisan state ke disk pada batas peristiwa (jawaban tercatat, Section selesai, research selesai). Jaminan: sesi apapun yang mati bisa dilanjutkan tanpa kehilangan keputusan.
+**Checkpoint**
+
+A State write after a durable event such as a recorded answer, completed Section, or completed research. A later session can resume from the Checkpoint and keep earlier decisions.
+
 _Avoid_: save, autosave
 
-**State**:
-Snapshot kondisi pipeline pada satu titik waktu, tersimpan sebagai `.lvr/state.json`. Satu-satunya sumber kebenaran; CLI dan UI adalah pembaca/penulisnya.
-_Avoid_: database (sebagai istilah untuk state), session
+**State**
 
-**Journal**:
-Log kejadian append-only `.lvr/journal.ndjson`. Tidak pernah ditimpa; State bisa direkonstruksi darinya.
-_Avoid_: history, log (sendirian)
+The current pipeline snapshot in `.lvr/state.json`. It is the source of truth for progress in the CLI and UI.
 
-**Blueprint Bundle**:
-Folder output akhir pipeline yang siap dikerjakan harness manapun: AGENTS.md, dokumen spek, DECISIONS.md, milestones + acceptance criteria, verification.md, assumptions.md, HANDOVER.md, RINGKASAN.md, blueprint.json, rekomendasi skill/plugin/MCP.
-_Avoid_: blueprint (sendirian), docs, output
+_Avoid_: database, session
 
-**Builder Kit**:
-Subset Blueprint Bundle yang ditujukan untuk agent builder: AGENTS.md, DECISIONS.md, milestones, verification.md, assumptions.md, salinan lvr-principles.md.
+**Journal**
+
+The append-only event history in `.lvr/journal.ndjson`. Replay rebuilds State from it, including verbatim answers.
+
+_Avoid_: history, log on its own
+
+**Blueprint Bundle**
+
+The finished plan directory a coding agent can use to build the product. It holds instructions, specifications, decisions, milestones, verification procedures, assumptions, owner documents, recommendations, and `blueprint.json`.
+
+_Avoid_: blueprint on its own, docs, output
+
+**Builder Kit**
+
+The part of the Bundle for the builder, including `AGENTS.md`, `DECISIONS.md`, milestones, verification, assumptions, and the LVR principles.
+
 _Avoid_: builder docs, scaffold
 
-**Feasibility Loop**:
-Mekanisme S6: hasil deep research yang menemukan konflik/risiko membuka kembali sesi klarifikasi ke user sebelum scope lock. Pipeline tidak garis lurus.
+**Feasibility Loop**
+
+The S6 process that reopens a focused owner discussion when deep research uncovers a conflict or risk before scope lock.
+
 _Avoid_: backtracking, retry
 
-**Parking Lot**:
-Daftar fitur yang sengaja TIDAK masuk MVP dan ditunda setelah rilis, tercatat eksplisit di Section Record S7 dan bundle (`SCOPE.md`, plus baris requirements dan bagian `USER_FLOWS.md` bertanda parked). State tidak punya field parking lot.
+**Parking Lot**
+
+The features deferred until after the MVP. The S7 Section Record and Bundle mark them explicitly in `SCOPE.md`, the requirements rows, and `USER_FLOWS.md`.
+
 _Avoid_: backlog, wishlist, later
 
-**Milestone**:
-Satuan pekerjaan build bernomor (M0, M1, ...) dengan acceptance criteria dan cara verifikasi yang bisa dijalankan agent. Satu milestone = satu unit yang bisa dibuktikan selesai.
-_Avoid_: task (untuk satuan besar), phase
+**Milestone**
 
-**Acceptance Criteria**:
-Daftar kondisi terukur yang harus benar agar Milestone dinyatakan selesai, beserta perintah/prosedur verifikasinya.
-_Avoid_: definition of done, checklist (sendirian)
+A numbered unit of build work such as M0 or M1. Each has acceptance criteria and a verification procedure an agent can run.
 
-**Constitution**:
-File `lvr-principles.md`: prinsip wajib yang di-load semua skill LVR (evidence-first, anti-yes-man, recheck sebelum setuju, no-slop, boleh bilang tidak tahu, riset hal yang user tidak tahu).
+_Avoid_: task for a large unit, phase
+
+**Acceptance Criteria**
+
+Measurable conditions that determine whether a Milestone is complete, together with the verification procedure.
+
+_Avoid_: definition of done, checklist on its own
+
+**Constitution**
+
+The principles in `lvr-principles.md` that all LVR skills load. They cover evidence, independent judgment, checking a claim before agreeing, plain English, uncertainty, and discovering questions the owner has yet to ask.
+
 _Avoid_: rules, policy, system prompt
 
-**Capability Registry**:
-Katalog skill/plugin/MCP eksternal yang sudah diverifikasi (kualitas, lisensi, aktivitas), sumber rekomendasi per-stack dan per-Section. Contoh isi: docs/research/agent-skill-catalog.md.
+**Capability Registry**
+
+A researched catalog of external skills, plugins, and MCP servers, with evidence about quality, license, and activity. It informs recommendations by stack and Section. [Research catalog](docs/research/agent-skill-catalog.md)
+
 _Avoid_: skill list, marketplace
 
-**Plan Review**:
-Review kritis (`/lvr-review-plan`, dulu `/lvr-recheck-plan`) atas rencana yang sudah jadi: 15 Lens memeriksa setiap file bundle dengan bukti kutipan, setiap temuan diberi severity dari tabel baku, lalu rencana diberi skor 0–10 dan verdict jujur (`BUILD-READY`, `FIX-THEN-BUILD`, `NOT-READY`, `INCOMPLETE`). Tidak pernah mengubah rencana, kecuali mode `--apply` dengan perbaikan yang disetujui user. Ada mode ringan `--scope-only` sebelum scope dikunci di S7. Bukan lint yang memuji.
-_Avoid_: recheck (nama lama), QA pass, sanity check
+**Plan Review**
 
-**Lens**:
-Satu sudut pandang kritis dalam Plan Review (L01 kebenaran dan kesegaran fakta … L15 efek samping jangka panjang), dengan daftar cek, file yang wajib dibaca, dan aturan bukti sendiri. Daftar lengkap ada di `lenses.md` milik skill review.
-_Avoid_: kategori, checklist group
+The critical review in `/lvr-review-plan`, previously `/lvr-recheck-plan`. Fifteen Lenses examine the Bundle with evidence, assign standard severities, and produce a score from 0 to 10 and a verdict such as `BUILD-READY`, `FIX-THEN-BUILD`, `NOT-READY`, or `INCOMPLETE`. The review writes approved repairs in `--apply` mode and offers a `--scope-only` mode before the S7 scope lock.
 
-**Coverage Matrix**:
-Tabel Lens × file bundle dalam Plan Review. Setiap sel wajib berakhir sebagai temuan, bersih (dengan kutipan persis dari file), n/a (dengan alasan), atau terblokir. Sel kosong berarti review belum selesai.
+_Avoid_: recheck, QA pass, sanity check
+
+**Lens**
+
+One perspective in Plan Review, from L01 truth and freshness to L15 long-term effects. Each Lens specifies checks, documents, and evidence in the review skill's `lenses.md`.
+
+_Avoid_: category, checklist group
+
+**Coverage Matrix**
+
+The Lens-by-document table in Plan Review. Each cell records a finding, a clean result backed by a source quote, a reason a check does not apply, or a blocker. An empty cell marks unfinished work.
+
 _Avoid_: checklist, progress table
 
-**Review Ledger**:
-Catatan temuan `.lvr/review/LEDGER.jsonl` yang hanya ditambah, tidak pernah diubah. Setiap temuan punya id stabil `RV-<lens>-<hash>` yang sama di setiap run. Dari ledger ini run berikutnya tahu mana yang sudah diperbaiki, mana yang baru muncul karena rencana berubah, dan mana yang seharusnya sudah ketemu di run sebelumnya (wajib minta maaf, sebut penyebab, dan tambah cek baru).
+**Review Ledger**
+
+The append-only findings in `.lvr/review/LEDGER.jsonl`. The stable `RV-<lens>-<hash>` ID lets reviewers track resolved and newly introduced findings. If a finding was missed, the next review acknowledges it, explains why, and adds a check.
+
 _Avoid_: findings list, audit log
 
-**Impact Analysis**:
-Peta dampak `/lvr-add-feature`: setiap baris matriks menyebut file bundle yang berubah, aksi (`edit`/`append`/`none`), dan bagian atau baris persisnya. Fitur tanpa impact analysis tidak boleh masuk bundle.
+**Impact Analysis**
+
+The map produced by `/lvr-add-feature` before a feature enters the Bundle. Each row names the affected file, the action (`edit`, `append`, or `none`), and the exact section or line.
+
 _Avoid_: diff, changelist
 
-**Build Loop**:
-Siklus `/lvr-build` per milestone: pilih milestone pertama yang belum `verified`, implementasi, jalankan prosedur verifikasi yang tercatat apa adanya, tangkap output nyata, catat ke `VERIFICATION.md`, set state, lanjut. Dua kegagalan maksimum, lalu berhenti dengan laporan.
-_Avoid_: run, execution, CI (bukan istilah untuk siklus ini)
+**Build Loop**
 
-**Brand Kit**:
-Output terpisah `/lvr-personal-brand` di folder `brand/`: `BRAND.md`, `LINKEDIN-PROFILE.md`, `CONTENT-PLAN.md`. Hanya jalan setelah semua milestone `verified` dan deployment live. Setiap klaim berasal dari bukti bundle atau halaman live; tidak pernah posting ke platform.
-_Avoid_: marketing kit, personal branding files (sebagai bagian bundle)
+The Milestone cycle in `/lvr-build`. It selects the first unverified Milestone, implements it, runs the recorded procedure, captures the result, updates `VERIFICATION.md` and State, and continues. It stops with a report after two failures.
 
-**Booster**:
-Skill eksternal terverifikasi yang menjadi dependensi LVR, dua tier: **core** (wajib — menjamin kualitas output) dan **enhancer** (menambah kualitas). Di-install otomatis di awal sesi bila belum ada; kalau terhalang (harness melarang install, offline, API key tidak ada), pipeline menawarkan pilihan ke user: dibantu install penuh, lanjut dengan output ditandai terbatas, atau berhenti. Konten skill berlisensi NC dipakai sebagai dependensi runtime, tidak pernah di-vendor ke repo LVR.
+_Avoid_: run, execution, CI
+
+**Brand Kit**
+
+The separate output of `/lvr-personal-brand` in `brand/`, containing `BRAND.md`, `LINKEDIN-PROFILE.md`, and `CONTENT-PLAN.md`. It requires verified Milestones and release evidence. Every claim points to evidence, and the skill produces drafts for the owner to publish.
+
+_Avoid_: marketing kit, personal branding files as part of the Bundle
+
+**Booster**
+
+An external skill that LVR uses as a dependency. Core Boosters are required for full output quality. Enhancers improve it. LVR checks for required Boosters when needed. A blocked installation is visible and offers three choices: get help, accept a clearly marked limited result, or stop. Runtime use of non-commercial content follows the license policy.
+
 _Avoid_: plugin, add-on, optional skill
 
-**Designer-filled**:
-Status keputusan yang diambil proaktif oleh Conductor karena penting tetapi tidak mungkin diketahui user untuk ditanyakan. Selalu terlihat (state + ASSUMPTIONS.md) dan selalu bisa dikoreksi user — tidak pernah senyap.
-_Avoid_: silent default, auto-assume, best practice (sebagai alasan)
+**Designer-filled**
 
-**Domain Brief**:
-File `.lvr/docs/research/domain-brief.md`, dibangun Conductor tepat setelah S0 selesai: 8–15 hal yang biasanya tidak diketahui orang di posisi user untuk ide dan negaranya — aturan dan regulasi, biaya umum dan biaya tersembunyi, kegagalan yang sering terjadi, istilah kunci, dan apa yang biasanya diharapkan pengguna sejenis. Setiap item punya id `U-NN`, sumber bertanggal, dan Section tujuan; item baru dari scan per Section ditambahkan ke file yang sama. Tiap item akhirnya menjadi pertanyaan atau keputusan `designer_filled` yang mengutipnya.
+A decision the Conductor proposes proactively because the owner would be unlikely to know to ask about it. State and `ASSUMPTIONS.md` make it visible and editable by the owner.
+
+_Avoid_: silent default, auto-assume, best practice as a reason
+
+**Domain Brief**
+
+The Conductor's `.lvr/docs/research/domain-brief.md` after S0. It explains 8 to 15 relevant regulations, costs, common failures, terms, or user expectations. Each `U-NN` item has a dated source and a target Section. Section scans add items to the same file, and each item leads to a question or a cited `designer_filled` decision.
+
 _Avoid_: research notes, background, context dump
 
-**Freshness limit**:
-Umur maksimum sebuah fakta yang dikutip sebelum wajib diriset ulang, per kategori, dari satu file `freshness.json` yang dipakai semua skill: harga, kuota, versi 30 hari; ToS/legal 60 hari; pasar 90 hari; statistik 365 hari. Regulasi juga wajib dicek tidak ada amandemen yang lebih baru.
-_Avoid_: TTL, cache age, stale threshold (sebagai istilah lepas)
+**Freshness limit**
 
-**Handoff**:
-Proses dan skill (`/lvr-handoff`): memverifikasi Blueprint Bundle bebas gap, memastikan kompatibilitas lintas harness, dan menyusun entry prompt untuk builder.
+The maximum age of a cited fact before rechecking it. The shared `freshness.json` defines limits by category. The original categories used 30 days for price, quota, and version, 60 for terms and legal facts, 90 for market facts, and 365 for statistics. The regulations check also confirms whether a newer amendment exists.
+
+_Avoid_: TTL, cache age, stale threshold on their own
+
+**Handoff**
+
+The `/lvr-handoff` process that checks the Blueprint Bundle for gaps, verifies compatibility across harnesses, and prepares the builder's entry prompt.
+
 _Avoid_: deliver, export
 
-**Folder Gate**:
-Pemeriksaan wajib di awal `/lvr-init-new-idea`: folder kosong → lanjut di tempat; folder berisi project lain → buat subfolder baru bernama slug ide; folder project existing → tolak init dan rekomendasikan skill yang tepat.
+**Folder Gate**
+
+The required folder check at the start of `/lvr-init-new-idea`. It uses an empty folder, offers a new subfolder for unrelated work, or recommends the appropriate skill for an existing project.
+
 _Avoid_: safety check, preflight
 
-**User Language**:
-Bahasa yang user pakai saat berinteraksi. Sumber kebenaran semua artefak adalah English; AI menerjemahkan output ke User Language secara dinamis saat runtime, bukan lewat file terjemahan yang disimpan.
-_Avoid_: locale, setting bahasa, RINGKASAN.md (istilah lama)
+**User Language**
 
-**Overview**:
-Dokumen dalam bundle (`OVERVIEW.md`, English) untuk pemilik produk: apa yang diputuskan, biaya, dan cara memakai produknya. Ditampilkan UI dalam User Language.
-_Avoid_: RINGKASAN.md (istilah lama), readme user
+The language for agent conversation. The agent follows the user's stated preference or latest clear message, falls back to the saved session language, and defaults to English. The interface and generated documents use English.
+
+_Avoid_: locale, language setting
+
+**Overview**
+
+The English owner document `OVERVIEW.md` in the Bundle. It explains the decisions, costs, and how the owner will use the product. The viewer displays its saved text.
+
+_Avoid_: `RINGKASAN.md` (legacy name), user readme

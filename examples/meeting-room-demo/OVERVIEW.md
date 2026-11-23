@@ -6,4 +6,4 @@ A team member picks a date, sees open rooms, and reserves a 30-minute slot. Canc
 
 **The rule that matters.** When two people ask for the same room and slot, only one booking succeeds. The other person sees the conflict and can choose a different slot.
 
-This is a fictional viewer demo with selected blueprint files. The milestones show planned work and checks you could run after building it.
+This is a fictional viewer demo with selected blueprint files. Session and review entries illustrate what recorded evidence looks like. Both build milestones are pending.

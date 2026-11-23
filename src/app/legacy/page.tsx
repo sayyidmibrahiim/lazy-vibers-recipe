@@ -10,9 +10,9 @@ export const runtime = "nodejs";
 
 const STATUS_LABEL: Record<ProjectStatus, string> = {
   interview: "Interview",
-  generating: "Menyusun",
-  ready: "Siap",
-  error: "Terhenti",
+  generating: "Generating",
+  ready: "Ready",
+  error: "Stopped",
 };
 
 const STATUS_TONE: Record<ProjectStatus, string> = {
@@ -23,7 +23,7 @@ const STATUS_TONE: Record<ProjectStatus, string> = {
 };
 
 function formatDate(value: number): string {
-  return new Intl.DateTimeFormat("id-ID", {
+  return new Intl.DateTimeFormat("en-US", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -31,9 +31,9 @@ function formatDate(value: number): string {
 }
 
 const STEPS = [
-  ["01", "Interview", "Empat pertanyaan untuk menutup celah terbesar."],
-  ["02", "Generate", "Lima dokumen teknis disusun berurutan."],
-  ["03", "Revisi", "Ubah satu dokumen dengan instruksi biasa."],
+  ["01", "Interview", "Answer four questions about your product."],
+  ["02", "Generate", "Get five technical documents in order."],
+  ["03", "Revise", "Update a document in your own words."],
 ];
 
 export default function LegacyHome() {
@@ -50,22 +50,22 @@ export default function LegacyHome() {
             </span>
             <span className="text-sm font-semibold tracking-tight">Lazy Vibers Recipe</span>
           </Link>
-          <Link href="/" className="label text-ink/65 hover:text-blueprint">Kembali ke viewer</Link>
+          <Link href="/" className="label text-ink/65 hover:text-blueprint">Back to viewer</Link>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl px-6">
         <section className="grid gap-14 border-b border-line py-16 lg:grid-cols-[1.05fr_0.95fr] lg:gap-20 lg:py-24">
           <div className="lg:pt-2">
-            <p className="label text-blueprint">Generator lama / 01</p>
+            <p className="label text-blueprint">Legacy generator / 01</p>
             <h1 className="mt-6 text-[clamp(2.7rem,6.2vw,4.7rem)] font-semibold leading-[0.96] tracking-[-0.05em]">
-              Ide mentah.
+              From idea to
               <br />
-              Blueprint siap.
+              blueprint
             </h1>
             <p className="mt-7 max-w-md text-[15px] leading-7 text-ink/65">
-              Tulis idemu. Jawab empat pertanyaan. Dapatkan lima dokumen teknis yang
-              bisa langsung dipakai untuk membangun.
+              Describe your idea and answer four questions. Get five technical
+              documents you can use to start building.
             </p>
 
             <div className="mt-10 grid max-w-lg grid-cols-1 gap-px border border-line bg-line sm:grid-cols-3">
@@ -87,18 +87,18 @@ export default function LegacyHome() {
         <section className="py-14">
           <div className="flex items-end justify-between gap-6">
             <div>
-              <p className="label text-ink/65">Arsip / 02</p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Proyek</h2>
+              <p className="label text-ink/65">Archive / 02</p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.03em]">Projects</h2>
             </div>
             <span className="label pb-1 text-ink/65">
-              {projects.length.toString().padStart(2, "0")} blueprint
+              {projects.length.toString().padStart(2, "0")} {projects.length === 1 ? "blueprint" : "blueprints"}
             </span>
           </div>
 
           {projects.length === 0 ? (
             <div className="blueprint-grid mt-8 border border-line px-6 py-14 text-center">
               <p className="text-sm text-ink/65">
-                Belum ada blueprint. Mulai dari ide di atas.
+                No blueprints yet. Enter an idea above to get started.
               </p>
             </div>
           ) : (
@@ -151,7 +151,7 @@ export default function LegacyHome() {
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <span className="label text-ink/65">Lazy Vibers Recipe</span>
-          <span className="label text-ink/65">Berjalan lokal</span>
+          <span className="label text-ink/65">Runs locally</span>
         </div>
       </footer>
     </div>

@@ -16,7 +16,7 @@ Before any check or file write:
 1. Read `references/principles.md` (the Constitution). Principles 1, 2, 9, and 13 bind this skill hardest.
 2. Read `references/conventions.md` (the operational manual): state schema, journal events, bundle list.
 3. Read `references/build-loop.md`: preflight, milestone selection, verification protocol, failure ladder, recording template, deployment check, anti-cheating rules.
-4. Interact in `state.project.user_language`. Code, commands, and stored values stay exact.
+4. Follow the conversation language and the before-write English document check in conventions §4.
 5. **Script helper (preferred when Node is available).** This skill ships `scripts/lvr.mjs` (Node ≥22, nothing to install). `<skill-dir>` = the folder holding this SKILL.md (use the base directory the harness reports; otherwise look for `lvr-<this-skill>/scripts/lvr.mjs` in the skills directories listed in INSTALL.md). Once per session run `node "<skill-dir>/scripts/lvr.mjs" version`. If it prints JSON with `"lvr_schema":2`, run the `Script:` command given at each step below (`LVR` = `node "<skill-dir>/scripts/lvr.mjs" --dir "<PROJECT_DIR>"`) and act on its JSON. **Preflight (every skill except /lvr-init-new-idea):** run `LVR state migrate --check`. If `needed` and `blocked` is null, run `LVR state migrate` and tell the user in one plain line (English source): "This project was made with an older LVR version. I updated its bookkeeping files to the new format; the old files are kept in `.lvr/migrations/`." (If `copied_from` is `.lvp`, ask once whether to remove the old `.lvp/` folder, default keep; on yes run `LVR state migrate --remove-legacy`.) If `blocked` is set, /lvr-continue follows its recovery for `blocked.code`; every other skill stops and recommends /lvr-continue. If any command answers `SCHEMA_TOO_NEW` (exit 1), the project was made by a newer LVR: change nothing and tell the user to update all LVR skills together. **Session:** after the preflight (init: in its Step 1) append `session_start` with `{"skill":"<this skill>","harness":"<harness id>","session_id":"<id the harness exposes>" or null with "session_id_reason":"<why>","model":"<model id>","cwd":"<cwd>"}` — use the confirmed ID source in `references/harnesses.json` and never invent an id — and at every exit append `session_end` with `{"reason":"done|paused|context_guard|error|cancelled","note":"<why>"}` (`note` is required for `cancelled`, which is how a refusal is recorded; `error` is journaled only after an unrecoverable failure left work half-done, never for a refusal). If `node` is missing, the command cannot start, or `lvr_schema` differs, say once (English source): "Node.js is not available here, so I'll do the bookkeeping by hand." Then follow each step's prose — the prose is the fallback and stays authoritative for behavior. Never hand-edit `.lvr/` files to work around a script error (`"ok":false`): report its `code` plainly and stop that step. On any non-zero exit (`"ok":false`) stop the step, show the error and follow `error.details.hint`; exit code 3 means the event was journaled (`journaled_seq`) or blocked but `state.json` was NOT updated (`STATE_LAGS`, `STATE_MISSING`, `STATE_INVALID`, `STATE_SEQ_UNKNOWN`, `JOURNAL_BEHIND_STATE`): do not continue the interview, run `/lvr-continue` (its Step 2 maps each code to the exact command). Pass long text through `--in -` with a quoted heredoc (`<<'EOF'`) or a PowerShell here-string (`@'…'@ |`), never inline in double quotes.
 
 ## Flow at a glance
@@ -97,7 +97,7 @@ On **PASS**:
 
 On **FAIL**:
 
-- checkpoint the failed result with the decisive output line;
+- checkpoint the failed result with the decisive English observation and reference to the raw evidence;
 - follow the failure ladder (`references/build-loop.md` §4): one fix attempt, then a fresh-assumption check, then stop. Two failures maximum; no third blind attempt.
 - on an unresolvable failure: journal `build_blocked` (payload: milestone, command, output, owner), keep the milestone unverified, and close with a plain report.
 
@@ -131,7 +131,7 @@ Backward-compatible additions, documented in conventions §2:
 - `state.deployment: { status: "live|pending", url?: string, verified_at?: string }`.
 - `state.release_check[product_type]` holds the latest observed result for each checked type.
 
-`.lvr/` writes are limited to those fields and journal appends. Everything else under `.lvr/` is read-only.
+`.lvr/` writes are limited to those fields, raw verification evidence under `.lvr/verification/results/`, and journal appends. Everything else under `.lvr/` is read-only.
 
 ## Journal events added by this skill
 

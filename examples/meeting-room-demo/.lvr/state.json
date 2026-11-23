@@ -34,5 +34,41 @@
   "milestones": [
     { "id": "M0", "goal": "See available rooms", "features": ["F-01"], "verified": false },
     { "id": "M1", "goal": "Reserve and release a slot", "features": ["F-02", "F-03"], "verified": false }
-  ]
+  ],
+  "sessions": [
+    {
+      "start_seq": 1,
+      "harness": "codex",
+      "skill": "lvr-init-new-idea",
+      "session_id_reason": "Illustrative session",
+      "started_at": "2026-01-15T09:00:00Z",
+      "ended_at": "2026-01-15T09:30:00Z",
+      "end_reason": "done",
+      "end_note": "Demo planning session. No live session ID is attached.",
+      "sections": ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9"]
+    },
+    {
+      "start_seq": 2,
+      "harness": "codex",
+      "skill": "lvr-review-plan",
+      "session_id_reason": "Illustrative session",
+      "started_at": "2026-01-15T09:40:00Z",
+      "ended_at": "2026-01-15T09:45:00Z",
+      "end_reason": "done",
+      "end_note": "Demo review found one open question about time zones.",
+      "agents": ["AG-001"]
+    }
+  ],
+  "agents_delegated": [
+    { "id": "AG-001", "profile": "Plan reviewer", "task": "Check the booking conflict flow.", "status": "done" }
+  ],
+  "review": {
+    "last": {
+      "run": 1,
+      "verdict": "FIX-THEN-BUILD",
+      "score": 8,
+      "report": ".lvr/review/REVIEW-2026-01-15-1.md",
+      "lens_scores": { "L01": 9, "L02": 7 }
+    }
+  }
 }

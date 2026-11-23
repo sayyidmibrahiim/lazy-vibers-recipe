@@ -26,12 +26,12 @@ export function OpenFolderForm() {
       const data = (await response.json()) as { id?: string; error?: string };
 
       if (!response.ok || !data.id) {
-        throw new Error(data.error ?? "Gagal membuka folder.");
+        throw new Error(data.error ?? "Could not open the folder.");
       }
 
       router.push(`/p/${data.id}`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Gagal membuka folder.");
+      setError(caught instanceof Error ? caught.message : "Could not open the folder.");
       setPending(false);
     }
   }
@@ -43,23 +43,23 @@ export function OpenFolderForm() {
     >
       <div className="flex items-center justify-between border-b border-line pb-3">
         <label htmlFor="folderPath" className="label text-blueprint">
-          Buka Folder LVR Lokal
+          Open Local LVR Folder
         </label>
         <span className="label text-ink/65">.lvr/</span>
       </div>
 
-      <p className="mt-3 text-xs leading-5 text-ink/65">
-        Buka project yang dibuat lewat CLI (misal:{" "}
-        <code className="bg-paper px-1 py-0.5">.scratch/lvp-core/dogfood/run</code> atau path folder lokal lain).
+      <p id="folderPathHint" className="mt-3 text-xs leading-5 text-ink/65">
+        Enter the path to the project folder containing <code className="bg-paper px-1 py-0.5">.lvr/state.json</code>.
       </p>
 
       <div className="mt-3 flex gap-2">
         <input
           id="folderPath"
           type="text"
+          aria-describedby="folderPathHint"
           value={folderPath}
           onChange={(event) => setFolderPath(event.target.value)}
-          placeholder="Path folder project..."
+          placeholder="Project folder path"
           disabled={pending}
           className="flex-1 border border-line bg-paper px-3 py-2 font-mono text-xs outline-none transition-colors focus:border-ink/50"
         />
@@ -68,11 +68,11 @@ export function OpenFolderForm() {
           disabled={pending || !folderPath.trim()}
           className="bg-ink px-4 py-2 text-xs font-medium text-paper transition-colors hover:bg-blueprint disabled:opacity-50"
         >
-          {pending ? "Membuka..." : "Buka"}
+          {pending ? "Opening..." : "Open"}
         </button>
       </div>
 
-      {error ? <p className="mt-2 text-xs text-rust">{error}</p> : null}
+      {error ? <p role="alert" className="mt-2 text-xs text-rust">{error}</p> : null}
     </form>
   );
 }

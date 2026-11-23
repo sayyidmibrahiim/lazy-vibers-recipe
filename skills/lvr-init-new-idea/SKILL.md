@@ -13,7 +13,7 @@ Before any check, question, or file write:
 
 1. Read `references/principles.md` (the Constitution). All 14 principles bind this skill.
 2. Read `references/conventions.md` (the operational manual). It owns the state schema, journal event list, Folder Gate details, and model-tier tables; the steps below reference it instead of repeating it.
-3. Interact in the user's language from the first message. The messages below are the English source; translate them when speaking. Artifacts and stored values follow the conventions (English source of truth).
+3. Follow the conversation language and the before-write English document check in conventions §4.
 4. **Script helper (preferred when Node is available).** This skill ships `scripts/lvr.mjs` (Node ≥22, nothing to install). `<skill-dir>` = the folder holding this SKILL.md (use the base directory the harness reports; otherwise look for `lvr-<this-skill>/scripts/lvr.mjs` in the skills directories listed in INSTALL.md). Once per session run `node "<skill-dir>/scripts/lvr.mjs" version`. If it prints JSON with `"lvr_schema":2`, run the `Script:` command given at each step below (`LVR` = `node "<skill-dir>/scripts/lvr.mjs" --dir "<PROJECT_DIR>"`) and act on its JSON. **Preflight (every skill except /lvr-init-new-idea):** run `LVR state migrate --check`. If `needed` and `blocked` is null, run `LVR state migrate` and tell the user in one plain line (English source): "This project was made with an older LVR version. I updated its bookkeeping files to the new format; the old files are kept in `.lvr/migrations/`." (If `copied_from` is `.lvp`, ask once whether to remove the old `.lvp/` folder, default keep; on yes run `LVR state migrate --remove-legacy`.) If `blocked` is set, /lvr-continue follows its recovery for `blocked.code`; every other skill stops and recommends /lvr-continue. If any command answers `SCHEMA_TOO_NEW` (exit 1), the project was made by a newer LVR: change nothing and tell the user to update all LVR skills together. **Session:** after the preflight (init: in its Step 1) append `session_start` with `{"skill":"<this skill>","harness":"<harness id>","session_id":"<id the harness exposes>" or null with "session_id_reason":"<why>","model":"<model id>","cwd":"<cwd>"}` — use the confirmed ID source in `references/harnesses.json` and never invent an id — and at every exit append `session_end` with `{"reason":"done|paused|context_guard|error|cancelled","note":"<why>"}` (`note` is required for `cancelled`, which is how a refusal is recorded; `error` is journaled only after an unrecoverable failure left work half-done, never for a refusal). If `node` is missing, the command cannot start, or `lvr_schema` differs, say once (English source): "Node.js is not available here, so I'll do the bookkeeping by hand." Then follow each step's prose — the prose is the fallback and stays authoritative for behavior. Never hand-edit `.lvr/` files to work around a script error (`"ok":false`): report its `code` plainly and stop that step. On any non-zero exit (`"ok":false`) stop the step, show the error and follow `error.details.hint`; exit code 3 means the event was journaled (`journaled_seq`) or blocked but `state.json` was NOT updated (`STATE_LAGS`, `STATE_MISSING`, `STATE_INVALID`, `STATE_SEQ_UNKNOWN`, `JOURNAL_BEHIND_STATE`): do not continue the interview, run `/lvr-continue` (its Step 2 maps each code to the exact command). Pass long text through `--in -` with a quoted heredoc (`<<'EOF'`) or a PowerShell here-string (`@'…'@ |`), never inline in double quotes.
 
 ## Flow at a glance
@@ -163,7 +163,7 @@ Purpose: capture the raw idea fully; detect User Language; propose slug + displa
 2. **Capture the idea** — say (English source): "Tell me everything in your head about this idea — what it is, who it's for, why you want it. Multi-paragraph is welcome; don't organize it, just pour it out." Ask clarifying mini-questions ONLY if the idea is under ~2 sentences (one short round: who is it for, where should it run), then move on. The mini-round questions and answers are folded verbatim into the captured idea stored as `S0.q1` (they are part of the intake) and noted in the S0 record.
 3. **Record it**: store the idea verbatim (User Language, unedited) as answer `S0.q1` under `pipeline.sections.S0.answers` — `{ "q": <the capture prompt>, "a": <verbatim idea>, "skipped": false }`. Journal `answer_recorded` + state write. One checkpoint.
    - Script: `LVR answer record --section S0 --in -` with `{"q":"<capture prompt>","a":"<verbatim idea>","project":{"idea_raw":"<verbatim idea>"}}`.
-4. **User Language**: detect the idea's language. Say: "I detected \<language\> — I'll run our whole conversation in it. Correct me if that's wrong." Record the confirmation as `S0.q2`; journal `answer_recorded`; set `project.user_language` (user-correctable — a correction replaces the detection). Checkpoint.
+4. **User Language**: resolve the conversation language using conventions §4. Confirm the detected language when the user has not specified one. Record the confirmation as `S0.q2`; journal `answer_recorded`; set `project.user_language` (user-correctable — a correction replaces the detection). Checkpoint.
    - Script: `LVR answer record --section S0 --in -` with `{"q":"<question>","a":"<reply>","project":{"user_language":"<code>"}}`.
 5. **Slug + display name**: propose a kebab-case slug and a Title Case display name. Slug rules: lowercase letters, digits, hyphens; 2–4 words from the idea's core noun phrase (the base slug — a `-2` suffix the Folder Gate adds for a taken folder name does not count); transliterate non-Latin scripts into English words (e.g. "aplikasi kasir warung" → `warung-cashier` / "Warung Cashier"). Say: "Working name: \*\*\<Name\>\*\* (slug: `\<slug\>`). Keep it, or rename?" If the gate already created a subfolder and the user changes the slug, rename that subfolder (it contains only `.lvr/` at this point). Record as `S0.q3`; journal `answer_recorded`; set `project.slug` and `project.name`. Checkpoint.
    - Script: `LVR slug make --text "<english words>"` / `LVR slug validate --slug <slug>` before proposing; on confirmation `LVR answer record --section S0 --in -` with `{"q":"<question>","a":"<reply>","project":{"slug":"<slug>","name":"<Name>"}}`.
@@ -174,11 +174,11 @@ Purpose: capture the raw idea fully; detect User Language; propose slug + displa
    ```markdown
    # S0 — Intake
 
-   ## Idea (verbatim, <user_language>)
+   <!-- lvr:english-summary -->
 
-   <idea_raw, unedited>
+   ## Idea summary
 
-   > Summary (EN): <2-4 sentence English summary of the idea>
+   <2–4 English sentences summarizing the original idea in S0.q1>
 
    ## Metadata
 
@@ -213,14 +213,14 @@ Generic procedure for every Section. Per-Section procedures for S0–S9 live in 
    - Use [the section map](references/booster-map.md). After a skill or reference actually informs the work, journal `LVR journal append --type booster_loaded --payload '{"section":"<S>","name":"<name>","usage":"start|pass|reference"}'`, setting one usage value. This also applies to the S0 clarifiers. Record a fallback in the Section Record whenever an applicable install was unavailable.
    - Run `LVR profile plan` after the product choice. Add that Section's profile questions and exit checks to the base bank. Apply the same question cap. Use profile suggestions for the relevant planning aids and specialist roles. Keep those additions inactive until the choice is confirmed.
 2b. **Coverage and adaptive depth** — follow [the evidence and pacing guide](references/sections/adaptive-interview.md). Save each exit fact and link prior answers or decisions. Confirm supported prior facts in one batch. Ask only targeted follow-ups on missing facts, with explicit choices where the procedure requires them. Checkpoint evidence using `coverage` on each relevant event. Use `LVR interview progress --section <S> --in -` and show the known/total count in User Language. While a fact lacks evidence, it stays open or becomes a visibly recorded permitted assumption.
-3. **Micro-batch loop** — batch size by tier: T1 up to 3, T2 up to 2, T3 exactly 1 (conventions §7). Phrase every question in User Language, plain and outcome-oriented, with a one-line reason it matters; choose the next batch from the previous answers. After EVERY answer: journal `answer_recorded` (payload `{ "section", "answer_id", "q", "a", "skipped" }` — `q` as asked, `a` verbatim, both User Language; `a` null for skipped) + state write (`sections.<S>.answers["<S>.qNN"] = { "q", "a", "skipped" }`, `q` stored as asked in User Language) — one checkpoint per answer. Bank question numbers are a suggested pool order; the authoritative id is `S<N>.qNN`, assigned at ask time within the Section. Keep both controls visible with every batch: **skip** (recorded with `"skipped": true`; never blocks) and **"cukup" / that's enough for this Section** (jumps straight to the exit-criteria check). A deferral ("later") is not a skip: the question stays open and may be re-asked in a targeted batch. Only an explicit skip — or leaving it unanswered at the exit check, which fires the `assumed` fallback — records `skipped: true`. Never re-ask a recorded answer — check `answers` before composing each batch.
+3. **Micro-batch loop** — batch size by tier: T1 up to 3, T2 up to 2, T3 exactly 1 (conventions §7). Phrase every question in User Language, plain and outcome-oriented, with a one-line reason it matters; choose the next batch from the previous answers. After EVERY answer: journal `answer_recorded` (payload `{ "section", "answer_id", "q", "a", "skipped" }` — `q` as asked, `a` verbatim, both User Language; `a` null for skipped) + state write (`sections.<S>.answers["<S>.qNN"] = { "q", "a", "skipped" }`, `q` stored as asked in User Language) — one checkpoint per answer. Bank question numbers are a suggested pool order; the authoritative id is `S<N>.qNN`, assigned at ask time within the Section. Keep both controls visible with every batch: **skip** (recorded with `"skipped": true`; never blocks) and **that's enough for this Section** in the conversation language (jumps straight to the exit-criteria check). A deferral ("later") is not a skip: the question stays open and may be re-asked in a targeted batch. Only an explicit skip — or leaving it unanswered at the exit check, which fires the `assumed` fallback — records `skipped: true`. Never re-ask a recorded answer — check `answers` before composing each batch.
    - Script: after every answer `LVR answer record --section <S> --in -` with `{"q":"<as asked>","a":"<verbatim>"}` (add `"skipped":true` for a skip; the id `<S>.q<n>` is assigned for you). Answers can never be silently overwritten (`ANSWER_EXISTS`).
 4. **Decisions** — any decision surfaced in the Section goes into `decisions[]` (`D-NNN`, status `user_confirmed | assumed | designer_filled` per principle 12) at the checkpoint where it is made; `assumed` and `designer_filled` also land in ASSUMPTIONS.md at S9. Status follows who decided: an explicit user choice made in conversation is `user_confirmed` even if the topic was designer-surfaced; `designer_filled` is only for decisions the user never made themselves. A decision that rests on a fact cites it in its rationale (a `U-NN` item or a cite tag, conventions §10); one that rests on an unverified fact is never `designer_filled` — ask the user, or it becomes an S6 blocking risk (principle 1).
    - Script: put `"decisions":[{"section":"<S>","summary":"…","rationale":"…","status":"user_confirmed"}]` in the same `answer record` input (ids `D-NNN` are assigned), or use `LVR decision record --event <carrier-event> --payload '{…}' --decision '{…}'` at the checkpoint where it is made.
 5. **Exit-criteria check** — when the questions are done or the user says enough, verify every exit criterion this Section's procedure lists. Unmet → say specifically what is missing (plain language) and run one more targeted batch. If the user still wants to move on with criteria unmet, mark the Section `blocked`, record the unmet criteria in its record, and stop before the next Section — never silently advance past unmet exit criteria. Journal `section_blocked` (payload: the Section id + the unmet criteria) as part of that checkpoint. Unblock path: when the user later supplies what was missing, re-run the exit-criteria check; on pass the Section closes normally (`section_done`, its record updated with the resolved criteria). Blocked sections resume like in-progress ones via /lvr-continue.
    - Script: `LVR journal append --type section_blocked --payload '{"section":"<S>","unmet":["…"]}'`
    - Check progress against the saved fact list. Each completed claim has eligible recorded evidence. An assumption must be allowed by this Section and named with its decision ID.
-6. **Done** — write the Section Record `PROJECT_DIR/.lvr/docs/sections/<S>-<name>.md`: the questions, the user's verbatim answers (User Language), an English summary per answer, the Section's decision summary, and the exit-criteria results. Update state (`status` "done", `record`, `completed_at`, `current_section` = next Section (after S9 it stays S9)). Journal `section_done`. One checkpoint.
+6. **Done** — write the Section Record `PROJECT_DIR/.lvr/docs/sections/<S>-<name>.md`: English question and answer summaries keyed by the original `S<n>.q<n>` IDs, the Section's decision summary, and the exit-criteria results. Update state (`status` "done", `record`, `completed_at`, `current_section` = next Section (after S9 it stays S9)). Journal `section_done`. One checkpoint.
    - Script: `LVR journal append --type section_done --payload '{"section":"<S>","record":"<S>-<name>.md"}'`
    - After S7 closes, freeze the chosen profile files with `LVR profile plan --write`. The command records the planned additions once. Keep that list through S9 and show any profile packs it could not find.
 7. **Next** — continue with the next Section's procedure block. After S9 closes, suggest `/lvr-handoff`. S10 Build is not an interview Section: the bundle must suffice for any builder without this skill, and the optional `/lvr-build` tracks its progress in `project.status`.
@@ -285,8 +285,10 @@ Then use bank questions 1, 2 and 4 within the tier's batch limit and continue in
 ```markdown
 # S1 — Context
 
+<!-- lvr:english-summary -->
+
 ## Answers
-- **<S1.qNN> <question, User Language>** — <answer verbatim> · _EN: <summary>_
+- **<S1.qNN> <English question summary>** — <English answer summary>
 
 ## Decisions this Section
 - **<D-NNN>** <summary> — <rationale> · status: <user_confirmed | assumed | designer_filled>
@@ -371,7 +373,7 @@ Purpose: feature expectations captured in detail, iteratively, until the user sa
 
 **Booster** — load grilling at the start of the capture rounds. Apply `mom-test`, `deliver-edge-cases`, `user-stories` and `deliver-acceptance-criteria` where relevant. Use the UI aids from the section plan for interface ideas. Keep the bank and surface degraded mode when using it alone.
 
-**Capture format (F-01…)** — every feature is captured per the format in `references/sections/S4-features.md`: plain-words name, one named kind of user, a click-by-click happy-path script ("posting ke IG" style — a stranger holding the phone could follow it without asking anything), priority must/should/could confirmed aloud, and the failure cases the user cares about. Apply `deliver-edge-cases` to every F-NN and record the [four unhappy paths](references/bundle/plan-quality.md#s4--unhappy-paths), including recovery and a test or a reason a path cannot occur. When capturing each F-NN, also coin an English display name — the record keeps the user's verbatim words; the English name is what SPEC/requirements.md, USER_FLOWS.md, and blueprint.json use. A name without a script is a placeholder, not a feature.
+**Capture format (F-01…)** — every feature is captured per the format in `references/sections/S4-features.md`: plain-words name, one named kind of user, a click-by-click happy-path script (a stranger holding the phone could follow each step without asking anything), priority must/should/could confirmed aloud, and the failure cases the user cares about. Apply `deliver-edge-cases` to every F-NN and record the [four unhappy paths](references/bundle/plan-quality.md#s4--unhappy-paths), including recovery and a test or a reason a path cannot occur. When capturing each F-NN, also coin an English display name — the journal preserves the original wording and the English name is what SPEC/requirements.md, USER_FLOWS.md, and blueprint.json use. A name without a script is a placeholder, not a feature.
 
 **Question strategy** — a capture loop: the one thing (the F-01 seed); walk it through like holding the phone — that IS the script; the next thing, one feature per script, never a blob; per feature: who taps it, what "done" leaves behind, what would annoy them; repair weak scripts by copying the old workaround; the three-that-matter round assigns priorities; the first-run emptiness question surfaces empty-state decisions.
 
@@ -388,16 +390,16 @@ Purpose: feature expectations captured in detail, iteratively, until the user sa
 - A feature named as a blob and split into parts → the split recorded `designer_filled` until the user corrects it.
 - Features left unmentioned after the three-that-matter round default to `could`, said visibly; the user's acceptance of that default is one `user_confirmed` decision.
 
-**The "enough" protocol** — on "cukup"/enough: stop capturing (no "are you sure?"); draft routine unhappy-path defaults for correction and scan every F-NN for a complete script, a priority and the four unhappy paths, and scan the F-NN feature blocks (name, who, priority, happy path) for placeholder language ("and whatever else", "etc."); then one final complete-or-drop batch covering all failing features — for each, fix the failure (finish its script in one last walk-through, confirm the missing priority aloud, or resolve the behavior that blocks an unhappy path) or drop it into a "named but not captured" list (recorded, never counted as a feature); refusing the batch → exit criterion unmet → Section `blocked` with the failing features named. Full protocol: `references/sections/S4-features.md`.
+**The "enough" protocol** — when the user says they have given enough: stop capturing (no "are you sure?"); draft routine unhappy-path defaults for correction and scan every F-NN for a complete script, a priority and the four unhappy paths, and scan the F-NN feature blocks (name, who, priority, happy path) for placeholder language ("and whatever else", "etc."); then one final complete-or-drop batch covering all failing features — for each, fix the failure (finish its script in one last walk-through, confirm the missing priority aloud, or resolve the behavior that blocks an unhappy path) or drop it into a "named but not captured" list (recorded, never counted as a feature); refusing the batch → exit criterion unmet → Section `blocked` with the failing features named. Full protocol: `references/sections/S4-features.md`.
 
 **Exit criteria** (engine step 5; cite the satisfying answer id or decision id):
 
 - [ ] The user explicitly said enough (the control, or the natural end of the capture loop).
 - [ ] Every captured F-NN has a complete click-by-click happy path and a priority.
 - [ ] Every F-NN covers abandonment, invalid input, concurrency/retry, and expiry/hold. Each path has observable recovery or a reason it is inapplicable.
-- [ ] No "and whatever else"/"etc." placeholders in the F-NN feature blocks (name, who, priority, happy path); verbatim answer quotes keep the user's own words, "dll" included.
+- [ ] No "and whatever else"/"etc." placeholders in the F-NN feature blocks (name, who, priority, happy path); original answer wording stays in the journal.
 
-**Section Record** — `S4-fitur.md` on the shared S1 skeleton, plus the feature list: each F-NN in the capture format, verbatim, as its own subsection before the exit criteria.
+**Section Record** — `S4-fitur.md` on the shared S1 skeleton, plus the feature list: each F-NN in the English capture format as its own subsection before the exit criteria.
 
 ### S5 — Deep research
 
@@ -449,8 +451,10 @@ Purpose: competitor scan, stack candidates with reasons, cost table, regional av
 ## Recommended stack
 ## Cost table and regional availability
 
+<!-- lvr:english-summary -->
+
 ## Answers
-- **<S5.qNN> <question, User Language>** — <answer verbatim> · _EN: <summary>_
+- **<S5.qNN> <English question summary>** — <English answer summary>
 (or "None — no user questions were needed.")
 
 ## Decisions this Section
@@ -573,8 +577,10 @@ Script: `LVR journal append --type scope_locked --payload '{"in_mvp":["F-01"],"p
 - Confirmed: <S7.qNN> · decision <D-NNN> · journaled `scope_locked` <ts>
 - Frozen from here: changes go through /lvr-add-feature.
 
+<!-- lvr:english-summary -->
+
 ## Answers
-- **<S7.qNN> <question, User Language>** — <answer verbatim> · _EN: <summary>_
+- **<S7.qNN> <English question summary>** — <English answer summary>
 (always at least the confirmation: the skip attempt + re-ask, then the explicit yes)
 
 ## Decisions this Section / Exit criteria / Context research
@@ -631,8 +637,10 @@ Script: close S8 with `LVR journal append --type section_done --payload '{"secti
 - **Verification:** <exact commands + expected outputs; visual checks as observable facts>
 - **Rough cost/effort:** <estimate + basis>
 
+<!-- lvr:english-summary -->
+
 ## Answers
-- **<S8.qNN> <question, User Language>** — <answer verbatim> · _EN: <summary>_
+- **<S8.qNN> <English question summary>** — <English answer summary>
 (or "None — the review passed without corrections.")
 
 ## Decisions this Section / Exit criteria / Context research
@@ -643,7 +651,7 @@ Script: close S8 with `LVR journal append --type section_done --payload '{"secti
 
 Before compiling a project with a recorded framework decision, recheck S5b evidence if its `recheck_by` date is due. Carry verified pins and documentation sources to the stack section of `SPEC/architecture.md`. Route a feasibility change through S6 and preserve the chosen stack until the user confirms a change.
 
-Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the Blueprint Bundle of 20 base Markdown files, frozen profile additions and the derived index (conventions §8; the per-file specs are packaged in `references/bundle/templates.md`). The bundle lives in the project folder next to `.lvr/` and must be self-sufficient: any harness, with no LVR skills installed, can build the product from it. Mostly AI work: the Conductor compiles; the user is brought in only when a gap needs their call. English is the source — the bundle is written in English; the web UI renders it in User Language (principle 5, conventions §4). The bundle files are S9's output: no `S9-*.md` Section Record is written (conventions §5).
+Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the Blueprint Bundle of 20 base Markdown files, frozen profile additions and the derived index (conventions §8; the per-file specs are packaged in `references/bundle/templates.md`). The bundle lives in the project folder next to `.lvr/` and must be self-sufficient: any harness, with no LVR skills installed, can build the product from it. Mostly AI work: the Conductor compiles; the user is brought in only when a gap needs their call. The entire bundle is written in English. The viewer displays the saved files (principle 5, conventions §4). The bundle files are S9's output: no `S9-*.md` Section Record is written (conventions §5).
 
 **Booster** — apply `deliver-prd` for PRD, `api-designer` when applicable, and `user-stories` and `deliver-acceptance-criteria` for requirements. Reference `develop-adr` and the Spec Kit templates when applicable. Apply ponytail to code style, then SimpleEnglish and anti-slop to prose. Apply the applicable UI or AI aids to those files. Fetch [the AGENTS.md format](https://raw.githubusercontent.com/agentsmd/agents.md/main/README.md) as documentation. Use the licensed anti-slop snapshot only as a degraded fallback when needed. Surface degraded uses in OVERVIEW.
 
@@ -661,7 +669,7 @@ Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the B
 
 **Work strategy** — the 6-step compilation order, run in sequence:
 
-1. **Draft** — compile each base file from the Section Records + `decisions[]` + `milestones[]`, following its skeleton in `references/bundle/templates.md`, in bundle order (conventions §8): `AGENTS.md` → `OVERVIEW.md` → … → `CLAUDE.md`/`GEMINI.md`. Then compile the frozen additions. Templates carry the structure; content comes only from the records — never invented. A gap the records cannot fill becomes an `assumed` decision (listed in ASSUMPTIONS.md) or a Limitations note, not a fabrication.
+1. **Draft** — compile each base file from the Section Records + `decisions[]` + `milestones[]`, following its skeleton in `references/bundle/templates.md` and the before-write English check in conventions §4, in bundle order (conventions §8): `AGENTS.md` → `OVERVIEW.md` → … → `CLAUDE.md`/`GEMINI.md`. Then compile the frozen additions. Templates carry the structure; content comes only from the records — never invented. A gap the records cannot fill becomes an `assumed` decision (listed in ASSUMPTIONS.md) or a Limitations note, not a fabrication.
 2. **Cross-check pass** — over the drafted bundle; fix every failure with a targeted edit to the offending file(s), then re-check. The full list:
    - every F-NN has a USER_FLOWS.md entry and a SPEC/requirements.md row;
    - every decision in `decisions[]` has a DECISIONS.md row — and DECISIONS.md holds nothing `decisions[]` lacks;
@@ -689,7 +697,7 @@ Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the B
 
 **Regeneration** — per file, explicit, only on user request or on a handoff gap-fix (`/lvr-handoff` re-lints instead of regenerating — conventions §9). Never blanket-regenerate the bundle; blueprint.json is the standing exception — derived and always regenerated from state, never hand-edited.
 
-**Owner documents** — OVERVIEW.md and HANDOVER.md are written FOR the non-technical owner: plain language (strictest SimpleEnglish reading level in OVERVIEW.md), real numbers in the cost table, no step that assumes reading code. Artifacts stay English; the web UI translates to User Language (principle 5, conventions §4).
+**Owner documents** — OVERVIEW.md and HANDOVER.md are written FOR the non-technical owner: plain language (strictest SimpleEnglish reading level in OVERVIEW.md), real numbers in the cost table, no step that assumes reading code. Present any localized explanation in conversation (principle 5, conventions §4).
 
 **Branding check (conventions §2)** — offer it while drafting OVERVIEW.md: the display name may still change here. A change is one `user_confirmed` decision, applied across the bundle before the cross-check runs. Any branding rename applies to `project.name` in state **before** the bundle is compiled, so OVERVIEW.md always carries the final name.
 

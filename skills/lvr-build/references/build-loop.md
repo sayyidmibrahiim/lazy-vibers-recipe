@@ -35,8 +35,9 @@ For the selected milestone:
 4. Capture, per command:
    - the exact command line;
    - exit code;
-   - full stdout/stderr (trim only repeated noise, never the failing lines);
+   - exact stdout/stderr in the raw evidence file, with secret values redacted;
    - timestamp.
+   Save each capture as `.lvr/verification/results/<milestone>-attempt-<n>-command-<n>.json`. Keep the same capture on resume. Use a new command number for each command in the recorded procedure. Write the interpretation in English in `VERIFICATION.md` and reference the evidence file.
 5. Compare exit code and observations with the expected result. A timeout, execution error, incomplete output or partial match cannot pass. The command wrapper's `ok: true` means the capture completed. Read `passed` and check the output against every assertion. Set `timeout_ms` for a documented command that legitimately needs more time.
 
 Run the checks associated with each changed part of the approved bundle.
@@ -60,7 +61,7 @@ Never weaken a check, delete an assertion, or mark a partial pass to move on.
 
 ## 5. Recording results
 
-Append to `VERIFICATION.md`; never rewrite earlier entries.
+Check the English text of the new entry using conventions §4 before appending it to `VERIFICATION.md`. Preserve earlier entries and keep command text exact.
 
 ~~~~markdown
 ## Build log — <YYYY-MM-DDTHH:MM:SSZ>
@@ -69,10 +70,8 @@ Append to `VERIFICATION.md`; never rewrite earlier entries.
 - Attempt: <n>
 - Command: `<exact command>`
 - Exit code: <n>
-- Output:
-```text
-<captured output>
-```
+- Evidence: `.lvr/verification/results/<milestone>-attempt-<n>-command-<n>.json`
+- Observed output: <English summary of the relevant actual output>
 - Result: <which acceptance criteria passed/failed>
 - State: verified at <ts> | blocked, owner <skill/user>
 ~~~~
@@ -84,7 +83,7 @@ After writing the log, run `LVR state milestone set --id M<n> --in -` with `stat
 Use `LVR release plan` to read `release_check` from each confirmed profile. For an older bundle with a recorded web URL and no chosen type, the plan uses its web check. If an older bundle has neither, establish its type from the approved plan and confirm it with the owner if uncertain. Without Node, read the same fields in `profiles/<type>.json` and keep the same evidence.
 
 1. Use the actual artifact or deployment specified by the milestone. Test the released version from a fresh client, runtime, harness, browser profile or device appropriate to its type. Open the web deployment from a clean client and check one expected product fact with a 2xx response. For installable products, prove installation and the profile's run criterion.
-2. Capture the environment, target including the artifact version, command or action, result, and timestamp in `VERIFICATION.md`. Record observed output with secrets removed. In `LVR release record --in -`, send JSON with `product_type`, `status` (`passed` or `failed`), `target`, `evidence` and the `clean_environment` used for a pass. Include numeric `http_status` and observed `product_fact` for a web pass. On web success, journal `deployment_verified` with the URL. Other types use their release records directly.
+2. Capture the environment, target including the artifact version, command or action, result, and timestamp in `VERIFICATION.md`. Summarize observed output in English and reference the original evidence with secrets removed. In `LVR release record --in -`, send JSON with `product_type`, `status` (`passed` or `failed`), `target`, `evidence` and the `clean_environment` used for a pass. Include numeric `http_status` and observed `product_fact` for a web pass. On web success, journal `deployment_verified` with the URL. Other types use their release records directly.
 3. Keep a missing or unsuccessful check open and report the specific artifact or evidence required. A prior entry or a working development copy cannot satisfy the current check.
 
 ## 7. Anti-cheating rules
@@ -92,7 +91,7 @@ Use `LVR release plan` to read `release_check` from each confirmed profile. For 
 - The verification command is part of the contract; changing it to pass is a failure.
 - Test fixtures may be added; assertions and expected outputs may not be weakened.
 - A green build with a modified verification procedure is worse than a red build with the original procedure.
-- `.lvr/` writes are limited to `project.status` (`building` at `build_started`, `complete` at `build_done`), `milestones[].verified`, `verified_at`, `deployment`, `release_check`, and journal appends. Everything else is read-only.
+- `.lvr/` writes are limited to `project.status` (`building` at `build_started`, `complete` at `build_done`), `milestones[].verified`, `verified_at`, `deployment`, `release_check`, raw verification evidence in `.lvr/verification/results/`, and journal appends. Everything else is read-only.
 
 ## 8. Build boosters
 

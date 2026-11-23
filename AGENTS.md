@@ -10,7 +10,7 @@ Local-only Next.js 16 app: idea -> 4 interview questions -> 5 generated markdown
 - Typecheck: `npx tsc --noEmit`. In a fresh checkout run `npm run build` (or `next dev`) once first: `next-env.d.ts` imports generated `.next/types/routes.d.ts`, so `tsc` fails before those exist.
 - `npm run build` then `npm start` for production. The build runs TypeScript itself.
 - No test runner installed. Verify manually: `curl -sN -X POST localhost:3000/api/projects/<id>/blueprint -H 'content-type: application/json' -d '{"answers":{}}'` prints the NDJSON progress stream.
-- The LLM proxy at `127.0.0.1:17070` must be up to exercise project creation or generation; failures surface as 502.
+- Legacy creation and generation need a configured `LLM_BASE_URL` and `LLM_MODEL`. A failed connection surfaces as a 502.
 
 ## Hard constraints
 
@@ -32,8 +32,9 @@ Local-only Next.js 16 app: idea -> 4 interview questions -> 5 generated markdown
 
 ## Conventions
 
-- User-facing copy, validation/error messages, and LLM prompts are Bahasa Indonesia (`<html lang="id">`; the README is English). Prompts require output language to match the user's idea language. Do not translate UI strings, prompts, or error text to English when editing them.
-- Route error mapping: 400 validation, 404 missing record, 502 LLM or parse failure. Error bodies are `{ error: string }` in Indonesian.
+- The web interface, CLI messages, and prompt instructions use English. In conversation and model-generated interview questions, follow an explicit language preference, then the latest clear user language, then the saved project language, with English as the default.
+- Draft and revise documents in English, including headings, table text and diagram labels. Check the language before saving. Keep original wording in the journal or raw evidence and display historical documents as saved. See [the language decision](docs/adr/0002-global-first-english-source-of-truth.md).
+- Route error mapping: 400 validation, 404 missing record, 502 LLM or parse failure. Error bodies are `{ error: string }` in English.
 - No auth by design; this is a local tool. Do not add auth or multi-user state unless asked. README documents loopback binding for exposure.
 - Route handler `params` are Promises in Next 16 (`await params`); layouts use the generated global `LayoutProps<"/">` type.
 

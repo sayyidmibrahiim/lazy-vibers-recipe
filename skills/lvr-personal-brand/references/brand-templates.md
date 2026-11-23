@@ -120,7 +120,7 @@ Goal: <job / consulting / product users / community> · cadence: <n posts/week f
 - [ ] No metric, user count, revenue, award, or endorsement without evidence.
 - [ ] Product name and one-line match `OVERVIEW.md` and `blueprint.json`.
 - [ ] Links resolve and the applicable release checks passed this run.
-- [ ] Applicable market and platform citations pass `LVR cite check` for the draft and any localized variants.
+- [ ] Applicable market and platform citations pass `LVR cite check` for the draft.
 - [ ] The prose pass preserves facts, citations and the owner's wording where it carries meaning.
 - [ ] Files live under `brand/`, not in the bundle.
 - [ ] Nothing was posted, scheduled, or sent to a platform.

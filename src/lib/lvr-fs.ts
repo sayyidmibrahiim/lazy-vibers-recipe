@@ -124,13 +124,13 @@ const sectionIds = Array.from({ length: 10 }, (_, index) => `S${index}`);
 const sectionStatus = new Set(["pending", "in_progress", "done", "blocked"]);
 const decisionStatus = new Set(["user_confirmed", "assumed", "designer_filled"]);
 const baseFiles = [
-  ["OVERVIEW.md", "Ringkasan"], ["SPEC/prd.md", "Dokumen kebutuhan produk"], ["SPEC/requirements.md", "Kebutuhan fitur"],
-  ["SPEC/data-model.md", "Model data"], ["SPEC/api.md", "Kontrak API"], ["SPEC/architecture.md", "Arsitektur"],
-  ["USER_FLOWS.md", "Alur pengguna"], ["AGENTS.md", "Panduan agen"], ["DECISIONS.md", "Keputusan"],
-  ["SCOPE.md", "Cakupan"], ["MILESTONES.md", "Tahap pembangunan"], ["VERIFICATION.md", "Verifikasi"],
-  ["ASSUMPTIONS.md", "Asumsi"], ["RESEARCH.md", "Riset"], ["CODE_STYLE.md", "Gaya kode"], ["SECURITY.md", "Keamanan"],
-  ["HANDOVER.md", "Panduan serah terima"], ["CAPABILITIES.md", "Alat bantu"], ["HANDOFF-PROMPT.md", "Petunjuk pembangun"],
-  ["CLAUDE.md", "Petunjuk Claude"], ["GEMINI.md", "Petunjuk Gemini"], ["blueprint.json", "Indeks blueprint"],
+  ["OVERVIEW.md", "Overview"], ["SPEC/prd.md", "Product requirements"], ["SPEC/requirements.md", "Feature requirements"],
+  ["SPEC/data-model.md", "Data model"], ["SPEC/api.md", "API contract"], ["SPEC/architecture.md", "Architecture"],
+  ["USER_FLOWS.md", "User flows"], ["AGENTS.md", "Agent guide"], ["DECISIONS.md", "Decisions"],
+  ["SCOPE.md", "Scope"], ["MILESTONES.md", "Build milestones"], ["VERIFICATION.md", "Verification"],
+  ["ASSUMPTIONS.md", "Assumptions"], ["RESEARCH.md", "Research"], ["CODE_STYLE.md", "Code style"], ["SECURITY.md", "Security"],
+  ["HANDOVER.md", "Handover guide"], ["CAPABILITIES.md", "Boosters"], ["HANDOFF-PROMPT.md", "Builder prompt"],
+  ["CLAUDE.md", "Claude instructions"], ["GEMINI.md", "Gemini instructions"], ["blueprint.json", "Blueprint index"],
 ] as const;
 const baseTitles = new Map<string, string>(baseFiles);
 const asObject = (value: unknown): Fields => value !== null && typeof value === "object" && !Array.isArray(value) ? value as Fields : {};
@@ -149,7 +149,7 @@ const dateOf = (value: unknown): string | null => {
 
 export class LvrPathError extends Error {
   constructor() {
-    super("Folder berisi tautan yang mengarah ke luar proyek.");
+    super("The folder contains a link to a file outside the project.");
   }
 }
 
@@ -302,7 +302,7 @@ export function parseLvrState(raw: unknown, journal: Fields[] = []): LvrState | 
   const reviewRun = number(lastReview.run);
   return {
     schema_version: number(item.schema_version) ?? 1,
-    project: { slug: slug ?? "", name: name ?? slug ?? "", idea_raw: text(project.idea_raw) ?? "", user_language: text(project.user_language) ?? "id", created_at: text(project.created_at) ?? "", status: text(project.status) ?? "" },
+    project: { slug: slug ?? "", name: name ?? slug ?? "", idea_raw: text(project.idea_raw) ?? "", user_language: text(project.user_language) ?? "en", created_at: text(project.created_at) ?? "", status: text(project.status) ?? "" },
     productTypes: list(asObject(item.product).types),
     pipeline: { current, sections, loop_backs: values(pipeline.loop_backs).map(asObject).filter((entry) => text(entry.id)).map((entry) => ({
       id: String(entry.id), reason: text(entry.reason) ?? "", target_section: text(entry.target_section) ?? "", opened_at: text(entry.opened_at) ?? "", resolved_at: text(entry.resolved_at),
@@ -449,16 +449,16 @@ export function buildLvrDiagrams(state: LvrState, features: LvrBlueprint["featur
     const position = positions.get(id);
     return position === undefined ? [] : [`  f${position} --> m${index}`];
   }));
-  const diagrams: LvrProjectDetail["diagrams"] = [{ id: "sections", title: "Linimasa perencanaan", code: ["flowchart LR", ...sectionIds.map((id, index) => `  ${node(`s${index}`, `${id} ${state.pipeline.sections[id]?.status === "done" ? "selesai" : state.pipeline.sections[id]?.status === "blocked" ? "terhambat" : state.pipeline.sections[id]?.status === "in_progress" ? "berjalan" : "menunggu"}`)}`), `  ${sectionIds.map((_, index) => `s${index}`).join(" --> ")}`].join("\n") }];
+  const diagrams: LvrProjectDetail["diagrams"] = [{ id: "sections", title: "Planning timeline", code: ["flowchart LR", ...sectionIds.map((id, index) => `  ${node(`s${index}`, `${id} ${state.pipeline.sections[id]?.status === "done" ? "complete" : state.pipeline.sections[id]?.status === "blocked" ? "blocked" : state.pipeline.sections[id]?.status === "in_progress" ? "in progress" : "pending"}`)}`), `  ${sectionIds.map((_, index) => `s${index}`).join(" --> ")}`].join("\n") }];
   if (milestones.length) {
-    diagrams.push({ id: "milestones", title: "Urutan tahap pembangunan", code: ["flowchart LR", ...milestoneNodes, ...(milestones.length > 1 ? [`  ${milestones.map((_, index) => `m${index}`).join(" --> ")}`] : [])].join("\n") });
+    diagrams.push({ id: "milestones", title: "Build milestone sequence", code: ["flowchart LR", ...milestoneNodes, ...(milestones.length > 1 ? [`  ${milestones.map((_, index) => `m${index}`).join(" --> ")}`] : [])].join("\n") });
   }
   if (features.length) {
-    diagrams.push({ id: "features", title: "Fitur dan tahap pembangunan", code: ["flowchart TD", ...features.map((item, index) => `  ${node(`f${index}`, `${item.id} ${item.name}`)}`), ...milestoneNodes, ...relationships].join("\n") });
+    diagrams.push({ id: "features", title: "Features and build milestones", code: ["flowchart TD", ...features.map((item, index) => `  ${node(`f${index}`, `${item.id} ${item.name}`)}`), ...milestoneNodes, ...relationships].join("\n") });
   }
   const blocks = [...(dataModel ?? "").matchAll(/^ {0,3}(`{3,}|~{3,})mermaid[ \t]*\r?\n([\s\S]*?)^ {0,3}\1[ \t]*$/gmi)];
   for (const match of blocks) {
-    if (/^\s*erDiagram\b/i.test(match[2])) diagrams.push({ id: `erd-${diagrams.length}`, title: "Relasi data", code: match[2].trim() });
+    if (/^\s*erDiagram\b/i.test(match[2])) diagrams.push({ id: `erd-${diagrams.length}`, title: "Data Relationships", code: match[2].trim() });
   }
   if (!diagrams.some((diagram) => diagram.id.startsWith("erd-"))) {
     const relations = /(?:^|\n)##\s+(?:relations|relationships|relasi)\s*\r?\n([\s\S]*?)(?=\n##\s|$)/i.exec(dataModel ?? "")?.[1] ?? "";
@@ -466,8 +466,8 @@ export function buildLvrDiagrams(state: LvrState, features: LvrBlueprint["featur
     if (edges.length) {
       const names = [...new Set(edges.flatMap((edge) => [edge[1], edge[4].trim().replace(/`/g, "")]))];
       const nodes = names.map((name, index) => `  ${node(`e${index}`, name)}`);
-      const links = edges.map((edge) => `  e${names.indexOf(edge[1])} -->|${edge[2].toUpperCase()} ke ${edge[3].toUpperCase()}| e${names.indexOf(edge[4].trim().replace(/`/g, ""))}`);
-      diagrams.push({ id: "erd-relations", title: "Relasi data", code: ["flowchart TD", ...nodes, ...links].join("\n") });
+      const links = edges.map((edge) => `  e${names.indexOf(edge[1])} -->|${edge[2].toUpperCase()} to ${edge[3].toUpperCase()}| e${names.indexOf(edge[4].trim().replace(/`/g, ""))}`);
+      diagrams.push({ id: "erd-relations", title: "Data Relationships", code: ["flowchart TD", ...nodes, ...links].join("\n") });
     }
   }
   return diagrams;
@@ -477,20 +477,20 @@ function projectMindmap(state: LvrState, features: LvrBlueprint["features"], fin
   const located = (locator: string | null) => locator?.split("#")[0] ?? undefined;
   const risks = [...(research ?? "").matchAll(/^\|\s*\**(R-\d+)\**\s*\|\s*([^|]+)\|/gm)];
   return { id: "idea", title: state.project.name, source: "OVERVIEW.md", children: [
-    { id: "type", title: "Jenis produk", children: state.productTypes.map((type) => ({ id: type, title: type, source: "SPEC/prd.md" })) },
-    { id: "sections", title: "Bagian perencanaan", children: sectionIds.map((id) => {
+    { id: "type", title: "Product type", children: state.productTypes.map((type) => ({ id: type, title: type, source: "SPEC/prd.md" })) },
+    { id: "sections", title: "Planning steps", children: sectionIds.map((id) => {
       const section = state.pipeline.sections[id];
       const record = section.record;
       return { id, title: id, status: section.status, source: record && relativeFile(record) ? `${folder}/docs/sections/${record}` : undefined };
     }) },
-    { id: "features", title: "Fitur", children: features.map((item) => ({ id: item.id, title: `${item.id} ${item.name}`, status: item.in_mvp ? "in_mvp" : "parked", source: "SPEC/requirements.md" })) },
-    { id: "milestones", title: "Tahap pembangunan", children: state.milestones.map((item) => ({ id: item.id, title: `${item.id} ${item.goal}`, status: item.verified ? "done" : "pending", source: "MILESTONES.md" })) },
-    { id: "decisions", title: "Keputusan dan asumsi", children: ["user_confirmed", "assumed", "designer_filled"].map((status) => ({ id: status, title: status, status, children: state.decisions.filter((item) => item.status === status).map((item) => ({ id: item.id, title: `${item.id} ${item.summary}`, status, source: status === "user_confirmed" ? "DECISIONS.md" : "ASSUMPTIONS.md" })) })) },
-    { id: "risk", title: "Risiko dan temuan", source: "RESEARCH.md", children: [
+    { id: "features", title: "Features", children: features.map((item) => ({ id: item.id, title: `${item.id} ${item.name}`, status: item.in_mvp ? "in_mvp" : "parked", source: "SPEC/requirements.md" })) },
+    { id: "milestones", title: "Build milestones", children: state.milestones.map((item) => ({ id: item.id, title: `${item.id} ${item.goal}`, status: item.verified ? "done" : "pending", source: "MILESTONES.md" })) },
+    { id: "decisions", title: "Decisions and assumptions", children: ["user_confirmed", "assumed", "designer_filled"].map((status) => ({ id: status, title: status, status, children: state.decisions.filter((item) => item.status === status).map((item) => ({ id: item.id, title: `${item.id} ${item.summary}`, status, source: status === "user_confirmed" ? "DECISIONS.md" : "ASSUMPTIONS.md" })) })) },
+    { id: "risk", title: "Risks and findings", source: "RESEARCH.md", children: [
       ...risks.map(([, id, description]) => ({ id, title: `${id} ${description.trim()}`, source: "RESEARCH.md" })),
       ...findings.map((item) => ({ id: item.id, title: `${item.id} ${item.claim}`, status: item.status, source: located(item.locator) })),
     ] },
-    { id: "sessions", title: "Sesi dan agen", children: state.sessions.map((session) => ({ id: String(session.startSeq), title: session.harness ?? session.skill, status: session.endReason ?? "in_progress", children: session.agents.map((id) => {
+    { id: "sessions", title: "Sessions and Agents", children: state.sessions.map((session) => ({ id: String(session.startSeq), title: session.harness ?? session.skill, status: session.endReason ?? "in_progress", children: session.agents.map((id) => {
       const agent = state.agents.find((item) => item.id === id);
       return { id, title: agent?.profile || id, status: agent?.status, source: agent?.record && relativeFile(agent.record) ? `${folder}/docs/sections/${agent.record}` : undefined };
     }) })) },
@@ -521,7 +521,7 @@ export function readLvrProject(targetDir: string): LvrProjectDetail | null {
     };
     const declared = blueprint?.files.length ? blueprint.files : [...baseTitles.keys()].filter((file) => file !== "HANDOFF-PROMPT.md");
     for (const file of declared) add(file, baseTitles.get(file) ?? file, file === "OVERVIEW.md" ? "overview" : file.startsWith("SPEC/") ? "spec" : baseTitles.has(file) ? "bundle" : "profile", true);
-    if (!declared.includes("HANDOFF-PROMPT.md")) add("HANDOFF-PROMPT.md", "Petunjuk pembangun", "bundle", false);
+    if (!declared.includes("HANDOFF-PROMPT.md")) add("HANDOFF-PROMPT.md", "Builder prompt", "bundle", false);
     if (!blueprint?.files.length) {
       for (const file of ["UI_SPEC.md", "SPEC/ai.md"]) if (!declared.includes(file)) add(file, file, "profile", false);
       for (const section of ["profile", "profiles"]) for (const name of disk.entries(section).filter((file) => relativeFile(file) && markdown(file))) add(`${section}/${name}`, name, "profile", false);
@@ -532,7 +532,7 @@ export function readLvrProject(targetDir: string): LvrProjectDetail | null {
       for (const file of files.reverse()) add(`${location}/${file}`, file, category, false);
     }
     const brief = disk.read(`${folder}/docs/research/domain-brief.md`);
-    if (brief) add(`${folder}/docs/research/domain-brief.md`, "Riset konteks", "section", false);
+    if (brief) add(`${folder}/docs/research/domain-brief.md`, "Context research", "section", false);
     const findings = parseLvrLedger(disk.read(`${folder}/review/LEDGER.jsonl`));
     const review = state.review?.run ? `${folder}/review/runs/run-${state.review.run}` : null;
     const heatmap = review ? parseReviewCells(parseLvrJson(disk.read(`${review}/snapshot.json`)), parseLvrJson(disk.read(`${review}/cells.json`))) : [];

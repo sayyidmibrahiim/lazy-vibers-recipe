@@ -73,7 +73,7 @@ export function MermaidBlock({ code }: { code: string }) {
   return (
     <div>
       {state.status === "error" ? (
-        <p className="label text-rust">Diagram gagal dirender. Menampilkan kode asli.</p>
+        <p className="label text-rust">Could not render the diagram. Showing its source.</p>
       ) : null}
       <pre>
         <code>{code}</code>

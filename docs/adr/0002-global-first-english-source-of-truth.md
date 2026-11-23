@@ -1,9 +1,7 @@
-# Global-first: English source of truth, AI-mediated translation
+# English interface and documents, adaptive conversation
 
-Repo ini berawal sebagai MVP lokal berbahasa Indonesia (konvensi AGENTS.md: copy UI, prompt, dan error message Bahasa Indonesia). Pemilik memutuskan (F0 grilling, 2026-11-07) bahwa produk pipeline LVP ditujukan untuk user global/public repo, sehingga: semua artefak pipeline (template interview, dokumen bundle, skill files, prompt) ditulis dalam **English** sebagai sumber kebenaran tunggal, dan penerjemahan ke bahasa user dilakukan **dinamis oleh AI saat runtime** (User Language), bukan lewat file terjemahan statis. Konvensi Bahasa Indonesia pada web app MVP yang sudah jadi tetap berlaku sampai rework F3; pekerjaan pipeline baru mengikuti keputusan ini.
+The local MVP began with an Indonesian interface. The original global-first decision made English the source language for planning. The website, CLI messages, skill instructions and generated documents now use English. Conversation, including generated interview questions, follows an explicit language request, the latest clear user language, or the saved project language, with English as the default.
 
-## Considered options
+New documents and revisions use English for prose, headings, tables, captions and diagram labels. The generator checks the draft independently before saving. The check allows one correction and leaves the previous document intact if the corrected draft fails. Names, identifiers, URLs and commands keep their exact spelling.
 
-- Indonesian-first (semua dokumen Bahasa Indonesia): menutup pasar global — ditolak.
-- Bilingual (dokumen English + ringkasan terjemahan tersimpan): dua sumber kebenaran yang pasti tak sinkron — ditolak.
-- English source + terjemahan runtime (dipilih): satu sumber kebenaran; kualitas terjemahan ditanggung model, bukan file.
+The project journal and other raw evidence preserve the user's wording and exact observations. New documents summarize that evidence in English and reference the original. The viewer displays previously saved documents as written.

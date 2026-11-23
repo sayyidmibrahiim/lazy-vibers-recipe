@@ -9,7 +9,7 @@ See [the section booster map](05-boosters.md) for the installed sources and use 
 - Track each exit fact with [journal-backed interview coverage](15-adaptive-interview.md). Confirm facts already supplied together, ask focused follow-ups for missing evidence, and show progress.
 - **Micro-batch adaptive**: 1–3 questions per turn. The Conductor chooses the next batch from the previous answers; batches never exceed 3.
 - Every question is phrased in **plain language oriented to the outcome** ("Do you already pay for a server somewhere?" not "Do you have VPS infrastructure?"), spoken in **User Language**, with a one-line reason why it matters.
-- Controls always visible: **skip** (recorded, does not block), **cukup/that's enough for this Section** (jump to exit criteria check).
+- Controls always visible: **skip** (recorded, does not block), **that's enough for this Section** in the conversation language (jump to exit criteria check).
 - Every answer → `answer_recorded` (checkpoint). Answers are never re-asked once recorded.
 - **Research what the user doesn't know** (principle 14, spec 07 §2): before the first batch of each Section S1–S8 the Conductor runs a per-Section scan (S1–S4: at least one targeted search; S5: the research itself; S6–S8: the freshness re-check `cite check --all` plus searches as needed) and shows the open Domain Brief and scan items for that Section as "Things you may not know", in User Language, each with source and date. Each item becomes a question (counts toward the batch size) or a `designer_filled` decision that cites it. Journal: `context_research` per research step.
 - **Evidence** (principle 1, spec 07 §3–4): every fact the Conductor states carries a cite tag (source URL, published/updated date, access date) within its freshness limit from `freshness.json`; `unverified` only after logged research failed. Web research is required: without it the skills stop (spec 07 §1).
@@ -19,7 +19,7 @@ See [the section booster map](05-boosters.md) for the installed sources and use 
 - Purpose: capture the raw idea fully, detect User Language.
 - Questions: none structured — free-form "tell me everything in your head", multi-paragraph encouraged. Ask clarifying mini-questions only if the idea is under ~2 sentences.
 - Booster: load grilling for targeted clarifying questions.
-- Output: `S0-intake.md` (verbatim idea + language + working slug + market); `project.idea_raw`, `user_language`.
+- Output: `S0-intake.md` (English idea summary, conversation language, working slug and market); original idea in `S0.q1` and `project.idea_raw`, conversation language in `project.user_language`.
 - Exit: idea recorded, slug + display name proposed and confirmed (name can still change at S9 branding step), market (country) confirmed.
 - **Domain Brief** (after S0 closes, before S1's first batch): `.lvr/docs/research/domain-brief.md` — 8–15 cited items on the market's rules and regulations, typical and hidden costs, failure modes, key terms, and what similar users expect; each with an id `U-NN`, a source, and a target Section. Journal `context_research` (scope `brief`). Spec 07 §2.
 
@@ -38,7 +38,7 @@ A shipped profile under `skills/lvr-profiles/<id>.json` is copied to each skill'
 
 The plan merges confirmed profiles in ID order. It deduplicates files and identical questions, rejects conflicting definitions for one question ID, and lists unknown profile IDs if a matching pack is unavailable. Profile defaults combine with OR and recorded project flags take precedence. The plan adds questions to the base bank within the existing batch limit and adds exit checks to the Section's checklist.
 
-## S2 — Kondisi (resources & constraints)
+## S2 — Resources and constraints
 
 - Purpose: what the user already has and can pay: devices, accounts (Apple Developer, Play Console, domains), hosting/VPS, monthly budget ceiling, willingness to run commands at all.
 - Booster: grilling for ready decisions. Use the internal cost fact-sheets as a lead list + live web verification of every price quoted (cite tag with source + dates, `price` limit 30 days; research that fails is logged and the price carries an `[unverified: …]` marker — it never decides a `designer_filled` decision).
@@ -57,7 +57,7 @@ The plan merges confirmed profiles in ID order. It deduplicates files and identi
 
 - Purpose: feature expectations in detail, iteratively until the user says "enough".
 - Booster: load grilling. Apply `mom-test`, `deliver-edge-cases`, `user-stories`, and `deliver-acceptance-criteria`. Apply applicable interface aids.
-- Mechanics: per feature — name, who uses it, step-by-step happy path (the "klik tombol ini → selesai" script), edge cases the user cares about. Features get IDs `F-01…`.
+- Mechanics: per feature — name, who uses it, step-by-step happy path (each action and its visible result), edge cases the user cares about. Features get IDs `F-01…`.
 - Output: `S4-fitur.md`; feeds `SPEC/requirements.md` + `USER_FLOWS.md`.
 - For a confirmed interface, record the visual direction, copy voice and accessibility needs. Compile [UI_SPEC.md](13-ui-spec.md) after scope lock.
 - Every captured feature names abandonment, invalid input, concurrency/retry and expiry/hold outcomes, using deliver-edge-cases and the [internal checks](12-plan-quality.md#s4--unhappy-paths).

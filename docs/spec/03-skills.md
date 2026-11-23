@@ -89,12 +89,12 @@ Post-lock captures and their decision lines live in `.lvr/docs/sections/S4-addit
 1. Preflight (build-loop §1): ids match, every milestone has a verification procedure, no open blocking review finding (`state.review.last.open.blocking` = 0; a project reviewed before the rename: its latest `.lvr/recheck/RECHECK-*.md`). A failed item journals `build_blocked` only (no state field changes) and stops before `build_started`.
 2. Journal `build_started` (`project.status` = `building`). Load context in `AGENTS.md` order and read the files declared in the bundle index.
 3. Select the first unverified milestone, check freshness with `verify freshness`, and load applicable project-local build aids. Recheck expired price, quota, version and stack evidence from official sources before proceeding.
-4. Execute the recorded verification. Use `verify run` to capture exact command output, exit status and times. Exercise associated interface checks, AI evals, data migrations and access checks, and workflow install tests.
+4. Execute the recorded verification. Use `verify run` to capture exact command output, exit status and times. Store redacted raw evidence under `.lvr/verification/results/` and put the English observation and evidence reference in `VERIFICATION.md`. Exercise associated interface checks, AI evals, data migrations and access checks, and workflow install tests.
 5. Append the observation to `VERIFICATION.md`, then use `state milestone set` to checkpoint the result. A pass writes `milestone_verified`. For failure use the two-attempt ladder and `build_blocked` when unresolved.
 6. At release, check each applicable type from `release plan` and capture the result with `release record`. A passing web check also records `deployment_verified`.
 7. When all milestones and each release check pass, journal `build_done` (`project.status` = `complete`). Follow the project-local booster cleanup and recommend `/lvr-handoff`, then `/lvr-personal-brand`. Builder-time specialist agents are deferred until after 1.0 (B11).
 
-`.lvr/` writes are limited to `project.status` (`building`/`complete`), `milestones[].verified`, `verified_at`, `deployment`, `release_check`, its session (`session_start`/`session_end`), and journal appends. Never skip or weaken a verification.
+`.lvr/` writes are limited to `project.status` (`building`/`complete`), `milestones[].verified`, `verified_at`, `deployment`, `release_check`, its session (`session_start`/`session_end`), raw verification evidence under `.lvr/verification/results/`, and journal appends. Never skip or weaken a verification.
 
 ### `/lvr-personal-brand` (v1, implemented)
 
@@ -110,7 +110,7 @@ Post-lock captures and their decision lines live in `.lvr/docs/sections/S4-addit
 5. Draft one file per turn under `brand/`: `BRAND.md`, `LINKEDIN-PROFILE.md`, `CONTENT-PLAN.md`; journal `brand_file_generated` per file.
 6. Run the anti-slop prose pass, verify citations and links, then journal `brand_done`. Use the project-local lifecycle for cleanup.
 
-**Never**: post, schedule, or message on any platform · invent metrics, users, revenue, awards, endorsements · place brand files in the Blueprint Bundle or edit bundle files · replace the English source with a localized variant · run before the gate passes.
+**Never**: post, schedule, or message on any platform · invent metrics, users, revenue, awards, endorsements · place brand files in the Blueprint Bundle or edit bundle files · write the saved brand kit in another language · run before the gate passes.
 
 ## Constitution — `lvr-principles.md`
 
@@ -120,7 +120,7 @@ Loaded by every LVR skill before any work. The list below is a summary; the full
 2. **Anti-yes-man** — if the user's idea has a gap, show it immediately with a concrete fix option. Disagreement is a duty, not a risk.
 3. **Recheck before agreeing AND before disagreeing** — verify, then take a position.
 4. **Allowed to say "I don't know"** — followed immediately by "let me research".
-5. **User Language** — interact in the user's language; artifacts stay English source of truth.
+5. **Language** — follow the conversation preference and fall back to English. Check new or revised documents for English before saving. Preserve exact evidence in the journal or raw evidence records.
 6. **No slop** — concrete, specific, no filler; final documents pass the anti-slop editing pass.
 7. **Plain language** — documents follow SimpleEnglish document rules (short sentences, active voice, jargon defined); this never fights GFM structure.
 8. **Simplicity + surgical changes** — minimal sufficient solution (ponytail ladder), touch only what the task needs (karpathy surgical rule).

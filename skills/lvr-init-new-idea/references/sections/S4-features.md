@@ -6,15 +6,15 @@ Booster note: use grilling for intake rounds. Apply `deliver-edge-cases`, `user-
 
 ## Feature capture format (F-01…)
 
-Every feature is captured in this exact shape, one per feature, ids `F-01, F-02, …` in capture order (conventions §2). A feature does not exist until its happy path is a script; a name without a script is a placeholder, not a feature. Alongside the verbatim name, coin an English display name per F-NN (the `**English name:**` field): the record keeps the user's verbatim words; the English name is what SPEC/requirements.md, USER_FLOWS.md, and blueprint.json use.
+Every feature is captured in this exact shape, one per feature, ids `F-01, F-02, …` in capture order (conventions §2). A feature does not exist until its happy path is a script; a name without a script is a placeholder, not a feature. Coin a plain English display name per F-NN. Use it in the heading, the `**English name:**` field, SPEC/requirements.md, USER_FLOWS.md, and blueprint.json. Refer to the original answers by ID.
 
 ```markdown
-### F-01 — <Name in plain words, the way the user would say it>
+### F-01 — <Plain English display name>
 - **English name:** <coined English display name — the name SPEC/requirements.md, USER_FLOWS.md, and blueprint.json use>
 - **Who uses it:** <one named kind of person from S1 — owner, customer, …>
 - **Happy path (click-by-click script):**
   1. Open <the screen it starts on>.
-  2. Tap <the control>, exactly like telling a friend "posting ke IG" step by step.
+  2. Tap <the control>, as if guiding a friend step by step.
   3. Enter/choose <what>.
   4. … continue until …
   5. Done: <what the person ends up with — a screen, a saved record, a sent message>.
@@ -26,7 +26,7 @@ Every feature is captured in this exact shape, one per feature, ids `F-01, F-02,
   - Expiry/hold — <when and whose clock, stale action, released state, check>
 ```
 
-The script standard: someone holding the phone could follow it without asking you anything. "Posting ke IG" style — every step is a tap, a field, or what appears next. If a step cannot be phrased that way, the feature is not understood yet; ask one more question.
+The script standard: someone holding the phone could follow it without asking you anything. Every step names a tap, a field, or what appears next. If a step cannot be phrased that way, the feature is not understood yet; ask one more question.
 
 ## Question pool
 
@@ -86,7 +86,7 @@ The script standard: someone holding the phone could follow it without asking yo
 
 ## The "enough" protocol
 
-The user may say "cukup" / "that's enough" at any moment. The control never blocks; this is what running it means:
+The user may say "that's enough" in the conversation language at any moment. The control never blocks; this is what running it means:
 
 1. Stop capturing immediately. Do not ask "are you sure?" — one acknowledgment, then the exit check.
 2. Scan every captured F-NN for a complete click-by-click happy path, a priority and the four unhappy paths. Draft routine recovery defaults for correction before the final batch. Also scan the F-NN feature blocks (name, who, priority, happy path) for placeholder language: "and whatever else", "etc.", "…", "some kind of report". Verbatim answer quotes may keep the user's own words, "dll" included.

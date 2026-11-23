@@ -51,6 +51,33 @@ test("replay repairs state from a healthy journal", (t) => {
   assert.deepEqual(run("replay", "--compare").diff, []);
 });
 
+test("replay distinguishes English summaries from original answers and reads legacy records", (t) => {
+  const { dir, run, start } = fixture(t);
+  start();
+  const journal = path.join(dir, ".lvr/journal.ndjson");
+  const records = path.join(dir, ".lvr/docs/sections");
+  fs.mkdirSync(records, { recursive: true });
+  fs.writeFileSync(path.join(records, "S0-intake.md"), "# Intake\n\n<!-- lvr:english-summary -->\n\n## Answers\n- **S0.q1 What is the idea?** — A summary of the idea.\n");
+  const original = { q: "Apa idenya?", a: "Daftar pemesanan lokal.", skipped: false };
+  const events = fs.readFileSync(journal, "utf8").trimEnd().split("\n").map(JSON.parse);
+  const event = events.find(({ type }) => type === "answer_recorded");
+  Object.assign(event.payload, original);
+  const saveJournal = () => fs.writeFileSync(journal, events.map((entry) => JSON.stringify(entry)).join("\n") + "\n");
+  const answer = ({ state }) => state.pipeline.sections.S0.answers["S0.q1"];
+  saveJournal();
+  assert.deepEqual(answer(run("replay", "--print-state")), original);
+
+  delete event.payload.q;
+  delete event.payload.a;
+  saveJournal();
+  const onlySummary = run("replay", "--print-state");
+  assert.deepEqual(answer(onlySummary), { q: null, a: null, skipped: false });
+  assert.deepEqual(onlySummary.report.answers.text_missing, [{ id: "S0.q1", missing: ["q", "a"] }]);
+
+  fs.writeFileSync(path.join(records, "S0-legacy.md"), `# Intake\n\n## Answers\n- **S0.q1 ${original.q}** — ${original.a} · _EN: A local booking list._\n`);
+  assert.deepEqual(answer(run("replay", "--print-state")), original);
+});
+
 test("bundle lint reports absent and incomplete document sets", (t) => {
   const { dir, run, start } = fixture(t);
   start();

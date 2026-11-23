@@ -1,8 +1,8 @@
-# File-based state sebagai sumber kebenaran tunggal
+# File-based state as the single source of truth
 
-Pipeline LVP menyimpan seluruh state sesi sebagai file di folder project user — `.lvp/state.json` (snapshot), `.lvp/journal.ndjson` (log append-only), `.lvp/docs/sections/` (section record per Section) — bukan di database. Skill CLI dan web UI membaca/menulis file yang sama, sehingga "sinkronisasi" bersifat struktural, bukan replikasi; checkpoint dan resume lintas sesi/harness menjadi properti gratis dari format ini. Web app yang sudah ada (SQLite) berubah peran menjadi client; SQLite hanya cache/index bila diperlukan.
+The original LVP pipeline stored session state in files in the user's project folder. The snapshot was `.lvp/state.json`, the append-only log was `.lvp/journal.ndjson`, and the per-Section records were under `.lvp/docs/sections/`. Sharing a file format across the CLI and web viewer lets users checkpoint and resume across sessions and harnesses. The existing SQLite web app became a client, with SQLite available for caching or indexing.
 
 ## Considered options
 
-- SQLite sebagai sumber kebenaran: harness lain tidak bisa membaca state tanpa web app; menyalahi syarat portabilitas — ditolak.
-- State hanya di memori sesi chat: mati saat token habis — ditolak (syarat checkpoint pemilik).
+- SQLite as the source of truth would require other harnesses to read State through the web app and would limit portability.
+- Chat memory alone would lose State when the context window filled, which conflicts with the owner's checkpoint requirement.

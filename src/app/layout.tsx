@@ -14,13 +14,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Lazy Vibers Recipe",
-  description: "Ubah ide menjadi blueprint software yang bisa langsung dikerjakan.",
+  description: "Turn an idea into a software blueprint you can build from.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="id"
+      lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-dvh">{children}</body>

@@ -1,6 +1,6 @@
 import { legacyGuard } from "@/lib/legacy";
 import { NextResponse } from "next/server";
-import { interviewPrompt, parseInterview } from "@/lib/blueprint";
+import { INTERVIEW_SYSTEM_PROMPT, interviewPrompt, parseInterview } from "@/lib/blueprint";
 import { addQuestions, createProject } from "@/lib/db";
 import { chatJson } from "@/lib/llm";
 import { errorMessage } from "@/lib/text";
@@ -16,13 +16,13 @@ export async function POST(request: Request) {
 
   if (idea.length < 15) {
     return NextResponse.json(
-      { error: "Ceritakan idemu minimal satu kalimat utuh." },
+      { error: "Describe your idea in at least one complete sentence." },
       { status: 400 },
     );
   }
   if (idea.length > 6000) {
     return NextResponse.json(
-      { error: "Ide terlalu panjang. Ringkas di bawah 6000 karakter." },
+      { error: "Shorten your idea to 6,000 characters or fewer." },
       { status: 400 },
     );
   }
@@ -30,10 +30,7 @@ export async function POST(request: Request) {
   try {
     const raw = await chatJson<unknown>(
       [
-        {
-          role: "system",
-          content: "Kamu membalas hanya dengan JSON ketat. Tidak ada markdown, tidak ada penjelasan.",
-        },
+        { role: "system", content: INTERVIEW_SYSTEM_PROMPT },
         { role: "user", content: interviewPrompt(idea) },
       ],
       { maxTokens: 1400, temperature: 0.5 },

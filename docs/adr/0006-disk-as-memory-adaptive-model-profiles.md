@@ -1,9 +1,9 @@
-# Disk-as-memory + adaptive model profiles
+# Disk as memory and adaptive model profiles
 
-LVP harus bisa menyelesaikan pipeline penuh di model mana pun (1M-class API, open-weight 128–262k, lokal 32–128k), bukan hanya model frontier. Keputusan: (1) memori pipeline hidup di disk (`.lvp/`), context window diperlakukan sebagai workbench yang di-reload dari disk per Section/batch — bukan gudang; (2) pipeline mendeklarasikan **model profile** (T1/T2/T3, verified 2026-11-08: flash-tier API sekarang 1M juga; pemisah sejati adalah open-weight dan lokal) di bootstrap, dengan **capability probe** wajib untuk T2/T3 dan penolakan jujur bila gagal; (3) aturan perilaku per-tier (batch size, chunking research, append-chunks compilation, reload discipline) plus **context guard** dan **truncation self-recovery** (append-continue, jangan regenerate).
+LVP must complete the pipeline across model classes, including APIs with million-token context windows, open-weight models with 128–262k tokens, and local models with 32–128k tokens. Pipeline memory lives in `.lvp/`. The agent reloads what it needs from disk for each Section or batch. At startup, it declares model profile T1, T2, or T3. T2 and T3 run a capability check and stop with an explanation if the model cannot meet it. Each tier has rules for batch size, dividing research, compiling in chunks, and reloading context. Context guards and truncation recovery support continuing from the last completed point. The 2026-11-08 review found that some fast APIs already offered million-token context windows, making open-weight and local models the more useful boundaries.
 
 ## Considered options
 
-- Wajibkan model 1M saja: menyingkirkan model lokal/murah — melawan tujuan portabilitas; ditolak.
-- Abaikan perbedaan model (pipeline tunggal seragam): model kecil gagal diam-diam atau output terpotong tanpa recovery; ditolak.
-- Adaptif per-tier dengan gate eksplisit (dipilih): kualitas tidak pernah bohong — model yang tidak mampu ditolak di awal, bukan menghasilkan bundle buruk secara diam.
+- Requiring a million-token model would exclude affordable and local models and limit portability.
+- Running the same pipeline settings on every model could cause silent failures or truncate output on smaller models.
+- Adaptive tiers with upfront checks let compatible models finish and explain any limitation before work starts.

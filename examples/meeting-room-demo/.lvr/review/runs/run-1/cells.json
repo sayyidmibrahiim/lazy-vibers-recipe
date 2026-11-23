@@ -1,0 +1,6 @@
+{
+  "lenses": {
+    "L01": { "cells": { "REQUIREMENTS": { "state": "clean" }, "DATA": { "state": "clean" }, "VERIFICATION": { "state": "clean" } } },
+    "L02": { "cells": { "REQUIREMENTS": { "state": "findings" }, "DATA": { "state": "clean" }, "VERIFICATION": { "state": "findings" } } }
+  }
+}

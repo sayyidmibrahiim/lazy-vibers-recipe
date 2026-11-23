@@ -7,14 +7,14 @@ The bundle is the product. It is generated at S9 (and maintained by v1 skills), 
 | File | Owner | Audience | Content rules |
 |---|---|---|---|
 | `AGENTS.md` | S9 | builder | Entry point per agents.md spec: what the product is, how to load context (read DECISIONS → SPEC → MILESTONES), working rules, pointers to all other files |
-| `OVERVIEW.md` | S9 | owner | Plain-English (SimpleEnglish doc rules, strictest here): what was decided, total cost table, how the product will be used, what is parked. The web UI renders this in User Language |
+| `OVERVIEW.md` | S9 | owner | Plain English (SimpleEnglish rules, strictest here). Decisions, total costs, how the product will be used, and parked work. The web viewer renders the saved file |
 | `DECISIONS.md` | S9 | builder | Append-only log: D-001… with summary, rationale, alternatives considered (optional — record when a real alternative was rejected; `None recorded` is valid), date. Mirrors `decisions[]` |
 | `SPEC/prd.md` | S9 | builder | Problem, context, target users, value proposition, goals/non-goals, success metrics |
 | `SPEC/requirements.md` | S9 | builder | F-01… per feature: behavior, priority (must/should/could), acceptance criteria (Gherkin where natural) |
 | `SPEC/data-model.md` | S9 | builder | Entities, fields (name/type/constraints), relations + cardinality, indexes linked to queries, storage decision, migration and verification. Use the [data module](10-data-module.md) for stored data. |
 | `SPEC/api.md` | S9 | builder | Conventions, endpoint table, request/response examples for critical endpoints, status codes, error format |
 | `SPEC/architecture.md` | S9 | builder | Stack + reasons (mirrors DECISIONS), components, **ASCII data-flow diagram**, folder structure, local run instructions, failure points |
-| `USER_FLOWS.md` | S9 | builder + owner | Per feature: flow diagram (ASCII) + numbered click-by-click interaction script (the "posting ke IG" style), both happy path and key alternatives |
+| `USER_FLOWS.md` | S9 | builder + owner | Per feature: ASCII flow diagram and numbered click-by-click interaction script, including the happy path and key alternatives |
 | `CODE_STYLE.md` | S9 | builder | Language/framework conventions, naming, testing expectations, error handling, simplicity rules (ponytail principles adapted to the chosen stack) |
 | `SECURITY.md` | S9 | builder | Auth model, PII inventory + protection, secrets handling, dependencies policy, compliance notes (region-appropriate) |
 | `RESEARCH.md` | S5/S9 | builder + owner | Competitor scan, comparable products, stack comparison with trade-offs, cost table — every claim with a cite tag (source, published/updated date, access date) or a logged `[unverified: …]` marker (spec 07) |
@@ -52,7 +52,7 @@ Compile the [quality checks](12-plan-quality.md) into the existing bundle. Requi
 
 1. Draft each file from section records + `decisions[]` + `milestones[]`.
 2. **Cross-check pass**: every F-… has a USER_FLOWS entry and requirements entry; every decision has a DECISIONS.md row; every non-confirmed decision (`assumed` + `designer_filled`) is in ASSUMPTIONS.md; stack names identical across files; every claim carries a valid, fresh cite tag or a logged unverified marker (spec 07). `lvr.mjs crosscheck` runs this list mechanically (feature coverage including parked features, decisions mirror, ASSUMPTIONS, display and feature names, acceptance criterion vs VERIFICATION, cost sources, file presence, citations — rule X8 = `cite check --all`) and leaves the judgment items (stack and entity names, specificity) to the model.
-3. SimpleEnglish document-rules pass.
+3. SimpleEnglish document-rules pass. Independently check every new or revised draft for English prose, correct any flagged text once, and recheck before saving and checkpointing.
 4. Anti-slop editing pass.
 5. Emit `blueprint.json` + harness adapters.
 6. Journal `doc_generated` per file (checkpoint granularity).

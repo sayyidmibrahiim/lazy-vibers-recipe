@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
 const STEPS = [
-  "Membaca ide",
-  "Menentukan batas produk",
-  "Menyusun pertanyaan",
+  "Reading your idea",
+  "Identifying key decisions",
+  "Preparing questions",
 ];
 
 export function NewProjectForm() {
@@ -29,7 +29,7 @@ export function NewProjectForm() {
     const value = idea.trim();
 
     if (value.length < 15) {
-      setError("Tulis ide minimal satu kalimat utuh.");
+      setError("Describe your idea in at least one complete sentence.");
       return;
     }
 
@@ -46,12 +46,12 @@ export function NewProjectForm() {
       const data = (await response.json()) as { id?: string; error?: string };
 
       if (!response.ok || !data.id) {
-        throw new Error(data.error ?? "Gagal membuat proyek.");
+        throw new Error(data.error ?? "Could not create the project.");
       }
 
       router.push(`/p/${data.id}`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Gagal membuat proyek.");
+      setError(caught instanceof Error ? caught.message : "Could not create the project.");
       setPending(false);
     }
   }
@@ -63,9 +63,9 @@ export function NewProjectForm() {
     >
       <div className="flex items-center justify-between border-b border-line pb-3">
         <label htmlFor="idea" className="label text-ink/65">
-          Ide / 01
+          Idea
         </label>
-        <span className="label text-ink/65">Wajib</span>
+        <span className="label text-ink/65">Required</span>
       </div>
 
       <textarea
@@ -76,7 +76,7 @@ export function NewProjectForm() {
         disabled={pending}
         rows={7}
         maxLength={6000}
-        placeholder="Contoh: aplikasi untuk mencatat ide produk dan mengubahnya menjadi daftar fitur, model data, dan rencana rilis."
+        placeholder="An app that lets small teams book meeting rooms and prevents two people from booking the same slot."
         className="mt-4 w-full resize-none bg-transparent text-[15px] leading-7 text-ink outline-none placeholder:text-ink/65 disabled:opacity-60"
       />
 
@@ -94,7 +94,7 @@ export function NewProjectForm() {
             </>
           ) : (
             <>
-              Mulai interview
+              Start interview
               <span aria-hidden className="font-mono text-xs transition-transform group-hover:translate-x-0.5">
                 -&gt;
               </span>
@@ -109,7 +109,7 @@ export function NewProjectForm() {
         </p>
       ) : (
         <p className="mt-4 text-xs leading-5 text-ink/65">
-          Memakai model lokal di server ini. Tidak ada akun, tidak ada data yang keluar.
+          The interview uses the model configured for this server.
         </p>
       )}
     </form>

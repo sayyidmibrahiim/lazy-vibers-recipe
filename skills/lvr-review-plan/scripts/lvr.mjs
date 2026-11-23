@@ -104,7 +104,7 @@ const sha256 = (s) => crypto.createHash("sha256").update(s).digest("hex");
 const ptrEsc = (s) => String(s).replace(/~/g, "~0").replace(/\//g, "~1");
 const secNum = (s) => parseInt(String(s).slice(1), 10);
 
-const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check", "all", "context", "remove-legacy", "confirm", "offline", "refresh", "reserve", "existing", "builder"]);
+const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check", "all", "context", "remove-legacy", "confirm", "offline", "refresh", "reserve", "existing", "builder", "preview"]);
 /** Every `--file` value in order (cite check takes several); a symbol key so the unknown-flag check never sees it. */
 const FILE_LIST = Symbol("files");
 /** Repeatable review flags (--text, --claim, --id): every value in order. */
@@ -1971,16 +1971,20 @@ function makeDisk(dir) {
   return api;
 }
 
-function parseS0Record(text) {
+const ENGLISH_SUMMARY_RECORD = /^<!-- lvr:english-summary -->[ \t]*$/m;
+
+function parseS0Record(texts) {
   const out = {};
-  const h = text.match(/^## Idea \(verbatim, ([^)]*)\)[ \t]*$/m);
+  const legacyText = texts.filter((text) => !ENGLISH_SUMMARY_RECORD.test(text)).join("\n");
+  const h = legacyText.match(/^## Idea \(verbatim, ([^)]*)\)[ \t]*$/m);
   if (h) {
     out.headingLang = h[1].trim();
-    const after = text.slice(h.index + h[0].length).split("\n").slice(1);
+    const after = legacyText.slice(h.index + h[0].length).split("\n").slice(1);
     const body = [];
     for (const ln of after) { if (ln.startsWith("> ") || ln.startsWith("## ")) break; body.push(ln); }
     out.idea_raw = body.join("\n").trim();
   }
+  const text = texts.join("\n");
   const l = text.match(/^- User Language: *(\S+)/m);
   out.user_language = l ? l[1] : out.headingLang;
   const s = text.match(/Slug: `([^`]+)` · Display name: (.+)/);
@@ -1991,6 +1995,7 @@ function parseS0Record(text) {
 function recordAnswerIndex(texts) {
   const idx = new Map();
   for (const text of texts) {
+    if (ENGLISH_SUMMARY_RECORD.test(text)) continue;
     let inAns = false;
     for (const ln of text.split("\n")) {
       if (/^## /.test(ln)) { inAns = /^## Answers\s*$/.test(ln); continue; }
@@ -2073,7 +2078,7 @@ function replayEvents(dir, events, opts = {}) {
   // project from the S0 record, then the display name from OVERVIEW.md
   const s0texts = cli ? [] : disk.recordsFor("S0", recName("S0")).map((r) => r.text);
   if (s0texts.length) {
-    const s0 = parseS0Record(s0texts.join("\n"));
+    const s0 = parseS0Record(s0texts);
     for (const k of ["slug", "name", "idea_raw", "user_language"]) {
       if (ctx.projectFromEvents[k]) { derived.project[k] = "events"; continue; }
       if (isStr(s0[k]) && s0[k] !== "") { st.project[k] = s0[k]; derived.project[k] = "S0-record"; }
@@ -3958,19 +3963,24 @@ function cmdHandoffStubs({ dir, flags }) {
 }
 
 const KICKOFF = { "claude-code": 'claude "$(cat HANDOFF-PROMPT.md)"', "gemini-cli": 'gemini -p "$(cat HANDOFF-PROMPT.md)"', codex: 'codex "$(cat HANDOFF-PROMPT.md)"', zcode: 'zcode "$(cat HANDOFF-PROMPT.md)"', other: "Open a fresh session in this folder and paste the contents of HANDOFF-PROMPT.md." };
-function handoffPromptText(name, profileFiles = [], releaseChecks = []) {
+function handoffPromptText(name, profileFiles, releaseChecks, usesV2) {
   return [
     `# Builder entry prompt — ${name}`, "",
     "You are building the product described in this folder's Blueprint Bundle. Follow these rules in order:", "",
     "1. Read `AGENTS.md` first — it is the entry point and names the context load order.",
     "2. Execute the milestones from `MILESTONES.md` in order.",
     "3. Verify each milestone with its `VERIFICATION.md` procedure BEFORE claiming it done (verification-before-completion).",
-    "4. Record every verification result — pass or fail, with the actual outputs — in `VERIFICATION.md`.",
+    usesV2
+      ? "4. Record each verification result in English in `VERIFICATION.md`. Keep exact commands and reference the captured output in `.lvr/verification/results/`."
+      : "4. Record every verification result — pass or fail, with the actual outputs — in `VERIFICATION.md`.",
     "5. Consult `DECISIONS.md` before asking anyone anything — the answer is usually already recorded.",
     "6. Open questions go to the journal (`.lvr/journal.ndjson`), never guessed, never silently resolved.",
     "7. Follow `CODE_STYLE.md` for every line written.",
     "8. If the plan has a gap, show it immediately with a concrete fix option attached — never smooth it over.",
-    "9. `.lvr/` is read-only planning state — do not modify it, except appending open questions to `.lvr/journal.ndjson`; the optional `/lvr-build` skill may also set the build status, milestone verification and deployment fields.", "",
+    usesV2
+      ? "9. Preserve `.lvr/` planning state. Append open questions to `.lvr/journal.ndjson` and save raw verification evidence in `.lvr/verification/results/`. The optional `/lvr-build` skill may also set the build status, milestone verification and deployment fields."
+      : "9. `.lvr/` is read-only planning state — do not modify it, except appending open questions to `.lvr/journal.ndjson`; the optional `/lvr-build` skill may also set the build status, milestone verification and deployment fields.",
+    "",
     ...(profileFiles.length ? ["## Profile files", "", ...profileFiles.map((file) => `- \`${file}\``), ""] : []),
     ...(releaseChecks.length ? ["## Release verification", "", ...releaseChecks.map(({ product_type: type, kind, procedure }) => `- **${type}** (\`${kind}\`) — ${procedure}`), ""] : []),
   ].join("\n");
@@ -4003,8 +4013,9 @@ function handoffGate({ dir, flags }) {
 function cmdHandoffPrompt({ dir, flags }) {
   const b = makeBundle(dir);
   const index = b.blueprint().value;
+  const usesV2 = index?.schema_version === 2;
   let profileFiles = [], releaseChecks = [];
-  if (index?.schema_version === 2) {
+  if (usesV2) {
     if (!validBundlePaths(index.files)) throw fail("BLUEPRINT_INVALID", "The v2 bundle index must have a valid file list before handoff.");
     const gate = handoffGate({ dir, flags });
     if (!gate.ready) throw fail("HANDOFF_REVIEW_REQUIRED", "Finish a full review or record the owner's explicit override.", gate);
@@ -4013,7 +4024,7 @@ function cmdHandoffPrompt({ dir, flags }) {
     profileFiles = index.files.filter((file) => !BUNDLE_BASE_MANIFEST.includes(file));
     releaseChecks = releasePlan(dir).checks;
   }
-  const changed = writeIfChanged(dir, "HANDOFF-PROMPT.md", handoffPromptText(b.name, profileFiles, releaseChecks));
+  const changed = writeIfChanged(dir, "HANDOFF-PROMPT.md", handoffPromptText(b.name, profileFiles, releaseChecks, usesV2));
   return { changed, path: "HANDOFF-PROMPT.md", kickoff: KICKOFF };
 }
 
@@ -7129,7 +7140,7 @@ function buildCore(ctx, model, sc, cellsLine) {
     const tier = catalog.find((entry) => entry.id === b.name || entry.name === b.name)?.tier ?? arr;
     lim.push(`Booster ${b.name} (${tier}) is ${b.status}.`);
   }
-  for (const a of ctx.st.agents_delegated ?? []) if (isObj(a) && a.status === "failed") lim.push(`Delegation ${a.id} failed${a.reason ? `: ${oneLine(a.reason)}` : ""}.`);
+  for (const a of ctx.st.agents_delegated ?? []) if (isObj(a) && a.status === "failed") lim.push(`Delegation ${a.id} failed. See its recorded result in state.json.`);
   for (const [lid, c] of Object.entries(sc.lens_counts)) if (c.blocked) lim.push(`${lid} has ${c.blocked} blocked cell(s).`);
   for (const [lid, r] of Object.entries(sc.unscored)) lim.push(`${lid} is unscored: ${r}.`);
   const lbU = all.filter((f) => f.load_bearing && COUNTED.has(f.status) && (f.evidence_level ?? 0) <= 1);
@@ -7194,7 +7205,7 @@ function buildReport(ctx, model, sc, cellsLine, cells, P) {
   let n = 0;
   for (const [lid, cl] of Object.entries(isObj(cells?.lenses) ? cells.lenses : {}).sort((a, b) => cmpStr(a[0], b[0]))) {
     for (const [col, c] of Object.entries(isObj(cl?.cells) ? cl.cells : {}).sort((a, b) => cmpStr(a[0], b[0]))) {
-      if (isObj(c) && c.state === "clean") { n++; L(`- ${lid} ${col}: "${oneLine(c.quote)}" (tried: ${oneLine(c.tried)})`); }
+      if (isObj(c) && c.state === "clean") { n++; L(`- ${lid} ${col}: ${oneLine(c.tried)} (verified quote in \`${ctx.runRel}/cells.json\`)`); }
     }
     for (const a of Array.isArray(cl?.attacks) ? cl.attacks : []) if (isObj(a)) L(`- ${lid} attack on ${a.claim}: ${oneLine(a.attack)} => ${oneLine(a.result)}`);
   }
@@ -7245,12 +7256,22 @@ function cmdReviewRender({ dir, flags }) {
   // the ledger's score line is the record; the live fold must agree with it
   if (sc.overall !== scl.overall || sc.verdict !== scl.verdict) throw fail("SCORE_DRIFT", "The score line no longer matches the ledger: run `review score --write` again.", { line: { overall: scl.overall, verdict: scl.verdict }, now: { overall: sc.overall, verdict: sc.verdict } });
   const cellsLine = model.L.lines.find((l) => l.t === "cells" && l.run === N) ?? null;
-  const { text, core } = buildReport(ctx, model, sc, cellsLine, cells, null);
-  const bodySha = sha256(core);
   const reportRel = `.lvr/review/REVIEW-${ctx.last.started_at.slice(0, 10)}-${N}.md`;
-  const changed = putReviewFile(dir, reportRel, text);
-  const doneLine = mkLine("run_done", { run: N, report: reportRel, body_sha256: bodySha, verdict: sc.verdict });
-  writeRunLines(dir, N, new Set(["run_done"]), [doneLine]);
+  const saved = model.runs.get(N).done;
+  const savedText = saved?.report === reportRel ? tryReadLF(confine(dir, path.join(dir, reportRel))) : null;
+  const completed = savedText !== null;
+  const { text, core } = completed ? { text: savedText, core: null } : buildReport(ctx, model, sc, cellsLine, cells, null);
+  const bodySha = completed ? saved.body_sha256 : sha256(core);
+  const draftSha = sha256(text);
+  if (flags.preview) return { run: N, report: reportRel, body_sha256: bodySha, draft_sha256: draftSha, text, completed };
+  if (flags["checked-sha"] !== undefined && flags["checked-sha"] !== draftSha) {
+    throw fail("REVIEW_DRAFT_CHANGED", "The review draft changed after the language check. Preview and check the current draft before saving.");
+  }
+  const changed = !completed && putReviewFile(dir, reportRel, text);
+  if (!completed) {
+    const doneLine = mkLine("run_done", { run: N, report: reportRel, body_sha256: bodySha, verdict: sc.verdict });
+    writeRunLines(dir, N, new Set(["run_done"]), [doneLine]);
+  }
   const ledgerSha = sha256(fs.readFileSync(path.join(dir, REVIEW_LEDGER)));
   const payload = { run: N, verdict: sc.verdict, score: sc.overall, open: sc.open, missed_earlier: sc.missed_earlier, report: reportRel, lens_scores: sc.lens_scores, ledger_sha256: ledgerSha };
   const out = { run: N, report: reportRel, body_sha256: bodySha, changed, review_done_payload: payload };
@@ -7274,7 +7295,7 @@ const REVIEW_CMDS = {
   "review ledger-diff": { help: "Reconcile this run against the previous scored run (re-keys the same gap in new words, derives classes; an apply run needs approved approvals.json); --write appends the run lines. --run N [--write]", flags: ["run", "scope", "write", "lenses", "freshness"], run: async (c) => cmdReviewLedgerDiff(c) },
   "review score": { help: "Compute lens scores, overall and verdict (a pure function of the fold). --run N [--write]", flags: ["run", "scope", "write", "lenses", "freshness"], run: async (c) => cmdReviewScore(c) },
   "review stability": { help: "Compare run N with the previous scored run: strict lenses must not drift. --run N", flags: ["run", "scope", "lenses", "freshness"], run: async (c) => cmdReviewStability(c) },
-  "review render": { help: "Write REVIEW-<date>-<N>.md and the run_done line; refuses on SCORE_DRIFT. --run N [--journal]", flags: ["run", "scope", "journal", "lenses", "freshness"], run: async (c) => cmdReviewRender(c) },
+  "review render": { help: "Preview or write REVIEW-<date>-<N>.md. --run N [--preview | --checked-sha SHA] [--journal]", flags: ["run", "scope", "preview", "checked-sha", "journal", "lenses", "freshness"], run: async (c) => cmdReviewRender(c) },
   "review freshness": { help: "List every cite with its age, limit and expiry; flag the ones that crossed their limit since the last run. --run N [--since YYYY-MM-DD]", flags: ["run", "scope", "since", "lenses", "freshness"], run: async (c) => cmdReviewFreshness(c) },
 };
 

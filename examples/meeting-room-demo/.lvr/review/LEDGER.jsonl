@@ -1,0 +1,2 @@
+{"t":"finding","run":1,"id":"RV-DEMO-01","lens":"L02","severity":"major","status":"open","locator":"SPEC/requirements.md#requirements","claim":"Specify the time zone shown when the user chooses a new slot after a booking conflict."}
+{"t":"score","run":1,"scope":"full"}

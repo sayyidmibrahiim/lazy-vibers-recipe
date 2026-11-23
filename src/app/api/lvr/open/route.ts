@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
   if (!folderPath) {
     return NextResponse.json(
-      { error: "Path folder wajib diisi." },
+      { error: "Enter a project folder path." },
       { status: 400 },
     );
   }
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   }
   if (!detail) {
     return NextResponse.json(
-      { error: "Folder tidak ditemukan atau tidak memiliki catatan proyek .lvr atau .lvp yang valid." },
+      { error: "The folder was not found or does not contain a valid .lvr or .lvp project record." },
       { status: 400 },
     );
   }

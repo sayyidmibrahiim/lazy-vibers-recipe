@@ -15,17 +15,17 @@ export async function PATCH(
   const doc = getDoc(id);
 
   if (!doc) {
-    return NextResponse.json({ error: "Dokumen tidak ditemukan." }, { status: 404 });
+    return NextResponse.json({ error: "Document not found." }, { status: 404 });
   }
 
   const body = (await request.json().catch(() => null)) as { content?: unknown } | null;
   const content = typeof body?.content === "string" ? body.content : "";
 
   if (!content.trim()) {
-    return NextResponse.json({ error: "Dokumen tidak boleh kosong." }, { status: 400 });
+    return NextResponse.json({ error: "The document cannot be empty." }, { status: 400 });
   }
   if (content.length > 200_000) {
-    return NextResponse.json({ error: "Dokumen terlalu besar." }, { status: 400 });
+    return NextResponse.json({ error: "The document is too large." }, { status: 400 });
   }
 
   const updated = updateDocContent(id, content);

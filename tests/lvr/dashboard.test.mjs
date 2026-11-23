@@ -58,6 +58,7 @@ test("typed dashboard readers tolerate partial and corrupt data and derive sessi
   assert.equal(parseLvrBlueprint({ schema_version: "2" }), null);
   assert.deepEqual(parseLvrLines('{"ok":1}\n[]\nnot-json\n').invalid, 2);
   const state = parseLvrState(stateInput, journal);
+  assert.equal(state.project.user_language, "en");
   assert.equal(state.pipeline.current, "S4");
   assert.equal(state.pipeline.sections.S4.answerCount, 1);
   assert.equal(state.pipeline.sections.S4.skippedCount, 1);
@@ -113,10 +114,16 @@ test("a v2 project shows only the declared plan files, ledger, and build history
 
 test("older .lvp projects open read-only and bad state is a clean failure", (t) => {
   const { dir, put } = fixture(t);
-  put(".lvp/state.json", { schema_version: 1, project: { slug: "old" }, pipeline: { sections: { S4: { answers: [{ q: "Legacy?", a: "Yes" }] } } } });
+  const overview = "# Reservasi lapangan\n\nPelanggan bisa memesan lapangan.\n";
+  put(".lvp/state.json", { schema_version: 1, project: { slug: "old", user_language: "id", idea_raw: "Reservasi lapangan" }, pipeline: { sections: { S4: { answers: [{ q: "Legacy?", a: "Yes" }] } } } });
+  put("OVERVIEW.md", overview);
   put("SPEC/ai.md", "# Legacy profile\n");
   const detail = readLvrProject(dir);
   assert.equal(detail.legacy, true);
+  assert.equal(detail.state.project.user_language, "id");
+  assert.equal(detail.state.project.idea_raw, "Reservasi lapangan");
+  assert.equal(detail.overviewMarkdown, overview);
+  assert.equal(detail.docs.find((doc) => doc.relativePath === "OVERVIEW.md").title, "Overview");
   assert.equal(detail.state.pipeline.sections.S4.answerCount, 1);
   assert.ok(detail.docs.some((doc) => doc.relativePath === "SPEC/ai.md"));
   assert.ok(!fs.existsSync(path.join(dir, ".lvr")));
@@ -148,8 +155,12 @@ test("diagram source is byte-stable, confined to records and handles relation fo
   const model = "## Relations\n\n- courts 1—N bookings — one court has multiple bookings.\n\n## Indexes\n";
   const diagrams = buildLvrDiagrams(state, features, model);
   assert.equal(JSON.stringify(diagrams), JSON.stringify(buildLvrDiagrams(state, features, model)));
+  assert.equal(diagrams[0].title, "Planning timeline");
+  assert.match(diagrams[0].code, /S4 in progress/);
   assert.equal(diagrams.find((item) => item.id === "features").code, 'flowchart TD\n  f0["F-01 Book a slot"]\n  m0["M0 Booking demo"]\n  f0 --> m0');
-  assert.match(diagrams.find((item) => item.id === "erd-relations").code, /courts.*bookings.*1 ke N/s);
+  assert.match(diagrams.find((item) => item.id === "erd-relations").code, /courts.*bookings.*1 to N/s);
+  assert.deepEqual(buildLvrDiagrams(state, features, model.replace("## Relations", "## Relasi")), diagrams);
   const source = "erDiagram\n  COURT ||--o{ BOOKING : contains";
   assert.equal(buildLvrDiagrams(state, features, `\`\`\`mermaid\n${source}\n\`\`\``).at(-1).code, source);
+  assert.equal(diagrams.at(-1).title, "Data Relationships");
 });

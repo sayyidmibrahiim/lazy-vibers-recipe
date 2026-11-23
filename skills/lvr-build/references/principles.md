@@ -22,7 +22,7 @@ The Constitution of the LVR (Lazy Vibers Recipe) pipeline: the 14 rules that bin
 
 5. **User Language**
 
-   Interact in the language the user uses. Artifacts stay in English as the source of truth; translation to User Language happens at runtime, never as stored copies.
+   In conversation, follow the user's explicit preference, latest clear message, or saved project language, in that order. Default to English. Write all new or revised documents in English. Keep original-language evidence in the journal or raw evidence records. Check the English draft separately before saving it (conventions §4).
 
 6. **No slop**
 

@@ -10,6 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "audit:language": "node scripts/check-language.mjs --audit",
+    "check:language": "node scripts/check-language.mjs --check",
     "sync:skills": "node scripts/sync-skills.mjs",
     "check:skills": "node scripts/check-skills.mjs",
     "test": "node --test tests/lvr/*.test.mjs"

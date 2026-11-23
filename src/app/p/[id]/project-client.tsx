@@ -106,7 +106,7 @@ export function ProjectClient({
 
       if (!response.ok || !response.body) {
         const data = (await response.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(data?.error ?? "Tidak bisa memulai generate.");
+        throw new Error(data?.error ?? "Could not start generation.");
       }
 
       const reader = response.body.getReader();
@@ -156,7 +156,7 @@ export function ProjectClient({
       const refreshed = await fetch(`/api/projects/${project.id}`, {
         cache: "no-store",
       });
-      if (!refreshed.ok) throw new Error("Blueprint selesai, tetapi gagal dimuat ulang.");
+      if (!refreshed.ok) throw new Error("The blueprint is ready, but it could not be loaded.");
       const data = (await refreshed.json()) as {
         project: Project;
         questions: Question[];
@@ -170,7 +170,7 @@ export function ProjectClient({
       setPhase("workspace");
       router.refresh();
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : "Generate gagal.";
+      const message = caught instanceof Error ? caught.message : "Could not generate the blueprint.";
       setError(message);
       setProject((current) => ({ ...current, status: "error" }));
     } finally {
@@ -187,7 +187,7 @@ export function ProjectClient({
               href="/legacy"
               className="label shrink-0 text-ink/65 transition-colors hover:text-ink"
             >
-              &lt;- Arsip
+              &larr; Legacy projects
             </Link>
             <span className="hidden h-4 w-px bg-line sm:block" />
             <span className="truncate text-sm font-medium tracking-[-0.01em]">
@@ -238,7 +238,7 @@ export function ProjectClient({
 
 function StatusChip({ phase, status }: { phase: Phase; status: string }) {
   const label =
-    phase === "workspace" ? "Siap" : phase === "generating" ? "Menyusun" : status === "error" ? "Terhenti" : "Interview";
+    phase === "workspace" ? "Ready" : phase === "generating" ? "Generating" : status === "error" ? "Interrupted" : "Interview";
   const tone =
     phase === "workspace"
       ? "text-blueprint"
@@ -285,23 +285,23 @@ function InterviewView({
     <main className="mx-auto max-w-5xl px-5 py-10 sm:py-14">
       <p className="label text-blueprint">Interview / 01</p>
       <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
-        {questions.length} pertanyaan sebelum menulis.
+        {questions.length} questions to shape your plan
       </h1>
       <p className="mt-3 max-w-xl text-sm leading-6 text-ink/65">
-        Jawaban dipakai untuk mengunci batas produk. Kosongkan yang belum pasti,
-        model akan menandainya sebagai asumsi.
+        Your answers define the product scope. Skip anything you are unsure about.
+        The blueprint will mark those details as assumptions.
       </p>
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="self-start border border-line bg-card p-5 lg:sticky lg:top-8">
-          <p className="label text-ink/65">Ide awal</p>
+          <p className="label text-ink/65">Original idea</p>
           <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-ink/70">
             {project.idea}
           </p>
 
           <div className="mt-6 border-t border-line pt-4">
             <div className="flex items-baseline justify-between">
-              <span className="label text-ink/65">Terjawab</span>
+              <span className="label text-ink/65">Answered</span>
               <span className="font-mono text-xs text-ink/65">
                 {answeredCount} / {questions.length}
               </span>
@@ -315,7 +315,7 @@ function InterviewView({
           </div>
 
           <p className="mt-5 text-xs leading-5 text-ink/65">
-            Semua berjalan lokal. Dokumen disimpan di SQLite di folder proyek.
+            Your documents are saved locally in SQLite.
           </p>
         </aside>
 
@@ -336,7 +336,7 @@ function InterviewView({
                       {questions.length.toString().padStart(2, "0")}
                     </span>
                     <span className="label text-ink/65">
-                      {answer ? "Terjawab" : "Kosong"}
+                      {answer ? "Answered" : "Unanswered"}
                     </span>
                   </div>
 
@@ -366,11 +366,11 @@ function InterviewView({
                   </div>
 
                   <label className="mt-4 block">
-                    <span className="label text-ink/65">Atau tulis sendiri</span>
+                    <span className="label text-ink/65">Or write your own answer</span>
                     <input
                       value={selected ? "" : answer}
                       onChange={(event) => onAnswer(question.id, event.target.value)}
-                      placeholder="Jawaban lain..."
+                      placeholder="Your answer"
                       className="mt-2 w-full border border-line bg-paper px-3 py-2.5 text-sm outline-none transition-colors placeholder:text-ink/65 focus:border-ink/50"
                     />
                   </label>
@@ -390,8 +390,7 @@ function InterviewView({
 
           <div className="mt-6 flex flex-col items-start justify-between gap-4 border-t border-line pt-5 sm:flex-row sm:items-center">
             <p className="text-xs leading-5 text-ink/65">
-              Generate memakai satu panggilan model per dokumen. Butuh beberapa
-              menit.
+              Recipe writes and checks each document in English. This can take a few minutes.
             </p>
             <button
               type="button"
@@ -431,21 +430,21 @@ function GeneratingView({
 
   return (
     <main className="mx-auto max-w-3xl px-5 py-12 sm:py-16">
-      <p className="label text-blueprint">Generate / 02</p>
+      <p className="label text-blueprint">Generation / 02</p>
       <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
-        {stopped ? "Generate terhenti." : busy ? "Menyusun blueprint." : "Generate belum selesai."}
+        {stopped ? "Generation interrupted" : busy ? "Writing your blueprint" : "Blueprint incomplete"}
       </h1>
       <p className="mt-3 max-w-xl text-sm leading-6 text-ink/65">
         {stopped
-          ? "Dokumen yang sudah jadi tetap tersimpan. Lanjutkan untuk mengisi sisanya."
+          ? "Completed documents are saved. Resume generation to finish the rest."
           : busy
-            ? `Model menulis satu dokumen pada satu waktu untuk ${project.name}. Jangan tutup tab ini.`
-            : "Tidak ada proses aktif di tab ini. Lanjutkan untuk mengisi dokumen yang tersisa."}
+            ? `Recipe is writing one document at a time for ${project.name}. Keep this tab open.`
+            : "Generation is inactive in this tab. Resume to write the remaining documents."}
       </p>
 
       <div className="mt-8 border border-line bg-card">
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
-          <span className="label text-ink/65">Progres</span>
+          <span className="label text-ink/65">Progress</span>
           <span className="font-mono text-xs text-ink/65">
             {done} / {progress.length}
           </span>
@@ -473,7 +472,7 @@ function GeneratingView({
                       : "text-ink/65"
                 }`}
               >
-                {item.status === "done" ? "Selesai" : item.status === "running" ? "Menulis..." : "Menunggu"}
+                {item.status === "done" ? "Complete" : item.status === "running" ? "Writing…" : "Pending"}
               </span>
               {item.status === "running" ? (
                 <span className="size-1.5 rounded-full bg-blueprint status-dot" />
@@ -497,13 +496,13 @@ function GeneratingView({
         >
           <p className={`text-sm leading-6 ${stopped ? "text-rust" : "text-blueprint"}`}>
             {stopped
-              ? error ?? "Proses sebelumnya terhenti. Dokumen yang sudah jadi tetap tersimpan."
-              : "Proses tidak berjalan di tab ini. Lanjutkan untuk mengecek sisa dokumen."}
+              ? error ?? "The previous run stopped. Completed documents are saved."
+              : "Generation is inactive in this tab. Resume to check the remaining documents."}
           </p>
           <p className={`mt-2 text-xs leading-5 ${stopped ? "text-rust" : "text-blueprint"}`}>
             {hasDocs
-              ? "Dokumen yang sudah selesai tidak ditulis ulang."
-              : "Belum ada dokumen yang selesai."}
+              ? "Recipe picks up from the last completed document."
+              : "No documents have finished yet."}
           </p>
           <button
             type="button"
@@ -514,14 +513,14 @@ function GeneratingView({
                 : "border-blueprint/40 text-blueprint hover:bg-blueprint hover:text-paper"
             }`}
           >
-            Lanjutkan generate
+            Resume generation
           </button>
         </div>
       ) : null}
 
       {busy ? (
         <p className="mt-5 text-xs leading-5 text-ink/65">
-          Waktu tergantung model. Satu dokumen biasanya 10 sampai 40 detik.
+          The time needed for each document depends on the model.
         </p>
       ) : null}
     </main>
@@ -563,13 +562,13 @@ function WorkspaceView({
         body: JSON.stringify({ content: editContent }),
       });
       const data = (await response.json()) as { doc?: Doc; error?: string };
-      if (!response.ok || !data.doc) throw new Error(data.error ?? "Gagal menyimpan.");
+      if (!response.ok || !data.doc) throw new Error(data.error ?? "Could not save the document.");
       onDocsChange(docs.map((doc) => (doc.id === data.doc!.id ? data.doc! : doc)));
       setEditContent(data.doc.content);
       setEditing(false);
-      setNote("Dokumen disimpan.");
+      setNote("Document saved.");
     } catch (caught) {
-      setAssistantError(caught instanceof Error ? caught.message : "Gagal menyimpan.");
+      setAssistantError(caught instanceof Error ? caught.message : "Could not save the document.");
     } finally {
       setSaving(false);
     }
@@ -587,14 +586,14 @@ function WorkspaceView({
         body: JSON.stringify({ instruction }),
       });
       const data = (await response.json()) as { doc?: Doc; error?: string };
-      if (!response.ok || !data.doc) throw new Error(data.error ?? "Gagal merevisi.");
+      if (!response.ok || !data.doc) throw new Error(data.error ?? "Could not revise the document.");
       onDocsChange(docs.map((doc) => (doc.id === data.doc!.id ? data.doc! : doc)));
       setInstruction("");
       setEditing(false);
       setEditContent(data.doc.content);
-      setNote("Revisi diterapkan.");
+      setNote("Revision applied.");
     } catch (caught) {
-      setAssistantError(caught instanceof Error ? caught.message : "Gagal merevisi.");
+      setAssistantError(caught instanceof Error ? caught.message : "Could not revise the document.");
     } finally {
       setRevising(false);
     }
@@ -607,14 +606,14 @@ function WorkspaceView({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
-      setAssistantError("Clipboard tidak tersedia di browser ini.");
+      setAssistantError("The clipboard is unavailable in this browser.");
     }
   }
 
   if (!activeDoc) {
     return (
       <main className="mx-auto max-w-3xl px-5 py-16">
-        <p className="text-sm text-ink/65">Belum ada dokumen untuk proyek ini.</p>
+        <p className="text-sm text-ink/65">This project has no documents yet.</p>
       </main>
     );
   }
@@ -623,7 +622,7 @@ function WorkspaceView({
     <div className="mx-auto max-w-[1500px] lg:grid lg:h-[calc(100dvh-61px)] lg:grid-cols-[220px_minmax(0,1fr)_330px] lg:overflow-hidden">
       <aside className="border-b border-line p-4 lg:overflow-y-auto lg:border-b-0 lg:border-r">
         <div className="flex items-baseline justify-between px-1">
-          <span className="label text-ink/65">Dokumen</span>
+          <span className="label text-ink/65">Documents</span>
           <span className="font-mono text-[10px] text-ink/65">
             {docs.length.toString().padStart(2, "0")}
           </span>
@@ -656,10 +655,10 @@ function WorkspaceView({
         </div>
 
         <div className="mt-6 hidden border-t border-line px-1 pt-4 lg:block">
-          <p className="label text-ink/65">Proyek</p>
+          <p className="label text-ink/65">Project</p>
           <p className="mt-2 text-xs leading-5 text-ink/65">{project.name}</p>
           <p className="mt-1 text-[11px] leading-5 text-ink/65">
-            Blueprint v0.1. Disimpan lokal.
+            Blueprint v0.1. Saved locally.
           </p>
         </div>
       </aside>
@@ -685,7 +684,7 @@ function WorkspaceView({
               onClick={copy}
               className="border border-line px-3 py-1.5 text-xs transition-colors hover:border-ink/40 hover:bg-card"
             >
-              {copied ? "Tersalin" : "Copy"}
+              {copied ? "Copied" : "Copy"}
             </button>
           </div>
         </div>
@@ -699,6 +698,7 @@ function WorkspaceView({
         {editing ? (
           <div className="mt-5">
             <textarea
+              aria-label="Document Markdown"
               value={editContent}
               onChange={(event) => setEditContent(event.target.value)}
               spellCheck={false}
@@ -713,7 +713,7 @@ function WorkspaceView({
                 }}
                 className="px-3 py-2 text-xs text-ink/65 hover:text-ink"
               >
-                Batal
+                Cancel
               </button>
               <button
                 type="button"
@@ -721,7 +721,7 @@ function WorkspaceView({
                 disabled={saving}
                 className="bg-ink px-4 py-2 text-xs font-medium text-paper transition-colors hover:bg-blueprint disabled:opacity-60"
               >
-                {saving ? "Menyimpan..." : "Simpan"}
+                {saving ? "Saving…" : "Save"}
               </button>
             </div>
           </div>
@@ -735,29 +735,28 @@ function WorkspaceView({
       <aside className="border-t border-line p-5 lg:overflow-y-auto lg:border-t-0 lg:border-l">
         <p className="label text-blueprint">AI assistant</p>
         <h2 className="mt-3 text-lg font-semibold tracking-[-0.02em]">
-          Revisi dokumen aktif.
+          Revise this document
         </h2>
         <p className="mt-2 text-xs leading-5 text-ink/65">
-          Instruksi diterapkan ke seluruh dokumen, bukan ditambahkan di akhir.
-          Perubahan langsung disimpan.
+          Your instructions apply to the entire document. Recipe saves the English revision automatically.
         </p>
 
         <label className="mt-5 block">
-          <span className="label text-ink/65">Instruksi</span>
+          <span className="label text-ink/65">Instruction</span>
           <textarea
             value={instruction}
             onChange={(event) => setInstruction(event.target.value)}
             rows={5}
-            placeholder="Contoh: tambah acceptance criteria untuk setiap requirement, lalu ringkas bagian non-functional."
+            placeholder="Add acceptance criteria to each requirement and shorten the non-functional requirements."
             className="mt-2 w-full resize-none border border-line bg-card p-3 text-[13px] leading-6 outline-none transition-colors placeholder:text-ink/65 focus:border-ink/45"
           />
         </label>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
           {[
-            "Tambah acceptance criteria",
-            "Persingkat 30%",
-            "Tambah contoh request",
+            "Add acceptance criteria",
+            "Shorten by 30%",
+            "Add request examples",
           ].map((preset) => (
             <button
               key={preset}
@@ -779,10 +778,10 @@ function WorkspaceView({
           {revising ? (
             <>
               <span className="size-1.5 rounded-full bg-paper status-dot" />
-              Merevisi...
+              Revising…
             </>
           ) : (
-            "Revisi dokumen"
+            "Revise document"
           )}
         </button>
 
@@ -796,10 +795,9 @@ function WorkspaceView({
         ) : null}
 
         <div className="mt-6 border-t border-line pt-4">
-          <p className="label text-ink/65">Catatan</p>
+          <p className="label text-ink/65">Version history</p>
           <p className="mt-2 text-[11px] leading-5 text-ink/65">
-            Tidak ada riwayat versi. Simpan salinan manual kalau perlu
-            membandingkan revisi.
+            Keep a copy of the current document if you want to compare it with the revision.
           </p>
         </div>
       </aside>

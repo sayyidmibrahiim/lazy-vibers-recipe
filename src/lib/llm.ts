@@ -1,4 +1,5 @@
 import { extractJson } from "./json";
+import { GeneratorError } from "./text";
 
 export type ChatMessage = {
   role: "system" | "user" | "assistant";
@@ -11,8 +12,8 @@ type ChatOptions = {
   timeoutMs?: number;
 };
 
-const BASE_URL = (process.env.LLM_BASE_URL ?? "http://127.0.0.1:17070/v1").replace(/\/+$/, "");
-const MODEL = process.env.LLM_MODEL ?? "deepseek-v4.1-flash-free";
+const BASE_URL = process.env.LLM_BASE_URL?.trim().replace(/\/+$/, "");
+const MODEL = process.env.LLM_MODEL?.trim();
 const API_KEY = process.env.LLM_API_KEY ?? "";
 
 function headers(): HeadersInit {
@@ -34,6 +35,9 @@ export async function chatDetailed(
   messages: ChatMessage[],
   options: ChatOptions = {},
 ): Promise<ChatOutcome> {
+  if (!BASE_URL || !MODEL) {
+    throw new GeneratorError("Set LLM_BASE_URL and LLM_MODEL in .env.local to use the legacy generator.");
+  }
   const body = {
     model: MODEL,
     messages,
@@ -53,8 +57,8 @@ export async function chatDetailed(
       });
 
       if (!response.ok) {
-        const detail = (await response.text()).slice(0, 400);
-        throw new Error(`Model menolak permintaan (${response.status}): ${detail}`);
+        await response.body?.cancel();
+        throw new GeneratorError(`The model request failed (HTTP ${response.status}).`);
       }
 
       const contentType = response.headers.get("content-type") ?? "";
@@ -62,7 +66,7 @@ export async function chatDetailed(
         ? await readSse(response)
         : await readJson(response);
 
-      if (!outcome.text.trim()) throw new Error("Model mengembalikan jawaban kosong.");
+      if (!outcome.text.trim()) throw new GeneratorError("The model returned an empty response.");
       return outcome;
     } catch (error) {
       lastError = error;
@@ -70,7 +74,8 @@ export async function chatDetailed(
     }
   }
 
-  throw lastError instanceof Error ? lastError : new Error("Model tidak bisa dihubungi.");
+  if (lastError instanceof GeneratorError) throw lastError;
+  throw new GeneratorError("The model request failed. Check the provider configuration and try again.", { cause: lastError });
 }
 
 async function readJson(response: Response): Promise<ChatOutcome> {
@@ -146,13 +151,13 @@ export async function chatJson<T>(
         {
           role: "user",
           content:
-            "Jawaban itu bukan JSON yang valid. Kirim ulang jawaban yang sama sebagai JSON ketat saja, tanpa pagar markdown dan tanpa teks lain.",
+            "The response was invalid JSON. Return the same answer as strict JSON without Markdown fences or extra text.",
         },
       ];
     }
   }
 
-  throw lastError instanceof Error ? lastError : new Error("Model tidak mengembalikan JSON.");
+  throw new GeneratorError("The model did not return valid JSON.", { cause: lastError });
 }
 
 function sleep(ms: number): Promise<void> {

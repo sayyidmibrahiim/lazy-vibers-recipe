@@ -4,11 +4,11 @@ Companion to `/lvr-add-feature`. The capture form is mandatory: a feature withou
 
 ## 1. Capture form (`F-NN`)
 
-Ask in the user's language, one micro-batch at a time (tier limits apply). Record verbatim answers in the additions record.
+Ask in the user's language, one micro-batch at a time (tier limits apply). Keep original answers in journal events. Record English summaries and evidence IDs in the additions record.
 
 | Field | Rule |
 |---|---|
-| Verbatim request | The user's own words, unedited. |
+| Request summary | An English summary that cites the `feature_started` event containing the original words. |
 | Display name (EN) | Short noun phrase used in every bundle file. Coin it; confirm when ambiguous. |
 | Who uses it | One named kind of person, never "everyone". |
 | Happy path | Numbered click-by-click script a stranger could follow: opening state → each tap/input → visible result. No step may say "and then it works". |
@@ -94,7 +94,7 @@ Write `.lvr/docs/sections/S4-additions.md`, append-only:
 
 ## F-NN — <display name>
 - Captured: <date> · Priority: <must|should|could> · Scope: <in-MVP milestone|new milestone|Parking Lot>
-- Request (verbatim, <language>): <text>
+- Request summary: <English summary> · evidence: <feature_started event sequence>
 - Who: <named user>
 - Happy path: <numbered script>
 - Failure cases: <four outcomes with observable tests or scoped reasons>
