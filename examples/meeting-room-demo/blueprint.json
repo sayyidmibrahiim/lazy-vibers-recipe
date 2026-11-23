@@ -1,0 +1,12 @@
+{
+  "schema_version": 2,
+  "project": { "slug": "meeting-room-demo", "name": "Meeting Room Booker", "user_language": "en", "status": "bundled" },
+  "stack": { "components": ["Next.js", "SQLite"] },
+  "features": [
+    { "id": "F-01", "name": "See available rooms", "in_mvp": true },
+    { "id": "F-02", "name": "Reserve a slot", "in_mvp": true },
+    { "id": "F-03", "name": "Cancel your booking", "in_mvp": true },
+    { "id": "F-04", "name": "Sync to Google Calendar", "in_mvp": false }
+  ],
+  "files": ["OVERVIEW.md", "DECISIONS.md", "SPEC/requirements.md", "SPEC/data-model.md", "MILESTONES.md", "VERIFICATION.md", "blueprint.json"]
+}

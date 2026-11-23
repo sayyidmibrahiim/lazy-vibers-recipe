@@ -1,89 +1,121 @@
+<div align="center">
+
 # Lazy Vibers Recipe
 
-Turn a raw idea into a verified Blueprint Bundle that any AI agent can build.
+**Turn a rough idea into a build plan another agent can pick up.**
 
-## What it is
+[![Agent skills](https://img.shields.io/badge/Agent_skills-7-2563eb?style=flat-square)](skills/README.md)
+[![Viewer](https://img.shields.io/badge/Viewer-local-168268?style=flat-square)](#try-the-dashboard)
+[![License](https://img.shields.io/badge/License-MIT-e18536?style=flat-square)](LICENSE)
 
-This repo holds two related things.
+[Try the dashboard](#try-the-dashboard) · [Start a new idea](#start-a-new-idea) · [Browse the sample plan](examples/meeting-room-demo/OVERVIEW.md)
 
-The LVR skills turn an idea into a build plan through a guided interview. Start with as much detail as you have. The interview confirms details you already gave in one batch and asks focused follow-ups where a decision still needs evidence. It shows what is known and records assumptions you can review. The Blueprint Bundle gives a builder the base plan and the extra files your product needs.
+</div>
 
-The web MVP is a local Next.js app. You write an idea and answer four interview questions. The app then generates five markdown documents: PRD, requirements, data model, API contract, and architecture. Generation runs through an OpenAI-compatible LLM proxy. The app is single-user and has no auth.
+---
 
-The web MVP is an early prototype. The LVR skills are the complete pipeline, and they run on any harness that reads a SKILL.md file.
+Recipe's **agent skills** interview you about what you want to build, research open questions, and turn your decisions into a set of project files called a **Blueprint Bundle**. The **local dashboard** lets you read that plan, inspect diagrams, and see where a session left off.
 
-## How the pipeline works
+[![Meeting Room Booker in the local dashboard, showing the original idea, first-release features, and status](docs/assets/readme/meeting-room-dashboard.png)](docs/assets/readme/meeting-room-dashboard.png)
 
-Each skill is one folder with a SKILL.md file and its own references. The table is the short map. The full catalog is in [skills/README.md](skills/README.md).
+*Meeting Room Booker is a fictional plan. Its first release covers availability, reservations, and cancellations. Calendar sync stays parked.*
 
-| Skill | What it does | Result |
-|---|---|---|
-| `/lvr-init-new-idea` | Runs the Folder Gate and the interview S0–S9 (intake, context, conditions, data and privacy, features, deep research, feasibility loop, scope lock, milestone plan, compile) | A Blueprint Bundle of 20 files in the project folder |
-| `/lvr-continue` | Resumes a run or rebuilds the state from the journal | A restored state and an offer of the next step |
-| `/lvr-handoff` | Lints all 20 bundle files, emits `blueprint.json`, and writes the builder stubs | A bundle ready for any builder harness |
-| `/lvr-review-plan` | Reviews the finished plan through 15 critical lenses with quoted evidence (formerly `/lvr-recheck-plan`) | A scored review report with an honest verdict and a findings ledger; fixes only with `--apply` after you approve them |
-| `/lvr-add-feature` | Adds one post-lock feature through a mini-pipeline | An updated bundle, append-only |
-| `/lvr-build` | Executes the milestones and runs each verification procedure | A build log with verified milestones |
-| `/lvr-personal-brand` | Builds a brand kit after the milestones are verified | Three files in `brand/` |
+## Try the dashboard
 
-## State and rebuild guarantee
+You need **Node.js 24+**. The viewer runs on your machine and opens sample plans without an AI account or API key.
 
-One folder is one product. Every project folder holds a `.lvr/` folder. It stores `state.json`, the append-only `journal.ndjson`, and the Section Records. The journal records every answer with its verbatim question and answer text. If `state.json` is damaged, `/lvr-continue` rebuilds it by replaying the journal. The skills never degrade in silence.
+1. Clone the repo and start the viewer.
 
-## Install the skills
+   ```bash
+   git clone https://github.com/sayyidmibrahiim/lazy-vibers-recipe.git
+   cd lazy-vibers-recipe
+   npm ci
+   npm run dev -- --hostname 127.0.0.1
+   ```
 
-The preferred install is the skills CLI:
+2. Open [localhost:3000](http://localhost:3000). In **Buka Folder LVR Lokal**, enter `examples/meeting-room-demo` and click **Buka**. For your own plan, enter the project folder that contains `.lvr/state.json`.
+3. Open **Berkas rencana** to read the plan files, or **Peta dan diagram** → **Relasi data** to see how rooms, members, and reservations connect.
 
-```bash
-npx skills add <owner>/lazy-vibers-recipe
+<details>
+<summary><b>See the data model in the dashboard</b></summary>
+
+![Dashboard project map and rendered entity-relationship diagram for rooms, members, and reservations](docs/assets/readme/meeting-room-data-model.png)
+
+The sample includes [requirements](examples/meeting-room-demo/SPEC/requirements.md), a [data model](examples/meeting-room-demo/SPEC/data-model.md), and [checks for each milestone](examples/meeting-room-demo/VERIFICATION.md).
+
+</details>
+
+## Start a new idea
+
+You need **Node.js 22.20+** and a coding agent that can search the web and read pages. This example installs all seven skills for **Codex** in a new project folder. See the commands for other agents in [the install guide](INSTALL.md).
+
+1. In a terminal, make a project folder and install the skills.
+
+   ```bash
+   mkdir meeting-room-project
+   cd meeting-room-project
+   npx --yes skills@1.9.0 add sayyidmibrahiim/lazy-vibers-recipe --copy --skill '*' --agent codex --yes
+   ```
+
+2. Open Codex in that folder and paste this into the conversation.
+
+   ```text
+   $lvr-init-new-idea
+
+   I want a web app for an eight-person team sharing two meeting rooms.
+   People should see open 30-minute slots, reserve a slot, and cancel
+   their own bookings. If two people request the same slot at once,
+   only one should succeed. Leave calendar sync out of the first release.
+   ```
+
+3. When Recipe asks where to save the plan, choose to continue in the current folder. Answer the follow-up questions and confirm the scope. If you stop partway through, call `$lvr-continue` in the same folder to pick up from your recorded answers.
+4. When the plan is ready, run `$lvr-review-plan`, resolve any findings that block the build, then run `$lvr-handoff`. Give a fresh builder session the generated `HANDOFF-PROMPT.md` and a first task like this.
+
+   ```text
+   Read HANDOFF-PROMPT.md and AGENTS.md. Build milestone M0 only.
+   Run its checks in VERIFICATION.md and report what passed or failed.
+   ```
+
+Slash-command entry points include `/lvr-init-new-idea` and `/lvr-continue`. The Claude Code plugin uses `/lazy-vibers-recipe:lvr-init-new-idea`. [Skill catalog and install options](skills/README.md)
+
+## What you get
+
+```text
+Idea → Interview → Blueprint → Review → Handoff → Build and verify
 ```
 
-You can also copy a skill folder into the skills directory of your harness. Supported harnesses include ZCode, Claude Code, Codex, and Gemini CLI. See [skills/README.md](skills/README.md) for the full install table and the uninstall steps.
+| Open this | To find out |
+| --- | --- |
+| `OVERVIEW.md` and `SCOPE.md` | What's included in the first release and what's parked |
+| `SPEC/requirements.md` and `SPEC/data-model.md` | What each feature must do and what data it needs |
+| `DECISIONS.md` and `ASSUMPTIONS.md` | What you confirmed and what still needs checking |
+| `MILESTONES.md` and `VERIFICATION.md` | What to build first and how to prove it works |
+| `HANDOFF-PROMPT.md` | Where a fresh builder session should start after handoff |
 
-## Web MVP quick start
+A full plan has **20 base Markdown files**, a `blueprint.json` index, and extra files for the types of product you choose. The local `.lvr/` folder keeps the answers, progress, and journal so a new session can resume from disk. [Bundle format](docs/spec/04-bundle.md)
 
-The web app needs Node.js 24 or newer. It stores data in SQLite through `node:sqlite`.
+## Ideas you can try
 
-```bash
-npm install
-npm run dev
-```
+| If you're building | Give the agent a starting prompt like this |
+| --- | --- |
+| **Command-line tool** | “Build a CLI that finds duplicate images by SHA-256 and exports a CSV of matching paths. It should only read files.” |
+| **n8n workflow** | “Every Monday, read a team spreadsheet and send one summary to Slack. Skip empty rows and tell me if the sheet is unreachable.” |
+| **Browser extension** | “Save the current tab's title, URL, and my note into a local reading list. Let me export it as JSON.” |
 
-Open `http://localhost:3000`.
+Recipe also has profiles for mobile apps, MCP servers, skills and plugins, agents, document Q&A, and games. Once you have a plan, use `/lvr-add-feature` to revisit scope, `/lvr-build` to execute milestones with checks, or `/lvr-personal-brand` after release verification. [All seven skills](skills/README.md#choose-a-skill)
 
-The home page (`/`) is a read-only viewer for a project folder that holds a `.lvr/` bundle. Enter the folder path to open it. The viewer renders the bundle documents, `UI_SPEC.md`, product-type profile files, and Mermaid code blocks (rendered offline in the browser; if a diagram fails to render, the raw code is shown). Other fenced blocks, such as ASCII diagrams, stay monospace.
-
-### Legacy generator (off by default)
-
-The old idea-to-5-documents generator is hidden unless you set `ENABLE_LEGACY_GENERATOR=1` (only the exact value `1` enables it; `true`, `yes`, `0` or anything else leaves it off) (for example in `.env.local`, then restart). When it is off, `/legacy` and the `/api/projects/*` and `/api/docs/*` routes return 404. When it is on, open `/legacy`. Only this generator needs the LLM proxy at `127.0.0.1:17070`; if the proxy is down, generation fails with a 502 error.
-
-All settings are optional. Copy `.env.example` to `.env.local` only to override defaults.
-
-For production, run:
+<details>
+<summary><b>Production build and legacy generator</b></summary>
 
 ```bash
 npm run build
-npm start
+npm start -- --hostname 127.0.0.1
 ```
 
-The app has no auth. To limit access to loopback, run:
+The dashboard is a single-user local app without login and stores its project list in SQLite. The optional `/legacy` generator is off by default. To run it, copy `.env.example` to `.env.local`, set `ENABLE_LEGACY_GENERATOR=1`, configure your OpenAI-compatible `LLM_BASE_URL` and `LLM_MODEL`, and restart. Set `LLM_API_KEY` if your endpoint requires it.
 
-```bash
-npm start -- -H 127.0.0.1
-```
+</details>
 
-## Language note
+---
 
-The skill files and the spec docs are English. The web app UI, its prompts, and its error messages are Bahasa Indonesia by design.
-
-## Docs
-
-- [docs/spec/00-overview.md](docs/spec/00-overview.md): the spec overview. Read it first. The spec continues through 06.
-- [GLOSSARY.md](GLOSSARY.md): the domain glossary.
-- [docs/adr/](docs/adr/): the architecture decision records.
-- [AGENTS.md](AGENTS.md): the contract for contributors and agents.
-- [skills/README.md](skills/README.md): the skill catalog and install details.
-
-## License
-
-The repo is licensed under MIT. See [LICENSE](LICENSE). The skills follow a permissive-first policy ([ADR-0001](docs/adr/0001-permissive-first-license-policy.md)): boosters with NC licenses are runtime dependencies, credited and never vendored.
+[Installation by agent](INSTALL.md) · [Architecture and specs](docs/spec/00-overview.md) · [Contributor guide](AGENTS.md) · [Booster credits](CREDITS.md) · [MIT license](LICENSE)

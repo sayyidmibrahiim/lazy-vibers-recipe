@@ -1,0 +1,38 @@
+{
+  "schema_version": 2,
+  "project": {
+    "slug": "meeting-room-demo",
+    "name": "Meeting Room Booker",
+    "idea_raw": "A small team needs one place to see which meeting rooms are free, reserve a slot, and cancel its own bookings. Two people must never get the same room at the same time.",
+    "user_language": "en",
+    "status": "bundled"
+  },
+  "product": { "types": ["web"] },
+  "pipeline": {
+    "sections": {
+      "S0": { "status": "done" },
+      "S1": { "status": "done" },
+      "S2": { "status": "done" },
+      "S3": { "status": "done" },
+      "S4": { "status": "done" },
+      "S5": { "status": "done" },
+      "S6": { "status": "done" },
+      "S7": { "status": "done" },
+      "S8": { "status": "done" },
+      "S9": { "status": "done" }
+    }
+  },
+  "decisions": [
+    {
+      "id": "D-001",
+      "section": "S7",
+      "summary": "Reserve fixed 30-minute slots",
+      "rationale": "Fixed slots make availability easy to scan and give the database a single key to protect from double bookings.",
+      "status": "user_confirmed"
+    }
+  ],
+  "milestones": [
+    { "id": "M0", "goal": "See available rooms", "features": ["F-01"], "verified": false },
+    { "id": "M1", "goal": "Reserve and release a slot", "features": ["F-02", "F-03"], "verified": false }
+  ]
+}
