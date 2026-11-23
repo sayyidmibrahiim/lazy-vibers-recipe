@@ -82,3 +82,6 @@
 2026-11-23T07:16:43Z | codex/gpt-6 | task 35 | claimed after cleanup lifecycle; checked installation and profile catalog sources | next: rewrite skills README and verify links, names and installation command
 2026-11-23T07:16:56Z | codex/gpt-6 | task 35 | README rewritten against the supported tools and profile catalog | next: same-context verify links, names and a local install
 2026-11-23T07:17:39Z | codex/gpt-6 | task 35 | README links, catalogs and pinned local install pass; closed | next: task 37 handoff gate, builder prompt and registry lines
+2026-11-23T07:17:49Z | codex/gpt-6 | task 37 | claimed; checked existing handoff helpers and v1 compatibility | next: review gate, source validation, v2 prompt and pinned builder aids
+2026-11-23T07:23:10Z | codex/gpt-6 | task 37 | review gate, versioned prompt, pinned lines and focused fixture implemented | next: same-context verify citation blockers, compatibility and shared regressions
+2026-11-23T07:26:04Z | codex/gpt-6 | task 37 | gated handoff, unchanged v1 behavior and all shared regressions pass; closed | next: task 39 read-only dashboard and session tracker

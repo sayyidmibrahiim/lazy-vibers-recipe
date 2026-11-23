@@ -104,7 +104,7 @@ const sha256 = (s) => crypto.createHash("sha256").update(s).digest("hex");
 const ptrEsc = (s) => String(s).replace(/~/g, "~0").replace(/\//g, "~1");
 const secNum = (s) => parseInt(String(s).slice(1), 10);
 
-const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check", "all", "context", "remove-legacy", "confirm", "offline", "refresh", "reserve", "existing"]);
+const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check", "all", "context", "remove-legacy", "confirm", "offline", "refresh", "reserve", "existing", "builder"]);
 /** Every `--file` value in order (cite check takes several); a symbol key so the unknown-flag check never sees it. */
 const FILE_LIST = Symbol("files");
 /** Repeatable review flags (--text, --claim, --id): every value in order. */
@@ -3927,7 +3927,7 @@ function backupFile(dir, f) {
   writeFileAtomic(confine(dir, path.join(dir, name)), fs.readFileSync(path.join(dir, f), "utf8"), "HANDOFF_WRITE_FAILED");
   return name;
 }
-function cmdHandoffStubs({ dir }) {
+function cmdHandoffStubs({ dir, flags }) {
   const b = makeBundle(dir);
   const written = [], unchanged = [], backed_up = [];
   for (const f of BUNDLE_STUBS) {
@@ -3937,13 +3937,28 @@ function cmdHandoffStubs({ dir }) {
     writeIfChanged(dir, f, STUB_LINE + "\n");
     written.push(f);
   }
+  const preserved = [];
+  if (flags.harness === "qwen-code") {
+    const file = "QWEN.md";
+    const existing = b.text(file);
+    if (existing?.trim() === STUB_LINE) unchanged.push(file);
+    else {
+      let exists = true;
+      try { fs.lstatSync(path.join(dir, file)); } catch (error) { if (error.code === "ENOENT") exists = false; else throw error; }
+      if (exists) preserved.push(file);
+      else {
+        writeIfChanged(dir, file, STUB_LINE + "\n");
+        written.push(file);
+      }
+    }
+  }
   const { findings } = runChecks(makeBundle(dir), new Set(["A", "B", "G"]));
   const agents = findings.filter((f) => f.file === "AGENTS.md" && (f.group === "G" || f.id === "B1" || f.id === "A1"));
-  return { changed: written.length > 0, written, unchanged, backed_up, agents_md: { ok: agents.length === 0, findings: agents } };
+  return { changed: written.length > 0, written, unchanged, backed_up, ...(preserved.length ? { preserved } : {}), agents_md: { ok: agents.length === 0, findings: agents } };
 }
 
 const KICKOFF = { "claude-code": 'claude "$(cat HANDOFF-PROMPT.md)"', "gemini-cli": 'gemini -p "$(cat HANDOFF-PROMPT.md)"', codex: 'codex "$(cat HANDOFF-PROMPT.md)"', zcode: 'zcode "$(cat HANDOFF-PROMPT.md)"', other: "Open a fresh session in this folder and paste the contents of HANDOFF-PROMPT.md." };
-function handoffPromptText(name) {
+function handoffPromptText(name, profileFiles = [], releaseChecks = []) {
   return [
     `# Builder entry prompt — ${name}`, "",
     "You are building the product described in this folder's Blueprint Bundle. Follow these rules in order:", "",
@@ -3956,15 +3971,66 @@ function handoffPromptText(name) {
     "7. Follow `CODE_STYLE.md` for every line written.",
     "8. If the plan has a gap, show it immediately with a concrete fix option attached — never smooth it over.",
     "9. `.lvr/` is read-only planning state — do not modify it, except appending open questions to `.lvr/journal.ndjson`; the optional `/lvr-build` skill may also set the build status, milestone verification and deployment fields.", "",
+    ...(profileFiles.length ? ["## Profile files", "", ...profileFiles.map((file) => `- \`${file}\``), ""] : []),
+    ...(releaseChecks.length ? ["## Release verification", "", ...releaseChecks.map(({ product_type: type, kind, procedure }) => `- **${type}** (\`${kind}\`) — ${procedure}`), ""] : []),
   ].join("\n");
 }
-function cmdHandoffPrompt({ dir }) {
+
+function handoffGate({ dir, flags }) {
   const b = makeBundle(dir);
-  const changed = writeIfChanged(dir, "HANDOFF-PROMPT.md", handoffPromptText(b.name));
+  if (!b.j.healthy || b.j.scope_locked_seq === null || b.st.pipeline.sections.S7?.status !== "done") {
+    return { ready: false, reason: "scope_unlocked", review_run: null, verdict: null, override: null };
+  }
+  const last = b.st.review?.last;
+  const full = last?.scope === "full" ? last : null;
+  const reviewRun = full?.run ?? null;
+  const done = b.j.events.findLast((event) => event.type === "review_done" && event.payload.run === reviewRun);
+  const verdict = full?.done_at && done?.payload.verdict === full.verdict ? full.verdict : null;
+  if (["BUILD-READY", "FIX-THEN-BUILD"].includes(verdict)) return { ready: true, reason: "reviewed", review_run: reviewRun, verdict, override: null };
+  let override = null;
+  if (flags.override !== undefined) {
+    if (!/^D-\d{3,}$/.test(flags.override)) throw invalid("override", "the recorded handoff decision ID");
+    const reviewSeq = b.j.events.findLast((event) => ["review_started", "review_done"].includes(event.type))?.seq ?? b.j.scope_locked_seq;
+    const recorded = b.j.events.findLast((event) => event.seq > reviewSeq && event.type === "handoff_started"
+      && event.payload.review_override === true && event.payload.review_run === reviewRun
+      && Array.isArray(event.payload.decisions) && event.payload.decisions.some((decision) => decision?.id === flags.override && decision.status === "user_confirmed"));
+    if (recorded && b.st.decisions.some((decision) => decision.id === flags.override && decision.status === "user_confirmed")) override = flags.override;
+  }
+  const reason = override ? "approved_override" : flags.override !== undefined ? "override_not_recorded" : full?.done_at ? "review_not_ready" : full ? "review_open" : "review_required";
+  return { ready: override !== null, reason, review_run: reviewRun, verdict, override };
+}
+
+function cmdHandoffPrompt({ dir, flags }) {
+  const b = makeBundle(dir);
+  const index = b.blueprint().value;
+  let profileFiles = [], releaseChecks = [];
+  if (index?.schema_version === 2) {
+    if (!validBundlePaths(index.files)) throw fail("BLUEPRINT_INVALID", "The v2 bundle index must have a valid file list before handoff.");
+    const gate = handoffGate({ dir, flags });
+    if (!gate.ready) throw fail("HANDOFF_REVIEW_REQUIRED", "Finish a full review or record the owner's explicit override.", gate);
+    const citations = cmdCiteCheck({ dir, flags: { all: true } });
+    if (citations.findings.length) throw fail("HANDOFF_CITATIONS_OPEN", "Resolve citation findings before writing the handoff prompt.", { findings: citations.findings });
+    profileFiles = index.files.filter((file) => !BUNDLE_BASE_MANIFEST.includes(file));
+    releaseChecks = releasePlan(dir).checks;
+  }
+  const changed = writeIfChanged(dir, "HANDOFF-PROMPT.md", handoffPromptText(b.name, profileFiles, releaseChecks));
   return { changed, path: "HANDOFF-PROMPT.md", kickoff: KICKOFF };
 }
-function cmdInstallLines({ dir }) {
+
+function cmdInstallLines({ dir, flags }) {
   const b = makeBundle(dir);
+  if (flags.builder) {
+    const { data: registry } = boosterRegistry(dir, null, true);
+    if (flags.harness !== undefined && !registry.harnesses.includes(flags.harness)) throw invalid("harness", registry.harnesses.join("|"));
+    const ids = new Set(["verification-before-completion", "web-interface-guidelines", "review-animations-standards", "impeccable", "emil-design-eng", "supabase", "supabase-postgres-best-practices", "mcp-builder", "n8n-workflow-lifecycle-official"]);
+    const items = registry.boosters.filter((entry) => ids.has(entry.id) && boosterApplicability(entry.triggers, b.st.product) === true).map((entry) => {
+      const args = entry.install ? ["npx", "skills@1.9.0", "add", "./source", ...(flags.harness ? ["--agent", flags.harness] : []), "--skill", ...entry.install.skills, "--copy", "--yes"] : null;
+      const source = `https://github.com/${entry.repo}/tree/${entry.sha}`;
+      return { id: entry.id, source, sha: entry.sha, license: entry.license, tier: entry.tier, args, line: `${entry.name} (${entry.license}) ${source} — ${args ? args.join(" ") : "Read the pinned reference"}` };
+    });
+    return { count: items.length, lines: items.map((item) => item.line), items };
+  }
+  if (flags.harness !== undefined) throw invalid("harness", "a builder harness selected with --builder");
   if (!b.present("CAPABILITIES.md")) throw fail("BUNDLE_INCOMPLETE", "CAPABILITIES.md is missing or empty.", { missing: ["CAPABILITIES.md"] });
   const items = b.capabilities().map((c) => ({ ...c, line: `${c.name} (${c.license}): ${c.install}${c.nc ? " [NC: runtime dependency only, never vendored]" : ""}` }));
   return { count: items.length, lines: items.map((i) => i.line), items };
@@ -8747,9 +8813,10 @@ const COMMANDS = {
     help: "Derive blueprint.json from state + bundle; writes only on drift (generated_at ignored). [--check: write nothing] [--in FILE|-: JSON with stack, idea_summary_en, costs the bundle cannot supply]",
     flags: ["check", "in"], run: cmdBlueprintEmit,
   },
-  "handoff stubs": { help: "Write CLAUDE.md / GEMINI.md (exact one-line stub) when missing or wrong (a customised file is first copied to <file>.bak-<date>); verify AGENTS.md.", flags: [], run: async (c) => cmdHandoffStubs(c) },
-  "handoff prompt": { help: "Write HANDOFF-PROMPT.md from the fixed template (only when the bytes change); returns the kickoff commands.", flags: [], run: async (c) => cmdHandoffPrompt(c) },
-  "handoff install-lines": { help: "Print the booster install lines from CAPABILITIES.md (read-only).", flags: [], run: async (c) => cmdInstallLines(c) },
+  "handoff stubs": { help: "Write the Claude and Gemini stubs and verify AGENTS.md. [--harness qwen-code adds a missing QWEN.md]", flags: ["harness"], run: async (c) => cmdHandoffStubs(c) },
+  "handoff gate": { help: "Report the review threshold or a recorded owner override. [--override D-NNN]", flags: ["override"], run: handoffGate },
+  "handoff prompt": { help: "Write HANDOFF-PROMPT.md with the v2 profile files and release checks. [--override D-NNN]", flags: ["override"], run: async (c) => cmdHandoffPrompt(c) },
+  "handoff install-lines": { help: "Print documented legacy lines or pinned builder aids. [--builder [--harness NAME]]", flags: ["builder", "harness"], run: async (c) => cmdInstallLines(c) },
   "booster check": {
     help: "Check core boosters, a named booster, or applicable installs for a section. [--name id | --section S] [--registry PATH] [--journal]", flags: ["name", "section", "registry", "journal"],
     run: async ({ dir, flags }) => {

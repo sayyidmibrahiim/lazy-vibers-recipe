@@ -38,12 +38,12 @@ Skills are plain markdown instruction files (Agent Skills format) living in `ski
 **Precondition**: S1–S8 `done` + scope locked.
 
 **Flow**:
-1. **Gap lint** (`lvr.mjs lint run`; judgment checks come back as `needs_model`) — checklist: every bundle file exists and non-empty · every milestone has measurable acceptance criteria + verification procedure · every `assumed` decision appears in ASSUMPTIONS.md · every decision has rationale · cost table present · OVERVIEW.md present · `blueprint.json` matches state · no contradictions with `decisions[]` · every claim cited, fresh, and sourced per spec 07 (group I = `cite check --all`).
+1. Run `lint run`, `crosscheck` and `cite check --all` over the base and declared profile files. Refresh expired facts through the owning procedure. Complete `needs_model` checks with quoted evidence.
 2. Gaps → report in plain language + offer to jump back to the owning Section. Journal: `gap_found`.
-3. Emit `blueprint.json` (schema in `04-bundle.md`; `lvr.mjs blueprint emit`).
-4. Write harness adapters: `CLAUDE.md`, `GEMINI.md` (one-line pointers to AGENTS.md), verify AGENTS.md against the agents.md spec (`lvr.mjs handoff stubs`).
-5. Compose the **entry prompt** (English; `lvr.mjs handoff prompt` writes the fixed template): read AGENTS.md first · execute milestones in order · verify each milestone before claiming done · record results in VERIFICATION.md · consult DECISIONS.md before asking · open questions go to journal, never silently guessed · follow CODE_STYLE.md.
-6. Print the recommended install lines for `CAPABILITIES.md` boosters and the builder kickoff commands for the harness the user is currently in. Journal: `handoff_done`.
+3. With zero citation findings, use `handoff gate` to require a full review at `FIX-THEN-BUILD` or `BUILD-READY`, or the owner's recorded approval to proceed despite the current review. Emit `blueprint.json` using `blueprint emit`.
+4. Verify `AGENTS.md` and write the applicable harness pointers using `handoff stubs`.
+5. Use `handoff prompt` to write the builder instructions. For a v2 index include the profile paths and per-type release checks.
+6. Use `handoff install-lines --builder` for pinned aids and provide a builder kickoff command. Journal `handoff_done` with the selected cleanup owner.
 
 ## v1 skills
 

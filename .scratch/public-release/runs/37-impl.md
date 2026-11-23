@@ -1,0 +1,3 @@
+# Ticket 37 implementation
+
+Handoff checks the variable file list, requires clean crosschecks and citations, and verifies a completed full review or a recorded approval for the exact review context. The v2 prompt reads declared profile paths and the shared release procedures. Builder recommendations use the pinned registry. The procedure refreshes stale facts through their sources and routes profile issues to their owning procedures. Claude and Gemini keep their existing adapters. Qwen can add its documented context file while preserving existing instructions. Other tools can use the entry prompt and AGENTS.md directly.

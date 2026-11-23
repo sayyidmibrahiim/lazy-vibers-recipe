@@ -1,6 +1,6 @@
 ---
 name: lvr-handoff
-description: Verifies a finished LVR Blueprint Bundle with the gap lint (all 20 bundle files against their structure, decisions, milestones, costs, scope, and state), emits blueprint.json, writes the CLAUDE.md/GEMINI.md harness stubs, verifies AGENTS.md, and composes the builder entry prompt (HANDOFF-PROMPT.md) plus the booster install lines. Use when the user wants to hand an LVR project to a builder agent, close out the pipeline after S9, or check whether a bundle is complete. Refuses with plain guidance when scope is not locked or S1–S8 are unfinished, and never lints silently past a known gap.
+description: Checks the base and profile files of an LVR Blueprint Bundle, then prepares a builder prompt with release verification. Use when a user wants to hand an approved plan to a coding agent.
 ---
 
 # lvr-handoff
@@ -21,7 +21,7 @@ Before any check or file write:
 1. **Precondition** — `.lvr/state.json` readable, scope locked, S1–S8 done. Not met → refuse with guidance; never lint a half-built pipeline.
 2. **Gap lint** — `lint run` (script) or `references/lint-checklist.md` run literally, groups A–I in order (I = citations, `cite check`). Journal `handoff_started` at open, `gap_found` per finding.
 3. **Findings → offer** — fix now (jump back into the owning procedure) or abort; re-lint after fixes.
-4. **Emit** — `blueprint.json` + the two harness stubs; AGENTS.md verified, never assumed fine.
+4. **Emit** — check the review result and citations, then emit `blueprint.json` and the applicable harness stubs.
 5. **Entry prompt + close** — write `HANDOFF-PROMPT.md`, print the booster install lines and the harness kickoff command, journal `handoff_done`.
 
 ## Step 1 — Precondition
@@ -40,7 +40,7 @@ S9 is deliberately not a precondition: an uncompiled or half-compiled bundle is 
 
 1. **Open** — journal `handoff_started` (payload: project slug) + a state write (no state field changes) — one checkpoint.
    - Script: `LVR journal append --type handoff_started --payload '{"project":"<slug>"}'`
-2. **Run the checklist** — Material: the bundle files in `TARGET`, `TARGET/.lvr/state.json`, and the journal (scope evidence). Do not sample: every check runs, every time, on every run.
+2. **Run the checklist** — read the declared v2 bundle files and frozen profile list, or the base list for v1. Check state and scope against the journal. Run `LVR crosscheck` and `LVR cite check --all` over the full bundle; record findings alongside the gap lint. When citations expire, research the facts again with current sources before handoff. Log each attempt with `research log`, keep its sources and access dates, and send any substantive change to the owning procedure.
    - Script: `LVR lint run --journal`. The JSON is the whole mechanical result: `findings[]` = `{id, group, file, message, owner, kind}` (`kind` is `bundle_gap` or `self_fix`; `clean` is true when no `bundle_gap` is left), and `--journal` has already journaled one `gap_found` per finding. `needs_model[]` lists the checks only a model can judge (the `id` names the check in `references/lint-checklist.md`; the `message` says what to look at): perform each one yourself, literally, against the checklist. A failed one is a finding exactly like a script finding, journaled with `LVR journal append --type gap_found --payload '{"check":"<id>","finding":"…","owner":"…"}'`. Never add a script finding by judgment, never drop one, never reword it. `precondition` repeats the scope-lock evidence.
    - Fallback (no Node): read `references/lint-checklist.md` and execute every check literally, groups A–I in order.
 3. **Findings** — every failed check is one finding: a plain-language line (what is wrong, where) plus its owner (the checklist's owner table). Journal `gap_found` per finding (payload: check id, one-line finding, owner) at the moment it is found (with the script, `--journal` did this for its own findings).
@@ -57,6 +57,7 @@ With at least one bundle gap, offer exactly two options (in User Language):
 1. **Fix now** — jump back into the owning procedure:
    - The owning procedures live in the `lvr-init-new-idea` skill (S7 scope lock, S8 milestone plan, S9 compile — its SKILL.md). If it is installed (harness skill list, or the known skills directories: `~/.claude/skills/`, `<cwd>/.claude/skills/`, `~/.agents/skills/`), hand the user to it: re-open the owning Section's procedure on the failing items only, then return here and re-lint.
    - If it is NOT installed, instruct precisely instead: per finding, name the file, the exact heading or row to add or fix (the checklist embeds the required structure per file), and the record or state field the content comes from. Content from the records only — never invented. The user or another session applies the fixes; this skill never writes bundle files.
+   - For a profile-specific issue, use the same owning Section and its active profile from `LVR profile plan`. Name the affected file, criterion and evidence in the fallback. A stale fact must be refreshed from its real source.
    - Fixes land through the owning procedure's own checkpoint events (`doc_generated`, `section_done`, …).
    - The AI fixes only what the lint reported: each fix touches the file and heading the finding names, nothing else.
 2. **Abort** — stop cleanly: "The bundle still has \<N\> gaps. Nothing was emitted this run and nothing was changed. Fix the items above, then run `/lvr-handoff` again." No `blueprint.json`, no stubs, no entry prompt, no `handoff_done` — a later run re-lints from disk.
@@ -65,9 +66,13 @@ After fix-now: **re-lint** — run the full checklist again (Step 2; not just th
 
 ## Step 4 — Emit
 
-Only when the lint is clean. These are the only bundle writes this skill ever makes:
+Script: `LVR handoff gate` and `LVR cite check --all`.
 
-1. **`blueprint.json`** — derive it from `state.json` + the bundle, exact schema v1 (reproduced in `references/lint-checklist.md`, group H): project fields, stack, features with `in_mvp`, `decisions_count`, milestones with `acceptance_count`, costs, capabilities, pointers. Compare against the existing file ignoring `generated_at`: identical → leave untouched; missing or any drift → write it with `generated_at` = now. It is a derived file — regenerate, never hand-edit, never keep a stale copy.
+Emit after the full lint is clean, crosscheck passes, and citation findings are zero. A finished full review at `FIX-THEN-BUILD` or `BUILD-READY` meets the review gate. Show remaining review items to the owner. An unfinished or lower review result sends the user to `/lvr-review-plan` unless they explicitly approve proceeding with the stated gaps. Record the exact approval and reason as a `user_confirmed` decision using `LVR decision record --event handoff_started --in -`, with `review_override: true` and the gate's current `review_run` in the event payload. Write its decision row through the owning procedure and repeat the checks. Pass `--override D-NNN` to the gate and prompt command. A newer review requires an updated decision. Without Node, inspect the same review, citation and journal evidence before emitting.
+
+These are the handoff outputs:
+
+1. **`blueprint.json`** — derive it from state and the bundle. A v2 index includes the base files and approved profile files. An older v1 index keeps its base layout.
    - Script: `LVR blueprint emit` — refuses with `BUNDLE_FEATURES_INCONSISTENT` (never writes) when a feature id has two requirements blocks or an F-NN has none; that is a gap for Step 3 (B5/B9), not something to patch around. It derives everything the bundle states, writes only on drift, answers `{changed, written, reason, drift[]}` (`LVR blueprint emit --check` writes nothing). It keeps the stack, `idea_summary_en` and money totals from the existing `blueprint.json` when the bundle does not state them in a parseable way; when it cannot (`BLUEPRINT_NEEDS_INPUT`, `error.details.missing`), read the bundle yourself and pass exactly those fields: `LVR blueprint emit --in -` with a quoted heredoc holding `{"stack":{"primary":"…","components":["…"],"reasons_ref":"DECISIONS.md#D-NNN"},"idea_summary_en":"…","costs":{"monthly_usd":0,"one_time_usd":0}}`.
 2. **`CLAUDE.md` + `GEMINI.md`** — write each when missing or not exactly this one line, with nothing else:
 
@@ -76,6 +81,7 @@ Only when the lint is clean. These are the only bundle writes this skill ever ma
    ```
 
    - Script: `LVR handoff stubs` — writes only the stub that is missing or wrong (`{changed, written[], backed_up[]}`). A stub file that holds anything else (the user's own notes) is first copied to `<file>.bak-<YYYY-MM-DD>` (`-2`, `-3` … if that name exists) inside the project and `backed_up[]` names it: tell the user once, in their language, that their text was kept there. An empty file is just rewritten. Without Node, do the same by hand: copy the file aside before overwriting it.
+   - Qwen Code: `LVR handoff stubs --harness qwen-code` adds a missing `QWEN.md` and keeps an existing one. For other tools, point the builder to `AGENTS.md` from the entry prompt. [Qwen Code context file documentation](https://raw.githubusercontent.com/QwenLM/qwen-code/main/docs/users/configuration/settings.md)
 3. **AGENTS.md, verified** — it must exist and cover all four: what the product is (`## What this is`, concrete); the context load order (`DECISIONS.md` → `SPEC/` → `MILESTONES.md` → `VERIFICATION.md`); working rules (stack → `CODE_STYLE.md`, security → `SECURITY.md`, a milestone is done only when its `VERIFICATION.md` procedure passes); and a file map pointing at every one of the other 19 bundle files. Thin on any of these → that is a gap finding (back to Step 3), never a silent pass.
    - Script: the lint's G3–G6 checks and the `agents_md` object of `LVR handoff stubs` (`{ok, findings[]}`) report this; a non-empty `agents_md.findings` is a gap (back to Step 3).
 
@@ -94,8 +100,8 @@ Consult the pinned `verification-before-completion` reference for the builder's 
    - if the plan has a gap, show it immediately with a concrete fix option attached — never smooth it over (anti-yes-man, principle 2);
    - `.lvr/` is read-only planning state — the builder must not modify it, except appending open questions to `.lvr/journal.ndjson`; the optional `/lvr-build` skill may also set the build status, milestone verification and deployment fields.
 
-   Script: `LVR handoff prompt` writes exactly this file from the fixed template (title from `project.name`; the file's bytes depend on nothing else) and rewrites it only when the bytes change; its `kickoff` object holds the harness commands below.
-2. **Close** — print, in the user's language: the recommended install lines from `CAPABILITIES.md` (every row's install command with name and license; NC items marked runtime-dependency-only; Script: `LVR handoff install-lines` → `lines[]`), then the kickoff command for the current harness with the entry prompt as the first input. Kickoff forms: Claude Code `claude "$(cat HANDOFF-PROMPT.md)"` · Gemini CLI `gemini -p "$(cat HANDOFF-PROMPT.md)"` · Codex `codex "$(cat HANDOFF-PROMPT.md)"` · ZCode `zcode "$(cat HANDOFF-PROMPT.md)"` · harness unknown → "open a fresh session in this folder and paste the contents of `HANDOFF-PROMPT.md`".
+   For v2, list the approved profile paths and each confirmed type’s release check. `LVR handoff prompt` obtains both from disk and rewrites the file only when the content changes. Pass `--override D-NNN` when the recorded approval was needed. Use the pinned `anti-slop` editorial method on the owner summary. Keep precise filenames, commands and evidence in the prompt.
+2. **Close** — use `LVR handoff install-lines --builder --harness NAME` for the pinned repository, license and project-local install commands. Omit `--harness` when the installer should ask. Read reference-only entries at their pins. Stage installable aids through the lifecycle guide and print the kickoff command returned by the prompt helper. For other tools, open the folder and paste the prompt.
 3. **Done** — journal `handoff_done` with gaps found, self-fixes, entry prompt path and `cleanup_owner`. Use `"build"` if the owner chose `/lvr-build` next, or `"handoff"` when this wraps up the Recipe pipeline. The script fills `state.handoff` in the same checkpoint.
    - Script: `LVR journal append --type handoff_done --in -`. Keep tracked copies for the chosen Recipe build. When handoff owns cleanup, use the consent and exact-path checks in [the project-local lifecycle](references/booster-lifecycle.md).
 
