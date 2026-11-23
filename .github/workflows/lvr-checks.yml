@@ -1,0 +1,50 @@
+name: LVR checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check:skills
+      - run: npm run lint
+      - run: npm exec -- next typegen
+      - run: npm exec -- tsc --noEmit
+      - run: npm test
+      - run: npm run build
+
+  native-manifests:
+    runs-on: ubuntu-latest
+    container: node:24-bookworm
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install manifest tools in the disposable job
+        run: |
+          npm install --prefix "$RUNNER_TEMP/lvr-manifests" --no-package-lock \
+            @anthropic-ai/claude-code@2.1.330 @openai/codex@0.171.0 skills@1.9.0
+      - name: Check local manifests with the harness tools
+        env:
+          DISABLE_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
+        run: |
+          set -eu
+          bin="$RUNNER_TEMP/lvr-manifests/node_modules/.bin"
+          "$bin/claude" plugin validate .
+          "$bin/codex" plugin marketplace add "$GITHUB_WORKSPACE" --json
+          "$bin/codex" plugin marketplace list --json
+          "$bin/skills" add "$GITHUB_WORKSPACE" --list > "$RUNNER_TEMP/lvr-discovered-skills.txt"
+          node scripts/check-discovered-skills.mjs "$RUNNER_TEMP/lvr-discovered-skills.txt"

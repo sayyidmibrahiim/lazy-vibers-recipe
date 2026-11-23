@@ -45,3 +45,12 @@
 2026-11-23T02:28:07Z | codex/gpt-6 | task 16 | claimed and traced existing journal-backed coverage slots | next: add evidence progress, confirmation batching and rich/thin rehearsal
 2026-11-23T02:35:07Z | codex/gpt-6 | task 16 | evidence crosscheck, progress, user pacing and rich/thin bundle rehearsal implemented | next: finish same-context shared verification
 2026-11-23T02:37:42Z | codex/gpt-6 | task 16 | rich/thin, assumption audit, state replay and all regressions passed; closed | next: ticket 17 planning specialist routing and local lifecycle
+2026-11-23T02:38:34Z | codex/gpt-6 | task 17 | claimed and verified planning-only profile source pins and licenses | next: implement transport, project-local staging and result checks
+2026-11-23T02:41:36Z | codex/gpt-6 | task 17 | pinned 15 role cards and implemented planning routes, cited result checks and owned project staging | next: native registration, harness guide and fixture verification
+2026-11-23T02:48:09Z | codex/gpt-6 | task 17 | source and transport rehearsals pass; requested owner hosts for actual Claude Code and OpenCode evidence | next: keep pending source and continue independent OS matrix
+2026-11-23T02:48:09Z | codex/gpt-6 | task 19 | claimed independent automation work; current host is Linux with Codex | next: portable fixture and CI matrix, then native Codex smoke
+2026-11-23T02:52:05Z | codex/gpt-6 | task 19 | Linux Node 22/24 and native Codex rehearsal pass; CI prepared; other hosts pending | next: owner host runs; continue independent ticket 20 audit
+2026-11-23T02:52:51Z | codex/gpt-6 | task 20 | claimed; identified personal model defaults, active fixture dependencies and author metadata | next: fix runtime defaults and hint, run redacted history and data scans
+2026-11-23T02:58:14Z | codex/gpt-6 | task 20 | sanitized example, runtime configuration, build and history scan verified; owner asked to confirm authorship | next: make CI independent of archive, then finish untracking when safe
+2026-11-23T02:59:34Z | codex/gpt-6 | task 22 | claimed archive-independent checks | next: add portable core tests, metadata checks and CI
+2026-11-23T03:06:35Z | codex/gpt-6 | task 22 | clean archive-independent checkout, manifest validation, tests, lint, types and build pass; closed | next: ticket 28 variable bundle contract after isolating pending task 17 source

@@ -11,7 +11,8 @@
     "start": "next start",
     "lint": "eslint",
     "sync:skills": "node scripts/sync-skills.mjs",
-    "check:skills": "node scripts/sync-skills.mjs --check"
+    "check:skills": "node scripts/check-skills.mjs",
+    "test": "node --test tests/lvr/*.test.mjs"
   },
   "dependencies": {
     "mermaid": "^12.3.0",
