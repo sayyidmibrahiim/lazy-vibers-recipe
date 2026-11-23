@@ -139,11 +139,11 @@ Headings, in order: `# Capabilities` · one table row per recommended booster:
 Fill: boosters recommended for this stack, from the Capability Registry, license-tagged; NC items marked `runtime-dependency-only` — credited, never vendored (principle 11).
 
 ## 19. blueprint.json — machine snapshot (derived)
-Schema v1, stable — consumers: web UI, external harnesses (the canonical schema; the `lvr-handoff` lint checklist, group H, embeds the same block):
+Schema v2, with v1 compatibility for existing files — consumers: web UI, external harnesses (the canonical schema; the `lvr-handoff` lint checklist, group H, embeds the same block):
 
 ```jsonc
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "generated_at": "2026-11-08T12:00:00Z",
   "project": { "slug": "...", "name": "...", "user_language": "id",
                "idea_summary_en": "...", "status": "bundled" },
@@ -157,7 +157,16 @@ Schema v1, stable — consumers: web UI, external harnesses (the canonical schem
   "capabilities": [ { "name": "...", "kind": "skill|mcp|plugin", "license": "MIT",
                       "nc": false, "install": "npx skills add ..." } ],
   "pointers": { "agents": "AGENTS.md", "overview": "OVERVIEW.md",
-                "verification": "VERIFICATION.md", "state": ".lvr/state.json" }
+                "verification": "VERIFICATION.md", "state": ".lvr/state.json" },
+  "profile_files": ["ROUTES_SITEMAP.md", "UI_SPEC.md"],
+  "files": [
+    "AGENTS.md", "OVERVIEW.md", "DECISIONS.md", "SPEC/prd.md",
+    "SPEC/requirements.md", "SPEC/data-model.md", "SPEC/api.md",
+    "SPEC/architecture.md", "USER_FLOWS.md", "CODE_STYLE.md", "SECURITY.md",
+    "RESEARCH.md", "SCOPE.md", "MILESTONES.md", "VERIFICATION.md",
+    "ASSUMPTIONS.md", "HANDOVER.md", "CAPABILITIES.md", "CLAUDE.md",
+    "GEMINI.md", "ROUTES_SITEMAP.md", "UI_SPEC.md", "blueprint.json"
+  ]
 }
 ```
 

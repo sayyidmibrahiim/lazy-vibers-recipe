@@ -32,7 +32,7 @@ Reporting rule: a file that already failed a presence check (group A) is not re-
 - A17 `HANDOVER.md` — exists, non-empty
 - A18 `CAPABILITIES.md` — exists, non-empty
 
-`blueprint.json`, `CLAUDE.md`, `GEMINI.md` (rows 19–20 of the conventions §8 list) are handoff outputs: missing is never a gap — see groups G and H. A whole missing bundle (A1–A18 all fail) means S9 never ran: one plain report line saying so (id `A0` in the script), owned by S9.
+After the base content files, group A checks the frozen profile paths and v2 manifest entries. Each missing or empty content item gets its own finding. `blueprint.json`, `CLAUDE.md`, and `GEMINI.md` are derived or stub outputs reported in groups G and H. A bundle with no content gets one A0 finding.
 
 ## B. Structure — each file carries its template's required headings, in order
 
@@ -54,7 +54,7 @@ Reporting rule: a file that already failed a presence check (group A) is not re-
 - B16 `ASSUMPTIONS.md` — `# Assumptions` · one `## D-<NNN> — <summary> (assumed | designer_filled)` block per non-confirmed decision
 - B17 `HANDOVER.md` — `# Handover (owner guide)` · `## How to run it` · `## How to deploy and update` · `## How to back up` · `## Where secrets and API keys live` · `## Who to ask what`
 - B18 `CAPABILITIES.md` — `# Capabilities` · booster table with the exact header row `| Name | Kind | License | Install | Notes |`
-- B19 all bundle files — GitHub-flavored Markdown, English, no Mermaid fences (ASCII diagrams only)
+- B19 all bundle Markdown files — GitHub-flavored Markdown and ASCII diagrams. The Mermaid erDiagram in SPEC/data-model.md is the single diagram exception.
 - B20 no unfilled template placeholder (`<…>`) survives as literal text in any bundle file — a violation is an UNFILLED `<...>` token outside code fences; URLs/parameters inside fenced blocks and documented runtime parameters in emitted content (verification-time values like `<date>`, `<APP>` as defined in-file, the error envelope `{"error": "<message>"}`) are content, not placeholders (the script treats a `<token>` as documented when the same file shows it inside inline code or a fenced block)
 - B21 names are identical across files — the display name is the H1 of AGENTS.md (`# <Display name>`), OVERVIEW.md and SPEC/prd.md; each F-NN has the same name in SPEC/requirements.md, USER_FLOWS.md (heading minus its `(in-MVP)` / `(parked — see SCOPE.md)` suffix), SCOPE.md (the row starts with the name) and blueprint.json; stack and entity names are the model's check
 
@@ -104,14 +104,14 @@ G3–G6 are the "thin AGENTS.md" checks: failing any one is a gap finding, never
 
 - H1 `blueprint.json` exists — missing is not a gap: it is emitted in this run (self-fix)
 - H2 every field blueprint.json derives matches `state.json` and the bundle — project (slug, name, user_language, status), features (id, name, in_mvp), `decisions_count` (confirmed/assumed/designer_filled), milestones (id, goal, acceptance_count), costs vs the cost tables; any drift → re-emitted in this run (self-fix)
-- H3 blueprint.json follows the schema summary below — same keys and shapes, `schema_version` = 1 (a violation is a self-fix: re-emitted in this run)
+- H3 blueprint.json follows its declared schema. A v2 index has the complete `files` list. An existing v1 index remains readable. A malformed index is re-emitted.
 - H4 no bundle document contradicts `decisions[]` — the stack named in OVERVIEW/SPEC/architecture/RESEARCH and every shaping decision trace to decision ids; `blueprint.json` `stack.reasons_ref` names an existing decision
 
-`blueprint.json` schema summary (v1, verbatim from the S9 templates — embedded so the H checks need no other skill installed):
+`blueprint.json` v2 schema summary. A v1 index uses the same content fields without the complete file list.
 
 ```jsonc
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "generated_at": "2026-11-08T12:00:00Z",
   "project": { "slug": "...", "name": "...", "user_language": "id",
                "idea_summary_en": "...", "status": "bundled" },
@@ -125,7 +125,16 @@ G3–G6 are the "thin AGENTS.md" checks: failing any one is a gap finding, never
   "capabilities": [ { "name": "...", "kind": "skill|mcp|plugin", "license": "MIT",
                       "nc": false, "install": "npx skills add ..." } ],
   "pointers": { "agents": "AGENTS.md", "overview": "OVERVIEW.md",
-                "verification": "VERIFICATION.md", "state": ".lvr/state.json" }
+                "verification": "VERIFICATION.md", "state": ".lvr/state.json" },
+  "profile_files": ["ROUTES_SITEMAP.md", "UI_SPEC.md"],
+  "files": [
+    "AGENTS.md", "OVERVIEW.md", "DECISIONS.md", "SPEC/prd.md",
+    "SPEC/requirements.md", "SPEC/data-model.md", "SPEC/api.md",
+    "SPEC/architecture.md", "USER_FLOWS.md", "CODE_STYLE.md", "SECURITY.md",
+    "RESEARCH.md", "SCOPE.md", "MILESTONES.md", "VERIFICATION.md",
+    "ASSUMPTIONS.md", "HANDOVER.md", "CAPABILITIES.md", "CLAUDE.md",
+    "GEMINI.md", "ROUTES_SITEMAP.md", "UI_SPEC.md", "blueprint.json"
+  ]
 }
 ```
 

@@ -34,7 +34,9 @@ For the AGENTS.md format, consult the upstream specification at [agentsmd/agents
 
 ## Profile additions
 
-After the scope is locked, `profile plan --write` saves the selected types and their extra paths in `.lvr/profile-plan.json`. It keeps that list on retries. S9 uses it for the additional files. The derived v1 index includes `profile_files` when the snapshot has extra paths. Existing indexes with no extra paths retain their original shape. The complete bundle manifest and lint expansion are ticket 28.
+After the scope is locked, `profile plan --write` saves the selected types, scope flags and extra paths in `.lvr/profile-plan.json`. It keeps the file list on retries. S9 emits a v2 index with `files`, which lists all 20 base Markdown files, the frozen profile paths and the index itself. `profile_files` carries just the extras when present. Lint and crosscheck use the frozen and declared files to find missing content, placeholders and diagram errors. Existing v1 indexes remain readable and keep their format unless a v2 frozen plan applies.
+
+After lock, a file may be appended when an approved feature changes a profile flag and the resulting profile plan includes that file (A6). Journal `feature_applied` with the flipped flag in `product.flags`, the exact approved paths in `bundle_files`, and the matching `user_confirmed` decision in `decisions`. Run `LVR profile add-file --file PATH --flag KEY --decision-id D-NNN` for each approved file, then emit the index again. A repeated command keeps the existing entry. Existing files and IDs remain part of the plan. Create the approved file, update the file map and run lint and crosscheck before closing the feature.
 
 [The AI feature specification](14-ai-feature.md) adds `SPEC/ai.md` to new profile plans when `has_llm: true`. It carries sourced model and data choices, safeguards and runnable evaluations.
 
@@ -69,10 +71,10 @@ The base Markdown files and the frozen profile files define the plan for that ru
 
 Rules: existing ids are never renumbered; earlier `VERIFICATION.md` entries and `DECISIONS.md` rows are never rewritten; `blueprint.json` stays derived; parked features keep a requirements row marked parked, a scope row with the reason, and a `USER_FLOWS.md` section whose heading is marked `(parked — see SCOPE.md)` (the captured script, no diagram required), and require no milestone or verification procedure. Structure checks allow the trailing `## Build log — <ts>` sections `/lvr-build` appends to `VERIFICATION.md`.
 
-## `blueprint.json` schema (v1, stable — consumers: web UI, external harnesses)
+## `blueprint.json` schema (v2 — readers also support v1)
 ```jsonc
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "generated_at": "2026-11-08T12:00:00Z",
   "project": { "slug": "...", "name": "...", "user_language": "id",
                "idea_summary_en": "...", "status": "bundled" },
@@ -86,7 +88,16 @@ Rules: existing ids are never renumbered; earlier `VERIFICATION.md` entries and 
   "capabilities": [ { "name": "...", "kind": "skill|mcp|plugin", "license": "MIT",
                       "nc": false, "install": "npx skills add ..." } ],
   "pointers": { "agents": "AGENTS.md", "overview": "OVERVIEW.md",
-                "verification": "VERIFICATION.md", "state": ".lvr/state.json" }
+                "verification": "VERIFICATION.md", "state": ".lvr/state.json" },
+  "profile_files": ["ROUTES_SITEMAP.md", "UI_SPEC.md"],
+  "files": [
+    "AGENTS.md", "OVERVIEW.md", "DECISIONS.md", "SPEC/prd.md",
+    "SPEC/requirements.md", "SPEC/data-model.md", "SPEC/api.md",
+    "SPEC/architecture.md", "USER_FLOWS.md", "CODE_STYLE.md", "SECURITY.md",
+    "RESEARCH.md", "SCOPE.md", "MILESTONES.md", "VERIFICATION.md",
+    "ASSUMPTIONS.md", "HANDOVER.md", "CAPABILITIES.md", "CLAUDE.md",
+    "GEMINI.md", "ROUTES_SITEMAP.md", "UI_SPEC.md", "blueprint.json"
+  ]
 }
 ```
 

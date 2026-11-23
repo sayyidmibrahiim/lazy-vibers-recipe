@@ -78,3 +78,33 @@ test("framework signals are reproducible from dated cache evidence with no netwo
   assert.deepEqual(first.candidates[0].signals.version, { source, fetched: date, value: "16.0.1" });
   assert.equal(first.candidates[0].signals.github_pushed.value, null);
 });
+
+test("new blueprint indexes declare the full bundle and reject unusable lists", (t) => {
+  const { dir, run, start } = fixture(t);
+  start();
+  run("journal", "append", "--type", "doc_generated", "--payload", JSON.stringify({
+    file: "DECISIONS.md", decisions: [{ id: "D-001", section: "S5", summary: "Use a local stack", rationale: "The owner chose a local project.", status: "user_confirmed" }],
+  }));
+  fs.mkdirSync(path.join(dir, "SPEC"));
+  for (const [file, title] of Object.entries({
+    "SPEC/requirements.md": "Requirements", "MILESTONES.md": "Milestones", "SCOPE.md": "Scope",
+    "OVERVIEW.md": "Booking", "CAPABILITIES.md": "Capabilities",
+  })) fs.writeFileSync(path.join(dir, file), `# ${title}\n`);
+  const input = path.join(dir, "blueprint-input.json");
+  fs.writeFileSync(input, JSON.stringify({
+    idea_summary_en: "A local booking list.",
+    stack: { primary: "local", components: ["SQLite"], reasons_ref: "DECISIONS.md#D-001" },
+    costs: { monthly_usd: 0, one_time_usd: 0 },
+  }));
+  assert.equal(run("blueprint", "emit", "--in", input).written, true);
+  const blueprint = path.join(dir, "blueprint.json");
+  const declared = JSON.parse(fs.readFileSync(blueprint, "utf8"));
+  assert.equal(declared.schema_version, 2);
+  assert.equal(declared.files.length, 21);
+  assert.ok(declared.files.includes("AGENTS.md") && declared.files.includes("GEMINI.md"));
+  assert.ok(declared.files.includes("blueprint.json"));
+  declared.files.push("../outside.txt");
+  fs.writeFileSync(blueprint, JSON.stringify(declared));
+  const lint = run("lint", "run", "--group", "H");
+  assert.ok(lint.findings.some((entry) => entry.id === "H3" && entry.message.includes("project-relative")));
+});

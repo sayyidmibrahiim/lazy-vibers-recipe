@@ -670,11 +670,11 @@ Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the B
    - every milestone acceptance criterion has a VERIFICATION.md procedure (exact commands, expected outputs, what to look at);
    - every price in the OVERVIEW.md and RESEARCH.md cost tables cites its S2 or S5 row (principle 1);
    - every claim in the records and the bundle carries a valid, fresh cite group or a logged `[unverified: …]` marker; no memory sources; no unsourced recommendation; no `designer_filled` decision on an unverified fact; every Domain Brief item became a question or decision (principles 1 and 14; conventions §10) — an expired fact is researched again, never compiled stale;
-   - all base Markdown files and frozen profile additions exist and are non-empty.
+   - all required files from the frozen and declared bundle list exist and are non-empty.
    - Script: `LVR crosscheck` runs this whole list (rules X1–X8, read-only; X8 = `cite check --all`, findings I1–I13) over the drafted bundle and returns `findings[]` with exact messages; fix only what it reports, with targeted edits, then run it again until `clean` is true. Its `needs_model[]` items (stack and entity names identical across files; Why and confirm lines specific; verification steps exact and covering their criterion; OVERVIEW and RESEARCH prices really sourced; also the cost tables agree) are yours to check by reading — the script never guesses them. A duplicated `## F-NN` block or an F-NN that exists in only some files is reported by the script (X1). Parked features keep a `SPEC/requirements.md` block marked parked, a `SCOPE.md` row, and a `USER_FLOWS.md` heading marked `(parked — see SCOPE.md)` (conventions §5); the script checks all three.
 3. **SimpleEnglish document-rules pass** — short sentences, active voice, jargon defined on first use (principle 7); applies to all bundle files, strictest for OVERVIEW.md; never fights GFM structure.
 4. **Anti-slop editing pass** — concrete and specific, no filler (principle 6); rewrite slop lines, never drop content.
-5. **Emit blueprint.json** — the exact schema v1 in `references/bundle/templates.md` §19, derived from `state.json`: regenerate it, never hand-edit it. Write the one-line CLAUDE.md + GEMINI.md stubs (exact line in the templates).
+5. **Emit blueprint.json** — the v2 manifest in `references/bundle/templates.md` §19, derived from `state.json`: regenerate it, never hand-edit it. Write the one-line CLAUDE.md + GEMINI.md stubs (exact line in the templates).
    - Script: `LVR blueprint emit` (add `--in -` with the stack, `idea_summary_en` and costs JSON when it answers `BLUEPRINT_NEEDS_INPUT`; the hint shows the shape) and `LVR handoff stubs`. Both write only what is missing or wrong.
 6. **Close** — journal `doc_generated` per file (payload: the file path) with a state write each — one checkpoint per file (conventions §9). Then: `project.status` = "bundled"; `sections.S9` closes per engine step 6 with `record` = the bundle files; `current_section` stays "S9" (S10 Build has no section pointer; `/lvr-build` tracks it in `project.status`); suggest `/lvr-handoff` (engine step 7). S9 is resumable per file: a file already on disk that passes the cross-check is kept — only missing or failing files are drafted again, never a silent blanket rewrite.
    - Script: `LVR journal append --type doc_generated --payload '{"file":"<path>"}'` per file.
@@ -709,7 +709,7 @@ Script: a confirmed display-name change is `LVR decision record --event doc_gene
 - [ ] If SPEC/ai.md is planned, it has a checked prompt and data contract, fallback, cost and at least ten runnable cases with observable pass conditions.
 - [ ] If UI_SPEC.md is planned, it has concrete tokens, screens and states, copy, motion, layout and accessibility checks. Its contrast results and outstanding builder checks are recorded.
 - [ ] Feature failure paths and abuse controls have verification steps. The bundle records its quality and operations targets, and a named data sources and integrations section.
-- [ ] blueprint.json matches `state.json` and follows the schema in `references/bundle/templates.md` §19.
+- [ ] blueprint.json matches `state.json` and follows the manifest schema in `references/bundle/templates.md` §19.
 - [ ] CLAUDE.md + GEMINI.md stubs written; AGENTS.md follows the agents.md spec.
 - [ ] Every degraded booster and blocked-then-resolved Section appears in OVERVIEW.md → Limitations.
 - [ ] `project.status` = "bundled"; `doc_generated` journaled for every file.

@@ -54,3 +54,7 @@
 2026-11-23T02:58:14Z | codex/gpt-6 | task 20 | sanitized example, runtime configuration, build and history scan verified; owner asked to confirm authorship | next: make CI independent of archive, then finish untracking when safe
 2026-11-23T02:59:34Z | codex/gpt-6 | task 22 | claimed archive-independent checks | next: add portable core tests, metadata checks and CI
 2026-11-23T03:06:35Z | codex/gpt-6 | task 22 | clean archive-independent checkout, manifest validation, tests, lint, types and build pass; closed | next: ticket 28 variable bundle contract after isolating pending task 17 source
+2026-11-23T03:07:44Z | codex/gpt-6 | task 17 | saved pending implementation at stash af6d741 while preserving tracker and run evidence | next: apply and integrate after native host evidence
+2026-11-23T03:07:44Z | codex/gpt-6 | task 28 | claimed after completing independent CI; pending owner work remains isolated | next: v2 bundle file list, compatible reader and post-lock rule
+2026-11-23T03:14:21Z | codex/gpt-6 | task 28 | v2 file manifest, backward compatibility, profile presence checks and A6 additions implemented | next: complete same-context and shared regressions
+2026-11-23T03:17:19Z | codex/gpt-6 | task 28 | two profile bundles, v1 parity, post-lock file guard and all regressions passed; closed | next: ticket 29 align the add-feature path

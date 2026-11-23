@@ -2865,7 +2865,8 @@ function readProfilePlan(dir) {
   try {
     if (!fs.lstatSync(file).isFile()) throw fail("PROFILE_PLAN_INVALID", "The frozen profile plan must be a plain file.");
     const snapshot = JSON.parse(readText(file));
-    if (snapshot?.schema_version !== 1 || !profileNames(snapshot.types) || !Array.isArray(snapshot.profile_files) || !snapshot.profile_files.every(profileFilePath)) {
+    if (![1, 2].includes(snapshot?.schema_version) || !profileNames(snapshot.types) || !Array.isArray(snapshot.profile_files) || !snapshot.profile_files.every(profileFilePath)
+      || (snapshot.schema_version === 2 && (!isObj(snapshot.flags) || !Object.values(snapshot.flags).every((value) => typeof value === "boolean")))) {
       throw fail("PROFILE_PLAN_INVALID", "The frozen profile plan has invalid types or file paths.");
     }
     return snapshot;
@@ -2894,8 +2895,47 @@ function profilePlanCommand(dir, flags) {
     }
     const current = productProfilePlan(dir, flags);
     if (current.status !== "decided") throw fail("PRODUCT_UNCONFIRMED", "Confirm the product type before freezing the profile files.");
-    writeFileAtomic(path.join(dir, PROFILE_PLAN_PATH), JSON.stringify({ schema_version: 1, types: current.types, profile_files: current.profile_files }, null, 2) + "\n", "PROFILE_PLAN_WRITE_FAILED");
+    writeFileAtomic(path.join(dir, PROFILE_PLAN_PATH), JSON.stringify({ schema_version: 2, types: current.types, flags: current.flags, profile_files: current.profile_files }, null, 2) + "\n", "PROFILE_PLAN_WRITE_FAILED");
     return { ...current, frozen: true, written: true };
+  });
+}
+
+function profileAddFileCommand(dir, flags) {
+  const file = need(flags, "file");
+  const flag = need(flags, "flag");
+  const decision = need(flags, "decision-id");
+  if (!profileFilePath(file) || BUNDLE_BASE_MANIFEST.includes(file)) throw invalid("file", "a profile addition path");
+  if (!PROFILE_FLAGS.includes(flag)) throw invalid("flag", PROFILE_FLAGS.join("|"));
+  if (!/^D-\d{3,}$/.test(decision) || (file === UI_SPEC_FILE && flag !== "has_ui") || (file === AI_SPEC_FILE && flag !== "has_llm")) {
+    throw invalid("decision", "an approved decision associated with the file's profile flag");
+  }
+  needLvr(dir);
+  return withLock(dir, "profile add-file", () => {
+    guardSchema(dir);
+    const loaded = loadState(dir), journal = readJournal(dir), frozen = readProfilePlan(dir);
+    if (loaded.kind !== "valid" || !journal.healthy || !frozen || journal.scope_locked_seq === null) {
+      throw fail("SCOPE_UNLOCKED", "A readable frozen bundle is required before adding a profile file.");
+    }
+    guardJournalBehind(dir, journal);
+    if (frozen.profile_files.includes(file)) return { file, changed: false };
+    const approved = loaded.state.decisions.some((entry) => entry.id === decision && entry.status === "user_confirmed");
+    const event = journal.events.find((entry) => entry.seq > journal.scope_locked_seq && entry.type === "feature_applied"
+      && entry.payload.product?.flags?.[flag] === true && Array.isArray(entry.payload.bundle_files) && entry.payload.bundle_files.includes(file)
+      && Array.isArray(entry.payload.decisions) && entry.payload.decisions.some((entry) => entry.id === decision && entry.status === "user_confirmed"));
+    const profiles = loadProfiles(flags.profiles);
+    const scopeFlags = frozen.flags ?? mergeProfiles(profiles, frozen.types, {}).flags;
+    const prior = event && journal.events.findLast((entry) => entry.seq < event.seq && Object.hasOwn(entry.payload.product?.flags ?? {}, flag));
+    const before = prior?.payload.product.flags[flag] ?? scopeFlags[flag];
+    const current = productProfilePlan(dir, flags);
+    if (!approved || !event || before === true || current.flags[flag] !== true || !current.profile_files.includes(file)) {
+      throw fail("PROFILE_FILE_NOT_APPROVED", "Add a planned file only when a post-lock feature records the flag change, approved file and confirmed decision together.");
+    }
+    const next = {
+      ...frozen, schema_version: 2, flags: scopeFlags, profile_files: [...frozen.profile_files, file].sort(cmpStr),
+      additions: [...(frozen.additions ?? []), { file, flag, decision_id: decision, feature_seq: event.seq }],
+    };
+    writeFileAtomic(path.join(dir, PROFILE_PLAN_PATH), JSON.stringify(next, null, 2) + "\n", "PROFILE_PLAN_WRITE_FAILED");
+    return { file, flag, decision_id: decision, changed: true };
   });
 }
 
@@ -2907,7 +2947,27 @@ const BUNDLE_FILES = [
   "AGENTS.md", "OVERVIEW.md", "DECISIONS.md", "SPEC/prd.md", "SPEC/requirements.md", "SPEC/data-model.md", "SPEC/api.md", "SPEC/architecture.md",
   "USER_FLOWS.md", "CODE_STYLE.md", "SECURITY.md", "RESEARCH.md", "SCOPE.md", "MILESTONES.md", "VERIFICATION.md", "ASSUMPTIONS.md", "HANDOVER.md", "CAPABILITIES.md",
 ];
-const FILE_MAP_TARGETS = [...BUNDLE_FILES.slice(1), "blueprint.json", "CLAUDE.md", "GEMINI.md"];
+const BUNDLE_STUBS = ["CLAUDE.md", "GEMINI.md"];
+const BUNDLE_BASE_MANIFEST = [...BUNDLE_FILES, ...BUNDLE_STUBS, "blueprint.json"];
+const validBundlePaths = (files) => Array.isArray(files) && files.every(profileFilePath) && new Set(files).size === files.length;
+
+function bundleProfileFiles(dir, index) {
+  const frozen = readProfilePlan(dir);
+  if (frozen) return frozen.profile_files;
+  if (index?.schema_version === 2 && validBundlePaths(index.files)) {
+    return index.files.filter((file) => !BUNDLE_BASE_MANIFEST.includes(file));
+  }
+  return validBundlePaths(index?.profile_files) ? index.profile_files : [];
+}
+
+function bundleManifest(dir, index) {
+  return [...new Set([...BUNDLE_FILES, ...BUNDLE_STUBS, ...bundleProfileFiles(dir, index), "blueprint.json"])];
+}
+
+function bundleContentFiles(dir, index) {
+  const declared = index?.schema_version === 2 && validBundlePaths(index.files) ? index.files : [];
+  return [...new Set([...bundleManifest(dir, index), ...declared])].filter((file) => file !== "blueprint.json" && !BUNDLE_STUBS.includes(file));
+}
 const STUB_LINE = "Read [AGENTS.md](AGENTS.md) — the builder entry point for this project.";
 const LINT_GROUPS = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
 const DECISIONS_HEADER = "| ID | Decision | Rationale | Alternatives considered | Date | Status |";
@@ -3071,13 +3131,17 @@ function makeBundle(dir) {
   if (ls.kind === "unreadable") throw fail("STATE_UNREADABLE", `state.json is not valid JSON: ${ls.error}`);
   if (ls.kind === "invalid") throw fail("STATE_INVALID", `state.json has ${ls.errors.length} error(s); run state validate.`, { errors: ls.errors });
   const st = ls.state;
+  const root = fs.realpathSync(dir);
   const cache = new Map();
   const memo = (k, f) => { if (!cache.has(k)) cache.set(k, f()); return cache.get(k); };
   const b = {
     dir, st, name: st.project.name, j: readJournal(dir),
     text: (f) => memo("t:" + f, () => {
       const p = path.join(dir, f);
-      try { if (!fs.statSync(p).isFile()) return null; } catch { return null; }
+      try {
+        const resolved = path.relative(root, fs.realpathSync(p));
+        if (resolved === ".." || resolved.startsWith(".." + path.sep) || path.isAbsolute(resolved) || !fs.statSync(p).isFile()) return null;
+      } catch { return null; }
       return tryReadLF(p);
     }),
     present: (f) => b.text(f) !== null && b.text(f).trim() !== "",
@@ -3162,6 +3226,7 @@ function makeBundle(dir) {
       if (t === null) return { kind: "missing" };
       try { return { kind: "ok", value: JSON.parse(t) }; } catch (e) { return { kind: "invalid", error: e.message }; }
     }),
+    files: () => memo("files", () => bundleContentFiles(dir, b.blueprint().value)),
   };
   return b;
 }
@@ -3196,9 +3261,17 @@ function validateBlueprint(bp) {
     for (const k of Object.keys(o)) if (!keys.includes(k) && !optional.includes(k)) e.push(`${at(k)}: unknown key`);
     return true;
   };
-  exact("(root)", bp, ["schema_version", "generated_at", "project", "stack", "features", "decisions_count", "milestones", "costs", "capabilities", "pointers"], ["profile_files"]);
-  T("profile_files", bp.profile_files, (files) => arr(files) && files.every(profileFilePath) && new Set(files).size === files.length, "unique project-relative file paths");
-  if (bp.schema_version !== 1) e.push("schema_version: expected 1");
+  const v2 = bp.schema_version === 2;
+  exact("(root)", bp, ["schema_version", "generated_at", "project", "stack", "features", "decisions_count", "milestones", "costs", "capabilities", "pointers", ...(v2 ? ["files"] : [])], ["profile_files"]);
+  T("profile_files", bp.profile_files, validBundlePaths, "unique project-relative file paths");
+  if (![1, 2].includes(bp.schema_version)) e.push("schema_version: expected 1 or 2");
+  if (v2) {
+    T("files", bp.files, (files) => validBundlePaths(files) && BUNDLE_BASE_MANIFEST.every((file) => files.includes(file)), "unique project-relative paths including every base file and blueprint.json");
+    if (validBundlePaths(bp.files) && bp.profile_files !== undefined && validBundlePaths(bp.profile_files)
+      && jsonDiff(bp.files.filter((file) => !BUNDLE_BASE_MANIFEST.includes(file)).sort(cmpStr), [...bp.profile_files].sort(cmpStr)).length) {
+      e.push("profile_files: must match the non-base files listed in files");
+    }
+  }
   if ("generated_at" in bp) T("generated_at", bp.generated_at, isIso, "an ISO timestamp");
   if (exact("project", bp.project, ["slug", "name", "user_language", "idea_summary_en", "status"])) for (const k of ["slug", "name", "user_language", "idea_summary_en", "status"]) if (k in bp.project) T(`project.${k}`, bp.project[k], str, "a string");
   if (exact("stack", bp.stack, ["primary", "components", "reasons_ref"])) {
@@ -3228,7 +3301,7 @@ function jsonDiff(a, c, p = "", out = []) {
   return out;
 }
 
-const BLUEPRINT_KEYS = ["schema_version", "generated_at", "project", "stack", "features", "decisions_count", "milestones", "costs", "capabilities", "pointers", "profile_files"];
+const BLUEPRINT_KEYS = ["schema_version", "generated_at", "project", "stack", "features", "decisions_count", "milestones", "costs", "capabilities", "pointers", "profile_files", "files"];
 const ordBp = (bp) => Object.fromEntries(BLUEPRINT_KEYS.filter((k) => k in bp).map((k) => [k, bp[k]]));
 const serializeBp = (bp) => JSON.stringify(ordBp(bp), null, 2) + "\n";
 
@@ -3295,9 +3368,12 @@ function deriveBlueprint(b, input = {}) {
   };
   const capabilities = b.capabilities();
   const pointers = { agents: "AGENTS.md", overview: "OVERVIEW.md", verification: "VERIFICATION.md", state: ".lvr/state.json" };
-  const bp = { schema_version: 1, project, stack, features, decisions_count, milestones, costs, capabilities, pointers };
-  const profileFiles = readProfilePlan(b.dir)?.profile_files ?? [];
+  const frozen = readProfilePlan(b.dir);
+  const version = old.schema_version === 1 && frozen?.schema_version !== 2 ? 1 : 2;
+  const bp = { schema_version: version, project, stack, features, decisions_count, milestones, costs, capabilities, pointers };
+  const profileFiles = bundleProfileFiles(b.dir, old).filter((file) => !BUNDLE_BASE_MANIFEST.includes(file));
   if (profileFiles.length) bp.profile_files = profileFiles;
+  if (version === 2) bp.files = bundleManifest(b.dir, old);
   return { bp, missing, preserved };
 }
 const oldCostNum = (old, k) => (isObj(old.costs) && typeof old.costs[k] === "number" ? old.costs[k] : undefined);
@@ -3328,11 +3404,12 @@ function runChecks(b, wanted) {
   const name = b.name.normalize("NFC");
 
   // A. presence
-  const allMissing = BUNDLE_FILES.every((f) => !b.present(f));
-  for (const f of BUNDLE_FILES) if (!b.present(f)) missingFiles.add(f);
+  const contentFiles = b.files();
+  const allMissing = contentFiles.every((f) => !b.present(f));
+  for (const f of contentFiles) if (!b.present(f)) missingFiles.add(f);
   if (want("A")) {
     if (allMissing) add("A0", "(bundle)", "The Blueprint Bundle is missing entirely: Section S9 (Compile) has not run.");
-    else BUNDLE_FILES.forEach((f, i) => {
+    else contentFiles.forEach((f, i) => {
       if (b.text(f) === null) add(`A${i + 1}`, f, `File ${f} is missing.`);
       else if (b.text(f).trim() === "") add(`A${i + 1}`, f, `File ${f} is empty.`);
     });
@@ -3408,7 +3485,7 @@ function runChecks(b, wanted) {
     if (ok("ASSUMPTIONS.md")) for (const a of assumptionBlocks(b.text("ASSUMPTIONS.md"))) if (!a.wellFormed) add("B16", "ASSUMPTIONS.md", `File ASSUMPTIONS.md heading "## ${a.heading}" must look like "## D-NNN — <summary> (assumed | designer_filled)".`);
 
     // B19 Mermaid, B20 placeholders
-    for (const f of BUNDLE_FILES) {
+    for (const f of contentFiles.filter((file) => /\.md$/i.test(file))) {
       if (!ok(f)) continue;
       const lines = b.lines(f);
       for (const line of forbiddenMermaidLines(f, lines)) add("B19", f, `File ${f} has a Mermaid fence at line ${line}; use an ASCII diagram in a text block.`);
@@ -3613,7 +3690,10 @@ function runChecks(b, wanted) {
         for (const [m, why] of [["CODE_STYLE.md", "stack and language rules"], ["SECURITY.md", "security rules"], ["VERIFICATION.md", "the milestone-done rule"]]) if (!text.includes(m)) add("G5", "AGENTS.md", `AGENTS.md "## Working rules" does not mention ${m} (${why}).`);
       }
       const map = sec("File map");
-      if (map) { const text = map.join("\n"); for (const f of FILE_MAP_TARGETS) if (!text.includes(f)) add("G6", "AGENTS.md", `AGENTS.md "## File map" does not point to ${f}.`); }
+      if (map) {
+        const text = map.join("\n");
+        for (const f of [...contentFiles.slice(1), "blueprint.json", ...BUNDLE_STUBS]) if (!text.includes(f)) add("G6", "AGENTS.md", `AGENTS.md "## File map" does not point to ${f}.`);
+      }
     }
   }
 
@@ -3624,7 +3704,7 @@ function runChecks(b, wanted) {
     else if (bp.kind === "invalid") add("H3", "blueprint.json", `blueprint.json is not valid JSON (${bp.error}); blueprint emit rewrites it.`);
     else {
       const errs = validateBlueprint(bp.value);
-      if (errs.length) add("H3", "blueprint.json", `blueprint.json does not follow schema v1: ${errs.slice(0, 5).join("; ")}${errs.length > 5 ? `; and ${errs.length - 5} more` : ""}.`);
+      if (errs.length) add("H3", "blueprint.json", `blueprint.json does not follow schema v${bp.value?.schema_version === 2 ? 2 : 1}: ${errs.slice(0, 5).join("; ")}${errs.length > 5 ? `; and ${errs.length - 5} more` : ""}.`);
       else {
         // with duplicate feature blocks the derivation is ambiguous: B5 reports it and emit refuses until the bundle is fixed
         if (["SPEC/requirements.md", "MILESTONES.md", "SCOPE.md", "OVERVIEW.md", "CAPABILITIES.md"].every((f) => b.present(f)) && dupIds(b.reqBlocks()).length === 0) {
@@ -3647,7 +3727,7 @@ function runChecks(b, wanted) {
   }
 
   // needs_model items: only for groups that ran and files that exist
-  const needs = NEEDS_MODEL.filter(([id, , file]) => want(id) && (file === "all bundle files" ? BUNDLE_FILES.some((f) => b.present(f)) : b.present(file)))
+  const needs = NEEDS_MODEL.filter(([id, , file]) => want(id) && (file === "all bundle files" ? contentFiles.some((f) => b.present(f)) : b.present(file)))
     .map(([id, group, file, message]) => ({ id, group, file, message, owner: ownerOf(id), kind: "bundle_gap", needs_model: true }));
   needs.push(...extraNeeds);
   return { findings, needs_model: needs };
@@ -3673,7 +3753,7 @@ const XRULES = [
   ["X4", "Display name and feature names are identical across all files", ["B21"]],
   ["X5", "Every milestone has a VERIFICATION.md section and every acceptance criterion has a procedure", ["B15", "D4", "D5"]],
   ["X6", "Every price cites its source and access date, or is flagged unverified", ["E4"]],
-  ["X7", "All 18 content files exist and are non-empty", ["A0", ...Array.from({ length: 18 }, (_, i) => `A${i + 1}`)]],
+  ["X7", "All required bundle content files exist and are non-empty", []],
   ["X8", "Every claim carries a valid, fresh citation or a logged unverified marker", Array.from({ length: 13 }, (_, i) => `I${i + 1}`)],
 ];
 
@@ -3699,7 +3779,7 @@ function cmdCrosscheck({ dir }) {
   const b = makeBundle(dir);
   const { findings, needs_model } = runChecks(b, null);
   const rules = XRULES.map(([rule, title, ids]) => {
-    const fs_ = findings.filter((f) => ids.includes(f.id)).map((f) => ({ rule, ...f }));
+    const fs_ = findings.filter((f) => rule === "X7" ? f.group === "A" : ids.includes(f.id)).map((f) => ({ rule, ...f }));
     const nm = needs_model.filter((f) => ids.includes(f.id)).map((f) => ({ rule, ...f }));
     return { rule, title, ok: fs_.length === 0, findings: fs_, needs_model: nm };
   });
@@ -3725,7 +3805,7 @@ async function cmdBlueprintEmit({ dir, flags }) {
     missing: d.missing, hint: 'Read the bundle, then pass them as JSON with --in, for example {"stack":{"primary":"next-supabase","components":["Next.js","Supabase"],"reasons_ref":"DECISIONS.md#D-019"},"idea_summary_en":"...","costs":{"monthly_usd":0,"one_time_usd":0}}.',
   });
   const bad = validateBlueprint({ ...d.bp, generated_at: "2000-01-01T00:00:00Z" });
-  if (bad.length) throw fail("BLUEPRINT_INVALID", `The derived blueprint.json does not follow schema v1: ${bad.slice(0, 5).join("; ")}.`, { errors: bad });
+  if (bad.length) throw fail("BLUEPRINT_INVALID", `The derived blueprint.json does not follow schema v${d.bp.schema_version}: ${bad.slice(0, 5).join("; ")}.`, { errors: bad });
   const refId = d.bp.stack.reasons_ref.split("#")[1];
   if (!b.st.decisions.some((x) => x.id === refId)) throw fail("BLUEPRINT_INVALID", `stack.reasons_ref points to ${refId}, which is not in state.json decisions[].`, { reasons_ref: d.bp.stack.reasons_ref });
   const cur = b.blueprint();
@@ -3766,7 +3846,7 @@ function backupFile(dir, f) {
 function cmdHandoffStubs({ dir }) {
   const b = makeBundle(dir);
   const written = [], unchanged = [], backed_up = [];
-  for (const f of ["CLAUDE.md", "GEMINI.md"]) {
+  for (const f of BUNDLE_STUBS) {
     const t = b.text(f);
     if (t !== null && t.replace(/\n+$/, "") === STUB_LINE) { unchanged.push(f); continue; }
     if (t !== null && t.trim() !== "") backed_up.push({ file: f, backup: backupFile(dir, f) }); // the user's own notes are kept, never silently lost
@@ -4364,7 +4444,16 @@ function citeAllFiles(dir) {
     try { names = fs.readdirSync(path.join(dir, sub)).filter((f) => f.endsWith(".md")).sort(); } catch { /* none */ }
     for (const f of names) { const p = `${sub}/${f}`; try { if (fs.statSync(path.join(dir, p)).isFile()) out.push(p); } catch { /* skip */ } }
   }
-  for (const f of BUNDLE_FILES) { try { if (fs.statSync(path.join(dir, f)).isFile()) out.push(f); } catch { /* skip */ } }
+  let index;
+  try { index = JSON.parse(readText(path.join(dir, "blueprint.json"))); } catch { /* the bundle lint reports invalid JSON */ }
+  const root = fs.realpathSync(dir);
+  for (const f of bundleContentFiles(dir, index).filter((file) => /\.md$/i.test(file))) {
+    try {
+      const file = fs.realpathSync(path.join(dir, f));
+      const relative = path.relative(root, file);
+      if (relative !== ".." && !relative.startsWith(".." + path.sep) && !path.isAbsolute(relative) && fs.statSync(file).isFile()) out.push(f);
+    } catch { /* skip absent files */ }
+  }
   return out;
 }
 
@@ -8374,6 +8463,11 @@ const COMMANDS = {
     help: "Merge confirmed profiles, preview choices, or freeze the profile file list after scope lock. [--types ID,ID | --write] [--profiles DIR]",
     flags: ["types", "profiles", "write"],
     run: async ({ dir, flags }) => profilePlanCommand(dir, flags),
+  },
+  "profile add-file": {
+    help: "Append one planned file after a confirmed post-lock flag change. --file PATH --flag KEY --decision-id D-NNN [--profiles DIR]",
+    flags: ["file", "flag", "decision-id", "profiles"],
+    run: async ({ dir, flags }) => profileAddFileCommand(dir, flags),
   },
 };
 
