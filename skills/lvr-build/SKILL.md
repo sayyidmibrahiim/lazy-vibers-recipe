@@ -22,7 +22,7 @@ Before any check or file write:
 ## Flow at a glance
 
 1. **Precondition** — bundle, scope lock, S8–S9 done, milestones and verification present. Otherwise refuse with guidance.
-2. **Preflight** — run the reference §1 checklist; broken plan → `build_blocked`.
+2. **Preflight** — run the reference §1 checklist and check versions, quotas and prices; a broken or expired plan records `build_blocked`.
 3. **Open** — journal `build_started`; load builder context in `AGENTS.md` order.
 4. **Select** — first milestone in `state.milestones[]` not `verified`.
 5. **Build + verify** — implement, run the recorded procedure exactly, capture output.
@@ -43,26 +43,31 @@ Before any check or file write:
 
 ## Step 2 — Preflight
 
-Run `references/build-loop.md` §1. Every item must pass. Preflight runs before `build_started`: a failure journals `build_blocked` only — no state field changes, `project.status` stays as it is (replay treats `build_blocked` as informational). Failures:
+Script: `LVR lint run`, `LVR crosscheck`, and `LVR verify freshness`.
+
+Run `references/build-loop.md` §1. Check the actual manifest from `blueprint.json`, using the legacy base list for a v1 index. Every required item must pass. Preflight runs before `build_started`. On failure journal `build_blocked` without changing `project.status`.
 
 - a plan/bundle defect (missing procedure, id mismatch, open blocking review finding) → journal `build_blocked` with the item, name the owning skill (`/lvr-review-plan`, `/lvr-add-feature`, or the user), and stop;
 - a missing tool or credential the bundle knew about (S2 account, API key) → surface it now with the exact missing item; never start coding around it.
+- stale framework pins, prices or quotas → verify the current facts using first-party pages and live docs. Continue only with refreshed evidence that passes the check. Send changes that affect the plan or have incomplete evidence to `/lvr-review-plan`.
 
 ## Step 3 — Open
 
 Script: `LVR journal append --type build_started --payload '{"milestone":"M0"}'`
 
 1. Journal `build_started` (payload: first milestone id, bundle version/date) + a state write setting `project.status` = "building" (the script's reducer does this). One checkpoint.
-2. Load builder context in the order `AGENTS.md` defines: `DECISIONS.md` → `SPEC/` → `MILESTONES.md` → `VERIFICATION.md`, plus `CODE_STYLE.md`, `SECURITY.md`, and `HANDOVER.md` for their concerns.
+2. Load builder context in the order `AGENTS.md` defines. Use `blueprint.json` to locate approved profile files, including `UI_SPEC.md`, `SPEC/ai.md`, the data model and migrations, and workflow or install manifests. Use current official docs for API calls and flags.
 3. Per tier: T1/T2 load the context once per milestone; T3 reloads `state.json`, the current milestone row, its verification row, and the stack rules every turn — never the transcript.
 
 ## Step 4 — Select the milestone
 
-Script: `LVR journal append --type milestone_started --payload '{"id":"M0","goal":"…"}'`
+Script: `LVR verify freshness` then `LVR journal append --type milestone_started --payload '{"id":"M0","goal":"…"}'`.
 
 Follow `references/build-loop.md` §2:
 
 - first entry in `state.milestones[]` where `verified` is not `true`;
+- check freshness again before starting the milestone, including after a resumed build or a fresh-assumption retry;
+- plan the applicable project-local boosters for this milestone using the reference §8;
 - never re-run a verified milestone, never reorder;
 - all verified → run the final release checks in Step 7, then close at Step 8.
 
@@ -70,28 +75,29 @@ Journal `milestone_started` (payload: id, goal). One checkpoint.
 
 ## Step 5 — Build and verify
 
+Script: `LVR verify run --in -` for an approved command's argument list, and `LVR ai cases` / `LVR ai eval --in FILE` when the milestone exercises a model.
+
 1. Read the milestone's goal, deliverables, acceptance criteria, and procedure. State the plan for this milestone in two or three plain lines.
 2. Implement the deliverables in the project folder, outside `.lvr/`, following `CODE_STYLE.md` and `SECURITY.md`.
 3. Run the verification procedure exactly as written; capture command, exit code, full output, timestamp (`references/build-loop.md` §3).
-4. Never edit bundle documents, assertions, or expected outputs to make a check pass. Never substitute a command.
+4. Run the applicable interface, model, storage and workflow checks in the reference §3. Verify the actual manifest or package in a clean target when the milestone introduces an installable workflow.
 5. A procedure that is wrong or impossible is a bundle defect: stop, journal `build_blocked`, and recommend `/lvr-review-plan` (lens L12, check L12.1).
 6. When the milestone produces a release, run Step 7 for its release targets before recording the milestone result.
 
 ## Step 6 — Record the result
 
-Script: `LVR journal append --type milestone_verified --payload '{"id":"M0","attempt":1,"verified_at":"<ISO now>"}'` (sets `verified` + `verified_at`), `--type milestone_failed`, or `--type build_blocked`.
+Script: `LVR state milestone set --id M0 --in -` with `{"status":"passed","attempt":1,"criteria_passed":["…"]}` or `{"status":"failed","attempt":1,"output":"…"}`. Use `journal append --type build_blocked` for a blocking result.
 
 Append one entry to `VERIFICATION.md` using the template in `references/build-loop.md` §5. Never rewrite earlier entries.
 
 On **PASS**:
 
-- set `state.milestones[i].verified = true` and `verified_at = <ts>`;
-- journal `milestone_verified` (payload: id, attempt, criteria passed);
+- checkpoint the passed result. The script writes `milestone_verified` and applies `verified` and `verified_at`;
 - one checkpoint, then continue at Step 4.
 
 On **FAIL**:
 
-- journal `milestone_failed` (payload: id, attempt, decisive output line);
+- checkpoint the failed result with the decisive output line;
 - follow the failure ladder (`references/build-loop.md` §4): one fix attempt, then a fresh-assumption check, then stop. Two failures maximum; no third blind attempt.
 - on an unresolvable failure: journal `build_blocked` (payload: milestone, command, output, owner), keep the milestone unverified, and close with a plain report.
 
@@ -109,7 +115,7 @@ Run `references/build-loop.md` §6 when a milestone releases a product and after
 Script: `LVR journal append --type build_done --payload '{…}'`
 
 1. All milestones and release checks passed → journal `build_done` (payload: milestones and release results) + a state write setting `project.status` = "complete" (the script's reducer does this). One checkpoint.
-2. Report plainly what works, how to run it, which checks were captured and any known limitations.
+2. Report plainly what works, how to run it, which checks were captured and any known limitations. Run the applicable project-local booster cleanup at the end of the planned pipeline with owner permission (§8).
 3. Next actions, in order:
    - `/lvr-handoff` again — it refreshes `blueprint.json` and the entry prompt from the new state;
    - `/lvr-personal-brand` — after every milestone and release check passes;
@@ -145,3 +151,4 @@ Backward-compatible additions, documented in conventions §2:
 - Never change scope, features, or milestones; route to `/lvr-add-feature`.
 - Never continue past an unresolvable failure, and never take a third blind attempt. (Principles 2, 9)
 - Never mark a milestone verified because the code "looks done".
+- Keep specialist delegation in planning. Builder-time specialist agents may be designed after 1.0 (owner decision B11).

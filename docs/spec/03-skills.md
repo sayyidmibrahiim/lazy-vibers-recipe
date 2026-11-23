@@ -87,12 +87,12 @@ Post-lock captures and their decision lines live in `.lvr/docs/sections/S4-addit
 
 **Flow**:
 1. Preflight (build-loop §1): ids match, every milestone has a verification procedure, no open blocking review finding (`state.review.last.open.blocking` = 0; a project reviewed before the rename: its latest `.lvr/recheck/RECHECK-*.md`). A failed item journals `build_blocked` only (no state field changes) and stops before `build_started`.
-2. Journal `build_started` (`project.status` = `building`); load context in `AGENTS.md` order.
-3. Select the first `state.milestones[]` entry not `verified`; never re-run a verified milestone.
-4. Implement deliverables, run the recorded procedure exactly, capture command/exit code/output.
-5. Pass → append to `VERIFICATION.md`, set `verified` + `verified_at`, journal `milestone_verified`. Fail → one fix attempt, then a fresh-assumption check, then `build_blocked`; two failures maximum.
-6. Deployment milestone → live check, then `state.deployment = { status: "live", url, verified_at }`.
-7. All verified → `build_done` (`project.status` = `complete`); recommend `/lvr-handoff`, then `/lvr-personal-brand`.
+2. Journal `build_started` (`project.status` = `building`). Load context in `AGENTS.md` order and read the files declared in the bundle index.
+3. Select the first unverified milestone, check freshness with `verify freshness`, and load applicable project-local build aids. Recheck expired price, quota, version and stack evidence from official sources before proceeding.
+4. Execute the recorded verification. Use `verify run` to capture exact command output, exit status and times. Exercise associated interface checks, AI evals, data migrations and access checks, and workflow install tests.
+5. Append the observation to `VERIFICATION.md`, then use `state milestone set` to checkpoint the result. A pass writes `milestone_verified`. For failure use the two-attempt ladder and `build_blocked` when unresolved.
+6. At release, check each applicable type from `release plan` and capture the result with `release record`. A passing web check also records `deployment_verified`.
+7. When all milestones and each release check pass, journal `build_done` (`project.status` = `complete`). Follow the project-local booster cleanup and recommend `/lvr-handoff`, then `/lvr-personal-brand`. Builder-time specialist agents are deferred until after 1.0 (B11).
 
 `.lvr/` writes are limited to `project.status` (`building`/`complete`), `milestones[].verified`, `verified_at`, `deployment`, `release_check`, its session (`session_start`/`session_end`), and journal appends. Never skip or weaken a verification.
 

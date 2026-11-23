@@ -11,6 +11,7 @@ import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
 import * as http from "node:http";
+import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // ---------------------------------------------------------------- 1. constants
@@ -4204,7 +4205,7 @@ function designerFilledIn(text, rel) {
 }
 
 /** The analysis behind `cite check` and lint group I. `files` = project-relative paths to scan, in order. `state` = a valid state object or null. */
-function citeAnalyze({ dir, files, all, state, journal, F, today }) {
+function citeAnalyze({ dir, files, all, state, journal, F, today, freshnessCategories }) {
   const findings = [];
   const warnings = [];
   const stats = { files: 0, tags: 0, groups: 0, by_category: {}, unverified: 0, brief_items: 0 };
@@ -4276,6 +4277,9 @@ function citeAnalyze({ dir, files, all, state, journal, F, today }) {
       id, group: "I", code: codeName, file: rel, line: line0 + 1, message, owner: lineOwner.get(line0) ?? fileOwnerId, kind: "bundle_gap", needs_model: false,
       claim: claimOf(claimLine ?? code[line0] ?? ""), _file: fileIdx.get(rel), _seq: findings.length,
     });
+    const addFreshness = (category, ...args) => {
+      if (!freshnessCategories || freshnessCategories.includes(category)) add(...args);
+    };
 
     // zones and tables
     const exempt = new Set();
@@ -4392,7 +4396,7 @@ function citeAnalyze({ dir, files, all, state, journal, F, today }) {
           for (const r of refs) if ((eventDay(r.ev.ts) ?? -Infinity) > (eventDay(newest.ev.ts) ?? -Infinity)) newest = r;
           const ed = eventDay(newest.ev.ts);
           const age = ed === null ? 0 : Math.max(0, today.day - ed);
-          if (age > max) add("I10", "unverified_stale", li, `Failed research ${newest.id} is ${age} days old (limit ${max} for ${t.p.cat}): try the research again.`);
+          if (age > max) addFreshness(t.p.cat, "I10", "unverified_stale", li, `Failed research ${newest.id} is ${age} days old (limit ${max} for ${t.p.cat}): try the research again.`);
         }
         // cite group: freshness and source rule
         if (!cites.length) continue;
@@ -4408,15 +4412,15 @@ function citeAnalyze({ dir, files, all, state, journal, F, today }) {
           else {
             const age = ageOf(Math.max(...amends));
             const readAge = ageOf(Math.max(...cites.map((t) => t.accDay)));
-            if (age > max) { add("I6", "expired", li, `Amendment check is ${age} days old (limit ${max}): search for newer amendments again.`); step1 = false; }
-            else if (readAge > max) { add("I6", "expired", li, `Regulation source was read ${readAge} days ago (limit ${max}): read it again and search for newer amendments.`); step1 = false; }
+            if (age > max) { addFreshness(cat, "I6", "expired", li, `Amendment check is ${age} days old (limit ${max}): search for newer amendments again.`); step1 = false; }
+            else if (readAge > max) { addFreshness(cat, "I6", "expired", li, `Regulation source was read ${readAge} days ago (limit ${max}): read it again and search for newer amendments.`); step1 = false; }
           }
         } else {
           const asof = (t) => (def.clock === "published" ? t.pubDay : t.p.flags.live ? t.accDay : t.pubDay ?? t.accDay);
           const fresh = cites.filter((t) => ageOf(asof(t)) <= max);
           if (!fresh.length) {
             const age = Math.min(...cites.map((t) => ageOf(asof(t))));
-            add("I6", "expired", li, `Expired ${cat} fact: the newest source is ${age} days old (limit ${max}): research it again.`);
+            addFreshness(cat, "I6", "expired", li, `Expired ${cat} fact: the newest source is ${age} days old (limit ${max}): research it again.`);
             step1 = false;
           } else pool = fresh;
         }
@@ -8335,7 +8339,88 @@ async function cmdNextBundleIds({ dir, flags }) {
   });
 }
 
+function verifyFreshness({ dir }) {
+  const loaded = loadState(dir);
+  if (loaded.kind !== "valid") throw fail("STATE_INVALID", "Build freshness checks require readable project state.");
+  const today = todayInfo();
+  const freshnessCategories = ["price", "quota", "version"];
+  const report = citeAnalyze({
+    dir, files: citeAllFiles(dir), all: true, state: loaded.state, journal: readJournal(dir), F: loadFreshness(), today, freshnessCategories,
+  });
+  const facts = report.findings.filter((finding) => ["I6", "I10"].includes(finding.id));
+  const stack = loaded.state.framework_decision;
+  const selections = stack ? [stack, ...(stack.libraries ?? [])] : [];
+  const dependencies = selections.filter((entry) => entry.recheck_by < today.iso).map(({ slot, decision_id, chosen, recheck_by }) => ({ slot, decision_id, chosen, recheck_by }));
+  return { clean: facts.length === 0 && dependencies.length === 0, today: today.iso, facts, dependencies, stack_recorded: !!stack };
+}
+
+async function cmdVerifyRun({ dir, flags }) {
+  const payload = await readPayloadInput(flags);
+  if (!isObj(payload)) throw fail("BAD_JSON_INPUT", "Give the approved verification command's arguments as a JSON object.");
+  const { argv, cwd = ".", timeout_ms: timeout = 120_000 } = payload;
+  if (!Array.isArray(argv) || !nonEmpty(argv[0]) || !argv.every((arg) => isStr(arg) && !arg.includes("\0"))) throw invalid("argv", "a non-empty executable and an array of string arguments");
+  if (!nonEmpty(cwd) || cwd.includes("\0")) throw invalid("cwd", "a working directory inside the project");
+  if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 2_147_483_647) throw invalid("timeout_ms", "a positive timeout in milliseconds");
+  const folder = confine(dir, path.resolve(dir, cwd));
+  let realFolder;
+  try { realFolder = fs.realpathSync(folder); } catch { throw fail("DIR_NOT_FOUND", `Working directory not found: ${cwd}`); }
+  confine(fs.realpathSync(dir), realFolder);
+  if (!fs.statSync(realFolder).isDirectory()) throw fail("DIR_NOT_FOUND", `Working directory is not a folder: ${cwd}`);
+  const started_at = now();
+  const child = spawnSync(argv[0], argv.slice(1), { cwd: realFolder, encoding: "utf8", timeout, maxBuffer: 16 * 1024 * 1024, windowsHide: true });
+  return {
+    argv, cwd: relPath(dir, folder) || ".", started_at, ended_at: now(), exit_code: child.status, signal: child.signal,
+    stdout: child.stdout ?? "", stderr: child.stderr ?? "", passed: child.status === 0 && !child.error,
+    execution_error: child.error ? { code: child.error.code ?? "EXEC_FAILED", message: child.error.message } : null,
+  };
+}
+
+async function cmdMilestoneSet({ dir, flags, args }) {
+  if (args.length !== 2 || args[1] !== "set") throw fail("UNKNOWN_COMMAND", "Use state milestone set --id M<n> --in FILE|-.");
+  const id = need(flags, "id");
+  if (!/^M\d+$/.test(id)) throw invalid("id", "a milestone ID such as M0");
+  const payload = await readPayloadInput(flags);
+  if (!isObj(payload)) throw fail("BAD_JSON_INPUT", "Give the milestone result as a JSON object.");
+  const { status, attempt, criteria_passed: criteria, output } = payload;
+  if (!["passed", "failed"].includes(status)) throw invalid("status", "passed|failed");
+  if (![1, 2].includes(attempt)) throw invalid("attempt", "1 or 2");
+  if (status === "passed" && !(Array.isArray(criteria) && criteria.length && criteria.every(nonEmpty))) throw invalid("criteria_passed", "the observed passing criteria");
+  if (status === "failed" && !nonEmpty(output)) throw invalid("output", "the key observed failure");
+  needLvr(dir);
+  return withLock(dir, "state milestone set", () => {
+    guardSchema(dir);
+    const loaded = loadState(dir);
+    const journal = readJournal(dir);
+    if (loaded.kind !== "valid" || !journal.healthy) throw fail("STATE_INVALID", "Milestone checks require valid project state and a healthy journal.");
+    guardJournalBehind(dir, journal);
+    const type = status === "passed" ? "milestone_verified" : "milestone_failed";
+    const results = journal.events.filter((event) => ["milestone_verified", "milestone_failed"].includes(event.type) && event.payload.id === id);
+    const previous = results.at(-1);
+    if (previous?.type === type && previous.payload.attempt === attempt) {
+      const sidecar = readSidecar(dir);
+      if (sidecar.k === "lag" || (sidecar.k === "num" && sidecar.n < previous.seq)) {
+        throw stateFailure("STATE_LAGS", null, { state_seq: sidecar.n, journal_max_seq: journal.max_seq });
+      }
+      return { id, changed: false, seq: previous.seq };
+    }
+    if (loaded.state.milestones.find((entry) => entry.verified !== true)?.id !== id) throw fail("MILESTONE_NOT_NEXT", "Record results for the first unverified milestone.", { id });
+    const expected = results.length + 1;
+    if (attempt !== expected) throw fail("MILESTONE_ATTEMPT_MISMATCH", "Use the next verification attempt from the journal.", { id, attempt, expected });
+    const result = appendLocked(dir, type, { id, attempt, ...(status === "passed" ? { criteria_passed: criteria } : { output }) });
+    return { id, changed: true, ...result };
+  });
+}
+
 const COMMANDS = {
+  "verify freshness": {
+    help: "Find expired price, quota, version and framework evidence before a build milestone.", flags: [], run: verifyFreshness,
+  },
+  "verify run": {
+    help: "Run an approved verification command and capture its output. [--in FILE|-]", flags: ["in"], run: cmdVerifyRun,
+  },
+  "state milestone": {
+    help: "Set a milestone result. state milestone set --id M<n> --in FILE|-", flags: ["id", "in"], run: cmdMilestoneSet,
+  },
   "release plan": {
     help: "Read the release procedure and latest recorded evidence for each confirmed product type.", flags: [],
     run: async ({ dir }) => releasePlan(dir),

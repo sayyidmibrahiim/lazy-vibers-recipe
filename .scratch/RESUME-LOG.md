@@ -64,3 +64,6 @@
 2026-11-23T03:27:13Z | codex/gpt-6 | task 31 | claimed after ticket 29; reviewed product profile and release journal contracts | next: profile evidence definitions, shared release helpers and both skill gates
 2026-11-23T03:30:28Z | codex/gpt-6 | task 31 | profile checks, build and brand gates, and portable release fixtures implemented | next: same-context verify all profiles, failed evidence, legacy parity and shared regressions
 2026-11-23T03:34:58Z | codex/gpt-6 | task 31 | installed build and brand release procedures, clean CLI rehearsal and all regressions pass; closed | next: task 30 build verification and freshness
+2026-11-23T03:35:06Z | codex/gpt-6 | task 30 | claimed after shared release plan closed | next: add build freshness, exact-command capture, journal checkpoints and scoped verification hooks
+2026-11-23T03:39:58Z | codex/gpt-6 | task 30 | build helper, documented verification hooks and 4 focused tests implemented | next: same-context verify packaged proof, freshness edges, recovery and shared regressions
+2026-11-23T06:51:26Z | codex/gpt-6 | task 30 | 51 archive tests, 15 public tests and all shared suites pass; closed after usage reset | next: task 32 continue recovery and progress

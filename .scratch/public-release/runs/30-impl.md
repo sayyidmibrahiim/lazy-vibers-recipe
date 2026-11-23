@@ -1,0 +1,3 @@
+# Ticket 30 implementation
+
+The builder verifies the bundle manifest and age of price, quota and version citations and the recorded stack/library deadlines before each milestone. `verify run` captures an approved command's exact argument list, working folder, times and observed results. `state milestone set` checkpoints the first unfinished milestone with the observed passing criteria or failure, enforces the attempt sequence and preserves state recovery. Build uses the product release checks, applicable project-local boosters and the UI, AI, data and workflow checks packaged with the skill. Builder-time specialist agents remain deferred until after 1.0 (B11).

@@ -32,12 +32,12 @@ const sources = [
   { src: path.join(SKILLS, "lvr-freshness.json"), dest: (s) => path.join(s, "references", "freshness.json") },
   { src: path.join(ROOT, "docs", "spec", "05-boosters.md"), dest: (s) => path.join(s, "references", "booster-map.md"), only: "lvr-init-new-idea" },
   { src: path.join(ROOT, "docs", "spec", "15-adaptive-interview.md"), dest: (s) => path.join(s, "references", "sections", "adaptive-interview.md"), only: ["lvr-init-new-idea", "lvr-add-feature"] },
-  { src: path.join(ROOT, "docs", "spec", "14-ai-feature.md"), dest: (s) => path.join(s, "references", "bundle", "ai-feature.md"), only: ["lvr-init-new-idea", "lvr-add-feature"] },
-  { src: path.join(ROOT, "docs", "spec", "13-ui-spec.md"), dest: (s) => path.join(s, "references", "bundle", "ui-spec.md"), only: ["lvr-init-new-idea", "lvr-add-feature"] },
+  { src: path.join(ROOT, "docs", "spec", "14-ai-feature.md"), dest: (s) => path.join(s, "references", "bundle", "ai-feature.md"), only: ["lvr-init-new-idea", "lvr-add-feature", "lvr-build"] },
+  { src: path.join(ROOT, "docs", "spec", "13-ui-spec.md"), dest: (s) => path.join(s, "references", "bundle", "ui-spec.md"), only: ["lvr-init-new-idea", "lvr-add-feature", "lvr-build"] },
   { src: path.join(ROOT, "docs", "spec", "12-plan-quality.md"), dest: (s) => path.join(s, "references", "bundle", "plan-quality.md"), only: ["lvr-init-new-idea", "lvr-add-feature"] },
-  { src: path.join(ROOT, "docs", "spec", "11-framework-discovery.md"), dest: (s) => path.join(s, "references", "sections", "S5b-framework.md"), only: ["lvr-init-new-idea", "lvr-add-feature"] },
-  { src: path.join(ROOT, "docs", "spec", "10-data-module.md"), dest: (s) => path.join(s, "references", "bundle", "data-module.md"), only: ["lvr-init-new-idea", "lvr-add-feature"] },
-  { src: path.join(ROOT, "docs", "spec", "09-workflows.md"), dest: (s) => path.join(s, "references", "bundle", "workflow.md"), only: ["lvr-init-new-idea", "lvr-add-feature"] },
+  { src: path.join(ROOT, "docs", "spec", "11-framework-discovery.md"), dest: (s) => path.join(s, "references", "sections", "S5b-framework.md"), only: ["lvr-init-new-idea", "lvr-add-feature", "lvr-build"] },
+  { src: path.join(ROOT, "docs", "spec", "10-data-module.md"), dest: (s) => path.join(s, "references", "bundle", "data-module.md"), only: ["lvr-init-new-idea", "lvr-add-feature", "lvr-build"] },
+  { src: path.join(ROOT, "docs", "spec", "09-workflows.md"), dest: (s) => path.join(s, "references", "bundle", "workflow.md"), only: ["lvr-init-new-idea", "lvr-add-feature", "lvr-build"] },
   { src: path.join(ROOT, "docs", "spec", "08-review.md"), dest: (s) => path.join(s, "references", "contract.md"), only: "lvr-review-plan" },
 ];
 
