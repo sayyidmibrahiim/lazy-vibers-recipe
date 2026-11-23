@@ -262,7 +262,7 @@ Purpose: problem, target users, platform shape, what "working" means for the use
 
 Record a direct choice on the answer with `"product":{"types":["web"],"source":"user"}`. Record a recommendation with `"product":{"types":["web"],"source":"ai_recommended","status":"pending","rationale":"<recorded reasons>"}`. On a clear yes, carry `"product":{"status":"decided","source":"ai_recommended","confirmed":true}` on the confirmation answer. Record an explicit alternative as a direct choice. Do not close S1 while the recommendation is awaiting confirmation.
 
-Then use bank questions 1, 2 and 4 within the tier's batch limit and continue in the strategy order.
+Then use bank questions 1, 2 and 4 within the tier's batch limit and continue in the strategy order. When the platform evidence establishes whether people use a visual interface, carry `product.flags.has_ui` on that answer. Use the confirmed evidence for the UI booster plan and resolve any mismatch with a profile default.
 
 **Decision surfaces**:
 
@@ -374,6 +374,8 @@ Purpose: feature expectations captured in detail, iteratively, until the user sa
 **Question strategy** — a capture loop: the one thing (the F-01 seed); walk it through like holding the phone — that IS the script; the next thing, one feature per script, never a blob; per feature: who taps it, what "done" leaves behind, what would annoy them; repair weak scripts by copying the old workaround; the three-that-matter round assigns priorities; the first-run emptiness question surfaces empty-state decisions.
 
 **First batch** — bank question 1 ("If this app could do only ONE thing on day one, what would it be?"); question 2 (the walk-through) follows as its own turn regardless of tier — F-01's script is the section's first real work.
+
+**Interface interview** — when the profile plan has `has_ui: true`, use its [feel, voice and accessibility questions](references/bundle/ui-spec.md#s4-interview) after a feature walk-through. Apply `ux-copy` and `antislop-human` from the S4 booster plan, or the internal reference if degraded. Record the concrete answers that feed UI_SPEC.md. Skip questions already answered.
 
 **Decision surfaces**:
 
@@ -643,6 +645,8 @@ Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the B
 
 **Profile files** — read the frozen `profile_files` from `LVR profile plan`. Draft each additional file from the relevant profile questions and records. Keep the previously closed bundle outputs and existing IDs. The blueprint generator copies the extra paths into `profile_files` when the list is nonempty. For a skill/plugin or agent, use [the personal workflow templates](references/bundle/workflow.md) for the draft skill, local profile schema, tools, evaluations and install plan. Carry each destination's exact data boundary into the plan.
 
+**Interface output** — when the frozen profile plan lists `UI_SPEC.md`, compile it with [the measurable UI specification](references/bundle/ui-spec.md). Use the recorded feel, voice and accessibility choices. Run the packaged [contrast checker](references/third-party/antislop-human/contrast-check.py) on the planned palette when Python is available. Copy the verified helper and its MIT license to `.lvr/verification/` for builder checks, and put the exact checks and expected results in VERIFICATION.md. Preserve existing frozen plans when resuming.
+
 **Quality, operations and data sources** — use [the S9 checklist](references/bundle/plan-quality.md#s9--data-sources-and-integrations). Carry S4 failures into requirements and flows, S3 abuse controls and S6 conclusions into SECURITY.md, and S2/S5 cost evidence into RESEARCH.md and OVERVIEW.md. Place measurable ops and restore steps in MILESTONES.md, VERIFICATION.md and HANDOVER.md. Add the named data sources and integrations section to SPEC/architecture.md, with permissions, refresh cadence, stale-data handling and source evidence.
 
 **Stored data output** — when `stores_data` is true, compile the chosen storage and schema into SPEC/data-model.md and its access and privacy checks into SECURITY.md. Use [the data module](references/bundle/data-module.md). The schema's Mermaid ERD is the diagram exception.
@@ -696,6 +700,7 @@ Script: a confirmed display-name change is `LVR decision record --event doc_gene
 
 - [ ] Every base Markdown file and frozen profile addition exists and is non-empty. Apply the documented bundle format to each file.
 - [ ] The cross-check list above passes on every item.
+- [ ] If UI_SPEC.md is planned, it has concrete tokens, screens and states, copy, motion, layout and accessibility checks. Its contrast results and outstanding builder checks are recorded.
 - [ ] Feature failure paths and abuse controls have verification steps. The bundle records its quality and operations targets, and a named data sources and integrations section.
 - [ ] blueprint.json matches `state.json` and follows the schema in `references/bundle/templates.md` §19.
 - [ ] CLAUDE.md + GEMINI.md stubs written; AGENTS.md follows the agents.md spec.

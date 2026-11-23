@@ -2735,6 +2735,12 @@ function cleanupBoosters(dir, flags) {
 const PROFILE_SECTIONS = SECTIONS.slice(1, 9);
 const PROFILE_FLAGS = ["stores_data", "has_ui", "has_llm"];
 const PROFILE_PLAN_PATH = ".lvr/profile-plan.json";
+const UI_SPEC_FILE = "UI_SPEC.md";
+const UI_SPEC_QUESTIONS = [
+  { id: "ui-feel", question: "How should this feel on the first screen, and what would feel out of place?", why: "The answer sets the visual direction and a concrete example to avoid.", feeds: [UI_SPEC_FILE] },
+  { id: "ui-voice", question: "What should the app say when an action works, and when the person has to try again?", why: "The user's words set the tone and the next step for key messages.", feeds: [UI_SPEC_FILE] },
+  { id: "ui-access", question: "How will people use this on a small screen, with a keyboard, or if they need more time or larger text?", why: "The answer turns real access needs into checks for the main user tasks.", feeds: [UI_SPEC_FILE] },
+];
 const profileFilePath = (file) => boosterPath(file) && file.split("/").every((part) => !part.startsWith("."));
 const profileNames = (values) => Array.isArray(values) && values.every((name) => isStr(name) && PRODUCT_TYPE_RE.test(name));
 const profileReferences = (values) => Array.isArray(values) && values.every((name) => isStr(name) && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(name));
@@ -2825,9 +2831,18 @@ function productProfilePlan(dir, config) {
   if (explicit && !profileNames(explicit)) throw invalid("types", "comma-separated product type IDs");
   const confirmed = product?.status === "decided" && product.confirmed === true;
   const types = [...new Set(explicit ?? (confirmed ? product.types : []))].sort(cmpStr);
+  const plan = mergeProfiles(profiles, types, product?.flags);
+  if (types.length && plan.flags.has_ui === true && (confirmed || directory === undefined)) {
+    if (!plan.profile_files.includes(UI_SPEC_FILE)) plan.profile_files.push(UI_SPEC_FILE);
+    plan.profile_files.sort(cmpStr);
+    const s4 = (plan.sections.S4 ??= { questions: [], exit_criteria: [], boosters: [], agents: [] });
+    s4.questions.push(...UI_SPEC_QUESTIONS.filter((question) => !s4.questions.some((entry) => entry.id === question.id)));
+    s4.exit_criteria.push("Record visual direction, copy voice and the accessibility needs for each main task.");
+    s4.boosters = [...new Set([...s4.boosters, "ux-copy", "antislop-human"])];
+  }
   return {
     status: explicit ? "preview" : confirmed ? "decided" : product?.status ?? "unasked",
-    ...mergeProfiles(profiles, types, product?.flags),
+    ...plan,
   };
 }
 

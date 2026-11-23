@@ -658,6 +658,7 @@
       "license_verified": "2026-11-23",
       "tier": "conditional",
       "sections": [
+        "S4",
         "S9"
       ],
       "triggers": {

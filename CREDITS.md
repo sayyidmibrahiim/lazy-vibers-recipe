@@ -46,3 +46,5 @@ The published registry pins these upstream files and selected skills. The links 
 | supabase-postgres-best-practices | reference | [supabase/agent-skills at `c9be0e931b7930f7d02126d04774d904c381e7d7`](https://github.com/supabase/agent-skills/tree/c9be0e931b7930f7d02126d04774d904c381e7d7) | [MIT](https://github.com/supabase/agent-skills/blob/c9be0e931b7930f7d02126d04774d904c381e7d7/LICENSE) |
 
 Recipe includes the anti-slop reference text from Matt Silverlock's `elithrar/dotfiles` under its MIT license. The upstream text and copyright notice are under `skills/lvr-init-new-idea/references/third-party/anti-slop/`.
+
+The UI specification adapts the Impeccable PRODUCT and DESIGN schemas and credits the pinned motion and interface rules in its source notes. The bundled `contrast-check.py` is the unmodified antislop-human helper from its pinned commit and travels with its MIT license.

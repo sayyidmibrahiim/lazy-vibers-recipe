@@ -171,3 +171,7 @@ Read [AGENTS.md](AGENTS.md) — the builder entry point for this project.
 ```
 
 Fill: identical content in both files; the agents.md entry point stays the single source.
+
+## Conditional UI specification
+
+When a frozen profile lists `UI_SPEC.md`, draft it from S4 and the [interface specification guide](ui-spec.md). Add its named build checks to VERIFICATION.md, with recorded palette results and exact contrast-helper invocations.

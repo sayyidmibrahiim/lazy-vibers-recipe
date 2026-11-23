@@ -58,6 +58,7 @@ The plan merges confirmed profiles in ID order. It deduplicates files and identi
 - Booster: load grilling. Apply `mom-test`, `deliver-edge-cases`, `user-stories`, and `deliver-acceptance-criteria`. Apply applicable interface aids.
 - Mechanics: per feature — name, who uses it, step-by-step happy path (the "klik tombol ini → selesai" script), edge cases the user cares about. Features get IDs `F-01…`.
 - Output: `S4-fitur.md`; feeds `SPEC/requirements.md` + `USER_FLOWS.md`.
+- For a confirmed interface, record the visual direction, copy voice and accessibility needs. Compile [UI_SPEC.md](13-ui-spec.md) after scope lock.
 - Every captured feature names abandonment, invalid input, concurrency/retry and expiry/hold outcomes, using deliver-edge-cases and the [internal checks](12-plan-quality.md#s4--unhappy-paths).
 - Post-lock additions: recorded by `/lvr-add-feature` in `S4-additions.md` (append-only); S4 itself is never re-run.
 - Exit: user explicitly says enough; feature list has no "and whatever else" placeholders.
