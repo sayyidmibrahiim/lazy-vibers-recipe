@@ -207,4 +207,4 @@ The dashboard is a single-user local app without login and stores its project li
 
 ---
 
-[Installation by agent](INSTALL.md) · [Architecture and specs](docs/spec/00-overview.md) · [Contributor guide](AGENTS.md) · [Language audit](docs/research/language-audit.md) · [Booster credits](CREDITS.md) · [MIT license](LICENSE)
+[Installation by agent](INSTALL.md) · [Architecture and specs](docs/spec/00-overview.md) · [Contributor guide](AGENTS.md) · [Repository handoff](docs/agents/continuation.md) · [Language audit](docs/research/language-audit.md) · [Booster credits](CREDITS.md) · [MIT license](LICENSE)

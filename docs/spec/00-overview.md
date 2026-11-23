@@ -13,7 +13,7 @@ LVR (Lazy Vibers Recipe) is a pipeline that turns a raw idea from a **non-techni
 | **Owner** | The non-technical user. Speaks any language (User Language). Cannot read technical specs unaided. |
 | **Conductor** | The LVR skill running in a harness (`/lvr-init-new-idea`, `/lvr-continue`, or one of the post-S9 skills). Loads boosters per Section, drives the interview, writes state. |
 | **Builder** | Any agent harness that later consumes the Blueprint Bundle. Has no LVR skills; relies on bundle files only. |
-| **Web UI** | Optional read-only client (MVP) that reads the same `.lvr/` files. Two-way editing is F3. |
+| **Web UI** | Local read-only dashboard for plans, milestones, decisions, diagrams, and session history in `.lvr/` or legacy `.lvp/` projects. |
 
 ## Scope
 
@@ -34,6 +34,13 @@ Each skill ships `scripts/lvr.mjs` for the deterministic bookkeeping (journal, s
 6. `06-model-tiers.md` — model tiers T1–T3, capability probe, context guard, truncation recovery, cross-model resume
 7. `07-research.md` — web research requirement, Domain Brief and per-Section scans, citation syntax, freshness limits (`freshness.json`), research log events, the `cite check` contract
 8. `08-review.md` — plan review: lenses and coverage matrix, severity and score, findings ledger and stable ids, Run-N reconcile and stability, `--apply`, `--scope-only`, and the `lvr review *` command contract. It ships byte-for-byte as `skills/lvr-review-plan/references/contract.md` (`npm run sync:skills`), so it cites only files of that skill. Design and reasoning: research L (`.scratch/public-release/research/L-critical-review-design.md`) and owner decisions R1–R4 (`.scratch/public-release/spec.md`)
+9. [Personal workflows](09-workflows.md) — draft skills, tools, local configuration, installation, and evaluations
+10. [Data module](10-data-module.md) — storage decisions, entities, access, migrations, and checks
+11. [Framework discovery](11-framework-discovery.md) — candidate signals, comparison, and choice
+12. [Plan quality](12-plan-quality.md) — risk, recovery, and operational checks
+13. [UI specification](13-ui-spec.md) — screen and interaction contracts, accessibility, and verification
+14. [AI features](14-ai-feature.md) — models, data, safeguards, and evaluations
+15. [Adaptive interview](15-adaptive-interview.md) — fact coverage, question depth, and confirmation
 
 ## Ground rules (from ADRs — summarized)
 

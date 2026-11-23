@@ -2,7 +2,7 @@
 
 Seven skills (`lvr-init-new-idea`, `lvr-continue`, `lvr-handoff`, `lvr-review-plan`, `lvr-add-feature`, `lvr-build`, `lvr-personal-brand`). `lvr-review-plan` was called `lvr-recheck-plan` before the review redesign. No manifest format here supports a command alias, so delete an old `lvr-recheck-plan/` folder when you update a copied install. The only real copy lives in `skills/<name>/`; every manifest in this repo points at that folder. There are no symlinks in the repo.
 
-Repo: `sayyidmibrahiim/lazy-vibers-recipe` (version 0.9.0, pre-release). Verification dates below are 2026-11-19.
+Repo: `sayyidmibrahiim/lazy-vibers-recipe`. The public `master` branch is available before the v1.0.0 release. The dated sources below describe the install mechanisms for each tool.
 
 > `~` means your home folder. On Windows it is `%USERPROFILE%` (for example `C:\Users\you`). Skill paths are written with `/`; Windows accepts them in the shells below, or use `\`.
 > Installed skills never write outside the project folder they run in (they create `.lvr/` there).
@@ -49,13 +49,20 @@ Copy whole skill folders, never just `SKILL.md`:
 
 ```bash
 # Linux / macOS, project scope into .agents/skills (shared by Codex, Gemini, Copilot, Cursor, Kilo, Roo, Pi, Kimi, opencode)
-mkdir -p .agents/skills && cp -r skills/lvr-* .agents/skills/
+mkdir -p .agents/skills
+for skill in skills/lvr-*/; do
+  if [ -f "${skill}SKILL.md" ]; then
+    cp -R "$skill" .agents/skills/
+  fi
+done
 ```
 
 ```powershell
 # Windows PowerShell
 New-Item -ItemType Directory -Force .agents\skills | Out-Null
-Get-ChildItem skills -Directory -Filter 'lvr-*' | Copy-Item -Destination .agents\skills -Recurse -Force
+Get-ChildItem skills -Directory -Filter 'lvr-*' |
+  Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName 'SKILL.md') -PathType Leaf } |
+  Copy-Item -Destination .agents\skills -Recurse -Force
 ```
 
 The loose `skills/lvr-principles.md` and `skills/lvr-conventions.md` are repo source copies, already mirrored into each skill's `references/`; they are not installed.
@@ -82,7 +89,7 @@ codex plugin marketplace add sayyidmibrahiim/lazy-vibers-recipe
 ```
 
 Then enable the plugin from Codex's plugin directory (the docs describe marketplace add/list/upgrade/remove; the reference repo also documents `codex plugin add <plugin>@<marketplace>`, not confirmed in the official page). Invoke a skill explicitly with `$lvr-init-new-idea`.
-Manifests: `.codex-plugin/plugin.json` (`"skills": "./skills/"`), `.agents/plugins/marketplace.json` (git `url` source, `ref: main`).
+Manifests: `.codex-plugin/plugin.json` (`"skills": "./skills/"`), `.agents/plugins/marketplace.json` (git `url` source, `ref: master`).
 Manual alternative: copy to `.agents/skills/` (repo) or `~/.agents/skills/` (user).
 Sources: https://learn.chatgpt.com/docs/build-skills , https://developers.openai.com/codex/plugins/build (2026-11-19).
 
@@ -180,7 +187,7 @@ Update all LVR skills together (re-run the install command for every skill, or `
 
 ## Verify an install
 
-Open the harness in an empty folder and run `/lvr-init-new-idea` (or `$lvr-init-new-idea` in Codex). It should run the Folder Gate and start S0 intake.
+Open the agent in a new project folder. Invoke `/lvr-init-new-idea` for a direct skill install, `/lazy-vibers-recipe:lvr-init-new-idea` for the Claude Code plugin, or `$lvr-init-new-idea` in Codex. Recipe checks the folder and web research access before starting S0 intake.
 
 ## Uninstall
 
@@ -188,4 +195,4 @@ Claude Code: `claude plugin uninstall lazy-vibers-recipe`. Codex: `codex plugin 
 
 ## Maintainer note
 
-The `owner/repo` forms above can only be tested end to end once the repository is public (release ticket 25). Local-path forms (`claude plugin marketplace add <dir>`, `codex plugin marketplace add <dir>`, `npx skills add <dir>`) were validated before release.
+The public `npx skills@1.9.0 add sayyidmibrahiim/lazy-vibers-recipe` path was verified in a clean project folder. Local Claude manifest validation and Codex marketplace discovery passed. See the current release handoff for the native execution and platform checks still due. [Repository handoff](docs/agents/continuation.md)

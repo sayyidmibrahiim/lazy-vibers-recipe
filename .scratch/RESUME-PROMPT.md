@@ -8,6 +8,8 @@ Paste this into any coding agent (Claude Code, Codex, Gemini CLI, Qwen, Kimi, Cu
 
 You are taking over work that another agent started, possibly in a different harness or model. That agent stopped without warning: a usage limit, a crash, or a closed window. You have no memory of what it did. **Trust only evidence in the repo, never assumptions.** This prompt names no task on purpose: work out what is done and what isn't, then act.
 
+Read the [current repository handoff](../docs/agents/continuation.md) before using old run reports. It distinguishes published commits from local work and records which owner decisions have already been made.
+
 ## 0. Rules that override everything below
 1. **Done work is frozen.** Don't edit, reformat, "improve", regenerate or re-run anything that belongs only to a finished task. If a finished task's check fails now, report it to the owner and don't fix it silently.
 2. **Never throw away unfinished work.** No `git checkout -- .`, `git reset --hard`, `git clean`, `git stash drop`, and no deleting files you didn't create. Uncommitted changes are the previous agent's work in progress.

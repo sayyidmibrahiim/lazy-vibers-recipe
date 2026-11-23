@@ -1,5 +1,7 @@
 # Laporan akhir uji lokal
 
+> Historical verification snapshot for `db441e1`. Use the [current handoff](../../../docs/agents/continuation.md) for the English UI, published README and demo, updated verification, and current blockers.
+
 **34 dari 40 tugas selesai.** Semua tugas yang ditutup punya commit di `master`. Commit implementasi terakhir yang diuji adalah `db441e1`.
 
 ## Yang sudah bisa dipakai

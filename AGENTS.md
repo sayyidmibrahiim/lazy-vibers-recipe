@@ -1,16 +1,15 @@
 # AGENTS.md
 
-Local-only Next.js 16 app: idea -> 4 interview questions -> 5 generated markdown docs (PRD, requirements, data model, API contract, architecture) via an OpenAI-compatible LLM proxy. Single user, no auth, no tests, no CI.
+Lazy Vibers Recipe is a set of seven agent skills that turn an idea into a build-ready Blueprint Bundle. The local Next.js 16 dashboard reads project files, including older `.lvp/` projects. The optional legacy generator uses SQLite and an OpenAI-compatible model to interview the user and write five documents. Start with the [current handoff](docs/agents/continuation.md) when resuming work on this repository.
 
 ## Commands
 
-- Node 24+ required (`node:sqlite`); verified on 24.18.1.
-- `npm install` then `npm run dev` (port 3000). Copy `.env.example` to `.env.local` only to override defaults.
-- `npm run lint` = bare `eslint` (flat config, whole repo). No Prettier, no fix script.
-- Typecheck: `npx tsc --noEmit`. In a fresh checkout run `npm run build` (or `next dev`) once first: `next-env.d.ts` imports generated `.next/types/routes.d.ts`, so `tsc` fails before those exist.
-- `npm run build` then `npm start` for production. The build runs TypeScript itself.
-- No test runner installed. Verify manually: `curl -sN -X POST localhost:3000/api/projects/<id>/blueprint -H 'content-type: application/json' -d '{"answers":{}}'` prints the NDJSON progress stream.
-- Legacy creation and generation need a configured `LLM_BASE_URL` and `LLM_MODEL`. A failed connection surfaces as a 502.
+- Node.js 24 or later for the app and CI. Use `npm ci` followed by `npm run dev -- --hostname 127.0.0.1`. Open the `examples/meeting-room-demo` folder from the dashboard for a smoke check.
+- `npm test` runs the Node test runner. The [LVR checks workflow](.github/workflows/lvr-checks.yml) runs tests, language and skill checks, lint, typecheck, build, and manifest validation.
+- `npm run lint` runs ESLint. For standalone typecheck after a clean install, run `npm exec -- next typegen` followed by `npm exec -- tsc --noEmit`.
+- `npm run check:language` checks active copy in a Git checkout. `npm run audit:language` also reports archived and verbatim text. Run `npm run sync:skills` after editing a canonical source, then `npm run check:skills` to verify the shipped copies.
+- `npm run build` then `npm start -- --hostname 127.0.0.1` runs production locally. The build runs TypeScript itself.
+- The dashboard opens without model credentials. For the legacy generator, set `ENABLE_LEGACY_GENERATOR=1`, `LLM_BASE_URL`, and `LLM_MODEL` in `.env.local`. A failed connection surfaces as a 502.
 
 ## Hard constraints
 
@@ -21,13 +20,12 @@ Local-only Next.js 16 app: idea -> 4 interview questions -> 5 generated markdown
 - `src/lib/db.ts` is a `globalThis.__lvrDb` singleton, WAL mode, schema created inline with `CREATE TABLE IF NOT EXISTS`. No migration system: a schema change does not reach an existing `data/planner.db` (gitignored, holds real local projects). Add an idempotent migration rather than telling users to delete it.
 - DB columns are snake_case, JSON is camelCase; timestamps are epoch ms. Row converters in `db.ts` own that mapping.
 
-## Blueprint pipeline invariants
+## Legacy generator invariants
 
 - A doc kind lives in three files: `src/lib/kinds.ts` (union type), `src/lib/doc-list.ts` (array order becomes `position`), `src/lib/blueprint.ts` (`BRIEFS` is an exhaustive `Record<DocKind, string>`). Add all three or TypeScript fails.
 - `POST /api/projects/[id]/blueprint` streams NDJSON events (`doc_start`, `doc_done`, `done`, `error`); the only consumer is `src/app/p/[id]/project-client.tsx`. Change both sides together.
 - Generation is resumable and idempotent per kind: existing docs are skipped, `upsertDoc` overwrites by `(project_id, kind)`. Do not "regenerate all" to retry a partial run.
-- Truncation handling is duplicated (blueprint and revise routes): on `finishReason === "length"` retry once with a compaction prompt, then throw. Keep both copies in sync.
-- Pass model output through `cleanMarkdown` (strips fences) and `ensureTitle` (forces H1 to the stored title) before saving; prompt rules assume GFM and no Mermaid.
+- Generation and revision share `writeEnglishDocument` in `src/lib/blueprint.ts`. It retries a truncated draft once, normalizes Markdown and the title, and independently checks the language. A failed language check gets one correction. Save only verified English output.
 - `chatDetailed` retries 3x with backoff on any failure including 4xx; `chatJson` retries once by re-prompting after invalid JSON. Requests set `stream: false` but the proxy may still answer with SSE, which `readSse` handles.
 
 ## Conventions
@@ -54,4 +52,4 @@ Single-context: `GLOSSARY.md` at the repo root + `docs/adr/`. See `docs/agents/d
 
 ### LVR pipeline
 
-The skills under `skills/` (entry: `skills/lvr-init-new-idea/SKILL.md`) are the LVR interview pipeline; their contracts and constitution are specified in `docs/spec/` (start at `00-overview.md`, skill contracts in `03-skills.md`). Install/uninstall docs live in `skills/README.md`; do not edit skill folders without syncing their `references/` snapshots with `docs/spec/`.
+The [spec overview](docs/spec/00-overview.md) maps the current pipeline contracts. The [skill catalog](skills/README.md) lists the seven skills and [INSTALL.md](INSTALL.md) covers setup. Edit canonical sources for shared references and use `npm run sync:skills` to update their packaged copies.

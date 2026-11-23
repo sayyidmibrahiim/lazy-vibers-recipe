@@ -142,7 +142,7 @@ checkAgents(local("skills/lvr-agents.json"));
 if (!names.size) problem(local("skills"), "No shipped skill directories were found.");
 for (const name of names) checkFrontmatter(local(`skills/${name}/SKILL.md`), name);
 for (const file of [
-  ...["AGENTS.md", "README.md", "INSTALL.md", "GLOSSARY.md", "CREDITS.md"].map(local),
+  ...["AGENTS.md", "CLAUDE.md", "README.md", "INSTALL.md", "GLOSSARY.md", "CREDITS.md"].map(local),
   ...markdownFiles(local("docs")), ...markdownFiles(local("skills")),
 ]) checkMarkdown(file);
 for (const name of manifests) {

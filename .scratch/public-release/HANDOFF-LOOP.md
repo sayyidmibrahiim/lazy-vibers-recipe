@@ -3,7 +3,7 @@
 You are the **orchestrator** (run on Opus). You loop through every ticket in `.scratch/public-release/issues/` until all are done or blocked on the owner. Delegate the work to subagents. Spend your own context on decisions, integration and judgement, not on reading big files.
 
 ## 0. Load first (in this order, nothing else)
-1. `AGENTS.md` (repo rules: SQLite runtime exports, Tailwind v4, Bahasa Indonesia UI/prompts, `references/` must stay byte-synced with `docs/spec/`).
+1. `AGENTS.md` and `docs/agents/continuation.md` (repo rules, current baseline, and remaining work). The UI, CLI messages, and new documents use English. Agent conversation follows the user's language. Use the skill sync command for packaged references.
 2. `.scratch/public-release/spec.md` (decisions D1–D12, owner decisions B11/A6/P5/R1–R4, milestones, order).
 3. `.scratch/public-release/brainstorm-03-owner-decisions.md` (owner rounds 1–8).
 4. Only the ticket you are working on. Research reports (`research/A–L`) are read **by subagents**, never in full by you.
