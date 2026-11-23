@@ -42,15 +42,11 @@ Before any check, question, or file write:
 
 ## Step 2 — Open and locate ids
 
-Script: `LVR journal append --type feature_started --payload '{"request":"<verbatim>"}'`
+Script: `LVR ids next --reserve --in -` with `{"request":"<verbatim request>"}`
 
-1. Journal `feature_started` (payload: request verbatim) + a state write (no field change). One checkpoint.
-2. Load state, journal, the S4/S7/S8 records and their additions record, `SPEC/requirements.md`, `SCOPE.md`, `MILESTONES.md`, `blueprint.json`.
-3. Derive ids from the files on disk, never from memory:
-   - `F-NN` = highest id in `SPEC/requirements.md` + `SCOPE.md` + `S4-additions.md`, plus one.
-   - `D-NNN` = highest in `decisions[]` + `DECISIONS.md`, plus one.
-   - `M<n>` = highest in `MILESTONES.md` + `state.milestones[]`, plus one.
-   A mismatch between state and files is a finding to report now, not something to paper over.
+1. Load the journal, the S4/S7/S8 records and their additions, requirements, scope, milestones and the index. Inspect the already recorded outcomes.
+2. Reserve the feature ID in `feature_started`. The helper derives F, D and M IDs from actual records and events. A repeated request resumes its reservation or reports completion. Finish or resume an open feature before reserving another.
+3. Record pre-existing lint and citation findings. Keep the identified baseline out of the requested edits unless a finding blocks this feature. If the completed bundle predates frozen profiles, use `LVR profile plan --write --existing` before changing flags when a new file will be needed. It adopts the original index's declared files. Establish the existing profile from recorded evidence and confirm it only when unclear.
 
 ## Step 3 — Capture
 
@@ -58,7 +54,7 @@ Script: `LVR journal append --type feature_captured --payload '{"id":"F-NN","nam
 
 Follow `references/feature-capture.md` §1. Micro-batches by tier (T1 ≤3, T2 ≤2, T3 =1), every turn in the user's language, skip and enough controls visible.
 
-Required before moving on: verbatim request, English display name, named user, complete click-by-click happy path, failure cases the user cares about, priority confirmed aloud, scope proposal. A missing script or priority blocks the capture; do not fill it with a guess.
+Required before moving on: verbatim request, English display name, named user, complete click-by-click happy path, four scoped unhappy paths, priority confirmed aloud and scope proposal. Review data, abuse, regulated domains, AI usage and measurable operation targets where the feature changes them. Track coverage with `LVR interview progress --section S4 --in -` using feature-specific keys. Group known facts into one confirmation. Ask only for gaps and preserve skip/enough. Use the S4 booster plan for edge cases, stories and acceptance criteria.
 
 Record the whole capture in `.lvr/docs/sections/S4-additions.md` (append-only, template in the reference). Journal `feature_captured` (payload: id, name, priority). One checkpoint.
 
@@ -66,7 +62,7 @@ Record the whole capture in `.lvr/docs/sections/S4-additions.md` (append-only, t
 
 Script: `LVR journal append --type feature_research --payload '{…}'`
 
-Follow `references/feature-capture.md` §2. Reuse evidenced rows from `RESEARCH.md`; research only the new service, data class, platform capability, or legal constraint this feature introduces.
+Follow `references/feature-capture.md` §2. Collect the Domain Brief delta and show dated findings before recommendation. Reuse fresh evidence from `RESEARCH.md`. Run mini S5b for a new framework, library or service, including hard compatibility checks, cited signals, ranked choices and the user’s decision with its recheck date.
 
 Every new claim carries a cite group, or an `[unverified: <category> · RQ-NNN]` marker after logged research failed (conventions §10); log each research step as `research_logged` (`purpose` "feature"). Web research is required (principle 14): no web search or page fetch → explain how to enable it (conventions §10) and stop — never research from memory. Journal `feature_research` (payload: claims added, sources, unverified count). One checkpoint.
 
@@ -83,9 +79,10 @@ file | action (edit/append/none) | exact section or row | content source
 Rules:
 
 - `edit` must quote the existing text it changes; no blind rewrite.
-- No new bundle files. If the feature seems to need one, that is a finding for `/lvr-review-plan`, not a quiet addition.
+- Propose a new profile file only when an in-MVP feature changes a profile flag and the resulting plan includes that path. Include it in the scope choice. For stored data, extend the existing data model and security checks, including the ERD where used.
 - Every new acceptance criterion gets a matching verification procedure; every new data field gets a data-model row; every new cost gets one verified number used in `RESEARCH.md`, `OVERVIEW.md`, and `blueprint.json`.
-- Journal `impact_analysis` (payload: file list). One checkpoint.
+- Use the S6 booster plan for architecture, threats and cost. Apply the planning database or threat role when the impact changes their files. Use a verified read-only specialist when available, or its inline role, and journal the actual transport. Merge the cited result yourself.
+- Journal `impact_analysis` (payload: file list and evidence). One checkpoint.
 
 ## Step 6 — Scope decision
 
@@ -97,7 +94,7 @@ Present the scope proposal in plain language with three options and consequences
 2. **New milestone** — default for a substantial feature; appended as `M<n+1>` after the last milestone.
 3. **Parking Lot** — recorded, not built; the bundle gets a parked requirement row, a scope row with the reason, and a `USER_FLOWS.md` section marked `(parked — see SCOPE.md)`; no milestone or verification procedure.
 
-The user's explicit choice is recorded as the next `D-NNN` (`section: "S4"`, `user_confirmed`, rationale = the choice and why), and its decision line is appended to the feature's block in `S4-additions.md` (template in the reference) — that line is what a state rebuild reads before `DECISIONS.md` has the row. A skip or "later" is not a scope decision: keep the capture and stop before applying bundle edits, reporting the open feature. Journal `feature_scope_decision` (payload: F-NN, choice, D-NNN). One checkpoint.
+Include the exact new file paths, new flags and added cost in the user's choice when applicable. The user's explicit choice is recorded as the next `D-NNN` (`section: "S4"`, `user_confirmed`, rationale = the choice and why), and its decision line is appended to the feature's block in `S4-additions.md` (template in the reference) — that line is what a state rebuild reads before `DECISIONS.md` has the row. A skip or "later" is not a scope decision: keep the capture and stop before applying bundle edits, reporting the open feature. Journal `feature_scope_decision` (payload: F-NN, choice, D-NNN). One checkpoint.
 
 ## Step 7 — Apply
 
@@ -115,7 +112,8 @@ Apply the impact table, one file per turn, append-only unless the row is a requi
 - **ASSUMPTIONS.md** — append every new `assumed` / `designer_filled` decision.
 - **RESEARCH.md, OVERVIEW.md** — new evidence rows and owner-visible feature/cost lines.
 - **CAPABILITIES.md, HANDOVER.md, CODE_STYLE.md** — only when the matrix says so.
-- **`blueprint.json`** — regenerate from state + bundle in the existing file's schema v1 shape (the full schema is in the `lvr-handoff` skill's lint checklist, group H), never hand-edit. Script: `LVR blueprint emit` (it keeps the stack and summary already in the file; `--check` previews the drift).
+- **Profile additions (A6)** — record an approval checkpoint with the same confirmed decision, actual flag changes and exact paths. Run `LVR profile add-file` for each path before writing it. Update the file map and use the packaged template. Keep approvals and paths in the additions record. Resume from the first missing step.
+- **`blueprint.json`** — regenerate from state and the approved bundle list. Use `LVR blueprint emit` and provide changed stack or cost inputs when the approved feature changes them. `--check` previews the drift.
 - **State** — append the decision; append the milestone entry (`verified: false`) when a milestone was added. Never touch done Sections or existing milestone entries.
 
 After each file: journal `feature_applied` (payload: F-NN, file, action) + state write. One checkpoint per file.
@@ -124,7 +122,7 @@ After each file: journal `feature_applied` (payload: F-NN, file, action) + state
 
 Script: `LVR journal append --type feature_done --payload '{…}'`
 
-1. Re-read the touched files and check the matrix is fully applied: every `edit`/`append` row has evidence. A half-applied feature is a failure, not a checkpoint.
+1. Re-read the touched files and verify their impact rows. Run `LVR lint run`, `LVR crosscheck`, and `LVR cite check --file PATH` for each touched Markdown file. Fix introduced findings. Keep the feature open if a required check still fails. Record unrelated inherited gaps with their owners.
 2. Journal `feature_done` (payload: F-NN, scope, files touched, D-NNN, M-id or none). One checkpoint.
 3. Close in plain language:
    - what the product now does (or what was parked),
@@ -147,6 +145,6 @@ Script: `LVR journal append --type feature_done --payload '{…}'`
 - Never start without a locked scope and a bundle.
 - Never renumber, rewrite, or delete an existing feature, decision, milestone, or scope row.
 - Never mutate a done Section Record; additions go to `S4-additions.md`.
-- Never add a bundle file.
+- Add a bundle file only with the recorded post-lock profile approval.
 - Never expand the MVP on a guess; the scope choice needs an explicit answer. (Principles 2, 12)
 - Never leave an unsourced claim unflagged, or a skipped verification procedure. (Principles 1, 9)

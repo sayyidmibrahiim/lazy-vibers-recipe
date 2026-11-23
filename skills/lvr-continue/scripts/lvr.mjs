@@ -103,7 +103,7 @@ const sha256 = (s) => crypto.createHash("sha256").update(s).digest("hex");
 const ptrEsc = (s) => String(s).replace(/~/g, "~0").replace(/\//g, "~1");
 const secNum = (s) => parseInt(String(s).slice(1), 10);
 
-const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check", "all", "context", "remove-legacy", "confirm", "offline", "refresh"]);
+const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check", "all", "context", "remove-legacy", "confirm", "offline", "refresh", "reserve", "existing"]);
 /** Every `--file` value in order (cite check takes several); a symbol key so the unknown-flag check never sees it. */
 const FILE_LIST = Symbol("files");
 /** Repeatable review flags (--text, --claim, --id): every value in order. */
@@ -2878,6 +2878,7 @@ function readProfilePlan(dir) {
 }
 
 function profilePlanCommand(dir, flags) {
+  if (flags.existing && !flags.write) throw invalid("existing", "an existing-bundle adoption with --write");
   const plan = productProfilePlan(dir, flags);
   if (flags.types !== undefined) {
     if (flags.write) throw invalid("types", "a preview without --write");
@@ -2895,8 +2896,17 @@ function profilePlanCommand(dir, flags) {
     }
     const current = productProfilePlan(dir, flags);
     if (current.status !== "decided") throw fail("PRODUCT_UNCONFIRMED", "Confirm the product type before freezing the profile files.");
-    writeFileAtomic(path.join(dir, PROFILE_PLAN_PATH), JSON.stringify({ schema_version: 2, types: current.types, flags: current.flags, profile_files: current.profile_files }, null, 2) + "\n", "PROFILE_PLAN_WRITE_FAILED");
-    return { ...current, frozen: true, written: true };
+    let profileFiles = current.profile_files;
+    if (flags.existing) {
+      const bundle = makeBundle(dir);
+      const index = bundle.blueprint();
+      if (state.state.pipeline.sections.S9?.status !== "done" || index.kind !== "ok" || validateBlueprint(index.value).length) {
+        throw fail("BUNDLE_INCOMPLETE", "Adopting file paths needs a completed existing bundle with a valid index.");
+      }
+      profileFiles = bundleProfileFiles(dir, index.value).filter((file) => !BUNDLE_BASE_MANIFEST.includes(file));
+    }
+    writeFileAtomic(path.join(dir, PROFILE_PLAN_PATH), JSON.stringify({ schema_version: 2, types: current.types, flags: current.flags, profile_files: profileFiles }, null, 2) + "\n", "PROFILE_PLAN_WRITE_FAILED");
+    return { ...current, profile_files: profileFiles, frozen: true, written: true };
   });
 }
 
@@ -8205,7 +8215,77 @@ async function cmdInterviewProgress({ dir, flags }) {
   return { section, known, total: facts.length, confirmation: count("confirm"), assumptions: count("assumption"), missing: count("missing"), progress: `${section}: ${known} of ${facts.length} facts known`, facts };
 }
 
+// ---------------------------------------------------------------- 11g. feature identifiers
+function featureEventId(payload) {
+  const candidates = [payload.feature, payload.id, payload.feature_id, payload.feature?.id];
+  return candidates.find((id) => isStr(id) && /^F-\d{2,}$/.test(id));
+}
+
+function nextBundleIds(bundle) {
+  const features = featureUniverse(bundle);
+  for (const id of [...bundle.scope().inMvp.keys(), ...bundle.scope().parked.keys()]) features.add(id);
+  const milestones = new Set([...bundle.st.milestones, ...bundle.milestoneBlocks()].map((item) => item.id));
+  for (const { type, payload } of bundle.j.events) {
+    if (type.startsWith("feature_") || type === "impact_analysis") {
+      const id = featureEventId(payload);
+      if (id) features.add(id);
+    }
+    for (const milestone of Array.isArray(payload.milestones) ? payload.milestones : []) {
+      if (isStr(milestone?.id)) milestones.add(milestone.id);
+    }
+  }
+  const decisions = allDecisionIds(bundle.dir, bundle.st, bundle.j.events);
+  const next = (ids, prefix, width) => {
+    let max = prefix === "M" ? -1 : 0;
+    for (const id of ids) {
+      if (!isStr(id) || !id.startsWith(prefix) || !/^\d+$/.test(id.slice(prefix.length))) continue;
+      const number = Number(id.slice(prefix.length));
+      if (!Number.isSafeInteger(number) || number >= Number.MAX_SAFE_INTEGER) throw fail("ID_OUT_OF_RANGE", `Identifier ${id} exceeds the supported range.`);
+      max = Math.max(number, max);
+    }
+    return prefix + String(max + 1).padStart(width, "0");
+  };
+  return { feature: next(features, "F-", 2), decision: next(decisions, "D-", 3), milestone: next(milestones, "M", 0) };
+}
+
+async function cmdNextBundleIds({ dir, flags }) {
+  if (!flags.reserve) return { next: nextBundleIds(makeBundle(dir)) };
+  const payload = await readPayloadInput(flags);
+  if (!nonEmpty(payload?.request)) throw fail("BAD_JSON_INPUT", "Give the verbatim feature request when reserving an identifier.");
+  needLvr(dir);
+  return withLock(dir, "ids next", () => {
+    guardSchema(dir);
+    const bundle = makeBundle(dir);
+    if (!bundle.j.healthy || bundle.j.scope_locked_seq === null || bundle.st.pipeline.sections.S7?.status !== "done") {
+      throw fail("SCOPE_UNLOCKED", "Finish the scope lock before reserving a feature identifier.");
+    }
+    guardJournalBehind(dir, bundle.j);
+    const next = nextBundleIds(bundle);
+    const starts = bundle.j.events.filter((event) => event.type === "feature_started");
+    const latest = starts.at(-1);
+    if (latest) {
+      const following = bundle.j.events.filter((event) => event.seq > latest.seq && (event.type === "feature_captured" || event.type === "feature_done"));
+      const id = featureEventId(latest.payload) ?? following.map((event) => featureEventId(event.payload)).find(Boolean);
+      const done = following.some((event) => event.type === "feature_done" && (!id || featureEventId(event.payload) === id));
+      if (latest.payload.request === payload.request) {
+        if (!id && !done) {
+          const reserved = appendLocked(dir, "feature_started", { request: payload.request, feature: next.feature, resumed_from: latest.seq });
+          return { next, feature: next.feature, status: "reserved", seq: reserved.seq };
+        }
+        return { next, feature: id ?? null, status: done ? "done" : "resume", seq: latest.seq };
+      }
+      if (!done) throw fail("FEATURE_IN_PROGRESS", "Resume the running feature before reserving another identifier.", { feature: id ?? null });
+    }
+    const reserved = appendLocked(dir, "feature_started", { request: payload.request, feature: next.feature });
+    return { next, feature: next.feature, status: "reserved", seq: reserved.seq };
+  });
+}
+
 const COMMANDS = {
+  "ids next": {
+    help: "Read the next feature, decision and milestone IDs. [--reserve --in FILE|- to journal a feature request]",
+    flags: ["reserve", "in"], run: cmdNextBundleIds,
+  },
   version: {
     help: "Print the script version, schema number, node version and sha256 of this file.", flags: [],
     run: async () => ({ version: VERSION, lvr_schema: LVR_SCHEMA, node: process.versions.node, platform: process.platform, sha256: sha256(fs.readFileSync(SELF)) }),
@@ -8460,8 +8540,8 @@ const COMMANDS = {
     }),
   },
   "profile plan": {
-    help: "Merge confirmed profiles, preview choices, or freeze the profile file list after scope lock. [--types ID,ID | --write] [--profiles DIR]",
-    flags: ["types", "profiles", "write"],
+    help: "Merge confirmed profiles, preview choices, or freeze the profile file list after scope lock. [--types ID,ID | --write [--existing]] [--profiles DIR]",
+    flags: ["types", "profiles", "write", "existing"],
     run: async ({ dir, flags }) => profilePlanCommand(dir, flags),
   },
   "profile add-file": {

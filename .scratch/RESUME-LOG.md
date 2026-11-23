@@ -58,3 +58,6 @@
 2026-11-23T03:07:44Z | codex/gpt-6 | task 28 | claimed after completing independent CI; pending owner work remains isolated | next: v2 bundle file list, compatible reader and post-lock rule
 2026-11-23T03:14:21Z | codex/gpt-6 | task 28 | v2 file manifest, backward compatibility, profile presence checks and A6 additions implemented | next: complete same-context and shared regressions
 2026-11-23T03:17:19Z | codex/gpt-6 | task 28 | two profile bundles, v1 parity, post-lock file guard and all regressions passed; closed | next: ticket 29 align the add-feature path
+2026-11-23T03:17:29Z | codex/gpt-6 | task 29 | claimed and matched K findings to current shared helpers | next: deterministic ids and add-feature capture, research, apply and resume contracts
+2026-11-23T03:24:26Z | codex/gpt-6 | task 29 | implementation and focused fixture written | next: same-context verify installed helper, reference parity and shared regressions
+2026-11-23T03:27:06Z | codex/gpt-6 | task 29 | installed add-feature fixture, 51 archive tests, 8 public tests and all shared suites pass; closed | next: task 31 per-profile release evidence

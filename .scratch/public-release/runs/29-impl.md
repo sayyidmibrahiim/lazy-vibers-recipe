@@ -1,0 +1,3 @@
+# Ticket 29 implementation
+
+The add-feature skill opens a journaled feature ID, resumes the same open request, and learns decision and milestone IDs from the existing project. It captures four relevant failure paths and only asks for missing facts. It adds a dated context delta, a single-slot S5b procedure for new dependencies, and scoped boosters and review roles. The existing bundle can adopt a frozen file list before a flag change. New files require the recorded scope decision and are followed by lint, crosscheck and citation checks. The installed skill includes the supporting references and templates.

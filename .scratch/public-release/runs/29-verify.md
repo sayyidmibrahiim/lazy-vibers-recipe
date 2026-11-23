@@ -1,0 +1,6 @@
+# Ticket 29 same-context verify
+
+- PASS. The installed add-feature copy reserves F-05, reuses the same checkpoint, rejects a competing request, reports completion on retry, and allocates F-06 next. It also adopts an interrupted legacy start without reusing an earlier captured ID.
+- PASS. A disposable legacy futsal bundle pins its existing file list. A dated context event and a user-confirmed feature decision precede the AI addition. The scope decision alone grants no new file. Applying the recorded flag, decision and path adds only `SPEC/ai.md` and a retry leaves the file list unchanged. The resulting v2 index, full lint, crosscheck and AI spec citation check pass. Original S4 and S7 records are byte-identical.
+- PASS. The packaged references cover context freshness, gap-only capture and four failure paths, S5b dependency selection, just-in-time boosters and read-only or inline review. Separate regressions exercise the underlying interview, framework, booster and citation helpers.
+- PASS. All 51 focused and shared Node tests, all eight public-path tests, and suites 03, 04, 26, 27, 38 and 40. `check:skills`, typecheck and `git diff --check` passed. ESLint exited successfully with the pre-existing unused variable warning in the archived signal probe.
