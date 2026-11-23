@@ -146,6 +146,8 @@ Offer the next skill: `/lvr-build` (execute the next unverified milestone), `/lv
 
 ## Idempotency
 
+Check the [project-local lifecycle](references/booster-lifecycle.md) if a run closed before its cleanup prompt. Find its closing sequence (`handoff_done`, `build_done`, `feature_done`, `review_done`, or `brand_done`) and any recorded `keep` choices for that sequence. For a post-pipeline run, use its opening and closing sequence bounds. Offer pending cleanup for the eligible paths once. Honor a recorded `cleanup_owner: "build"` while the build remains planned or paused.
+
 - Sections marked `done` are never re-run.
 - Recorded or skipped answers are never re-asked.
 - Bundle regeneration is explicit and per-file only.

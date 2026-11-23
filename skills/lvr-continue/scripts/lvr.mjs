@@ -2678,15 +2678,33 @@ function cleanupBoosters(dir, flags) {
     const loaded = loadState(dir);
     if (!journal.exists || !journal.healthy || loaded.kind !== "valid") throw fail("BOOSTER_JOURNAL_INVALID", "Recover the project journal and state before cleaning up boosters.");
     guardJournalBehind(dir, journal);
+    const boundary = (flag, fallback) => {
+      const value = flags[flag];
+      if (value === undefined) return fallback;
+      const seq = Number(value);
+      if (!/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(seq) || !journal.events.some((event) => event.seq === seq)) {
+        throw invalid(flag, "an existing positive journal sequence number");
+      }
+      return seq;
+    };
+    const from = boundary("from-seq", 1);
+    const through = boundary("through-seq", journal.max_seq);
+    const scoped = flags["from-seq"] !== undefined || flags["through-seq"] !== undefined;
+    if (scoped && from > through) throw invalid("through-seq", "a sequence at or after from-seq");
     const installed = loaded.state.boosters?.installed ?? [];
     const receipts = new Map();
-    for (const { type, payload } of journal.events) {
-      if (type === "booster_installed") receipts.set(payload.path, payload);
+    const keep = new Set();
+    for (const event of journal.events) {
+      if (event.type === "booster_installed") receipts.set(event.payload.path, event);
+      if (scoped && event.type === "booster_choice" && event.payload.choice === "keep" && event.payload.close_seq === through) keep.add(event.payload.path);
     }
     const result = [];
     for (const entry of installed) {
       if (entry.status !== "installed" || (flags.path && flags.path !== entry.path)) continue;
-      const receipt = receipts.get(entry.path);
+      const install = receipts.get(entry.path);
+      if (scoped && (!install || install.seq < from || install.seq > through)) continue;
+      if (keep.has(entry.path)) continue;
+      const receipt = install?.payload;
       const item = { name: entry.name, path: entry.path, status: "unmanaged" };
       if (entry.scope === "project" && entry.kind === "skill" && receipt?.name === entry.name && receipt.sha === entry.sha && validBoosterReceipt(receipt.managed)) {
         try {
@@ -2710,7 +2728,7 @@ function cleanupBoosters(dir, flags) {
     const stage = fs.mkdtempSync(path.join(dir, ".lvr", "booster-remove."));
     const moved = path.join(stage, "skill");
     const receiptFile = path.join(stage, "receipt.json");
-    const hash = receipts.get(item.path).managed.hash;
+    const hash = receipts.get(item.path).payload.managed.hash;
     let event;
     try {
       fs.writeFileSync(receiptFile, JSON.stringify({ name: item.name, path: item.path, hash }) + "\n", { flag: "wx", mode: 0o600 });
@@ -2728,7 +2746,8 @@ function cleanupBoosters(dir, flags) {
     fs.rmSync(moved, { recursive: true });
     fs.unlinkSync(receiptFile);
     fs.rmdirSync(stage);
-    const parents = [...receipts.values()].filter((receipt) => validBoosterReceipt(receipt.managed)).flatMap((receipt) => receipt.managed.parents);
+    const parents = [...receipts.values()].map((entry) => entry.payload).filter((receipt) => validBoosterReceipt(receipt.managed)).flatMap((receipt) => receipt.managed.parents)
+      .filter((parent) => !scoped || item.path.startsWith(parent.path + "/"));
     return { removed: item.path, seq: event.seq, cleaned_parents: pruneBoosterParents(dir, parents) };
   });
 }
@@ -8770,8 +8789,8 @@ const COMMANDS = {
     run: async ({ dir, flags }) => deployBooster(dir, flags),
   },
   "booster cleanup": {
-    help: "Preview Recipe-owned skills eligible for cleanup. Pass --confirm --path PATH only after user approval of that path.",
-    flags: ["confirm", "path"],
+    help: "Preview Recipe-owned skills eligible for cleanup. [--from-seq N --through-seq N] Pass --confirm --path PATH only after user approval.",
+    flags: ["confirm", "path", "from-seq", "through-seq"],
     run: async ({ dir, flags }) => cleanupBoosters(dir, flags),
   },
   "profile list": {

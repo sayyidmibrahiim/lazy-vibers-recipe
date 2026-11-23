@@ -96,8 +96,8 @@ Consult the pinned `verification-before-completion` reference for the builder's 
 
    Script: `LVR handoff prompt` writes exactly this file from the fixed template (title from `project.name`; the file's bytes depend on nothing else) and rewrites it only when the bytes change; its `kickoff` object holds the harness commands below.
 2. **Close** — print, in the user's language: the recommended install lines from `CAPABILITIES.md` (every row's install command with name and license; NC items marked runtime-dependency-only; Script: `LVR handoff install-lines` → `lines[]`), then the kickoff command for the current harness with the entry prompt as the first input. Kickoff forms: Claude Code `claude "$(cat HANDOFF-PROMPT.md)"` · Gemini CLI `gemini -p "$(cat HANDOFF-PROMPT.md)"` · Codex `codex "$(cat HANDOFF-PROMPT.md)"` · ZCode `zcode "$(cat HANDOFF-PROMPT.md)"` · harness unknown → "open a fresh session in this folder and paste the contents of `HANDOFF-PROMPT.md`".
-3. **Done** — journal `handoff_done` (payload: gaps found, self-fixes applied, entry prompt path) and fill `state.handoff` = `{ "status": "done", "completed_at": <now> }` — one checkpoint.
-   - Script: `LVR journal append --type handoff_done --payload '{…}'` — the script fills `state.handoff` for you. Then follow the consent and exact-path checks in [the project-local booster lifecycle](references/booster-lifecycle.md) for optional cleanup.
+3. **Done** — journal `handoff_done` with gaps found, self-fixes, entry prompt path and `cleanup_owner`. Use `"build"` if the owner chose `/lvr-build` next, or `"handoff"` when this wraps up the Recipe pipeline. The script fills `state.handoff` in the same checkpoint.
+   - Script: `LVR journal append --type handoff_done --in -`. Keep tracked copies for the chosen Recipe build. When handoff owns cleanup, use the consent and exact-path checks in [the project-local lifecycle](references/booster-lifecycle.md).
 
 ## Idempotency
 

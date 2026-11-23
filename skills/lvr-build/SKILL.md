@@ -115,7 +115,7 @@ Run `references/build-loop.md` §6 when a milestone releases a product and after
 Script: `LVR journal append --type build_done --payload '{…}'`
 
 1. All milestones and release checks passed → journal `build_done` (payload: milestones and release results) + a state write setting `project.status` = "complete" (the script's reducer does this). One checkpoint.
-2. Report plainly what works, how to run it, which checks were captured and any known limitations. Run the applicable project-local booster cleanup at the end of the planned pipeline with owner permission (§8).
+2. Report plainly what works, how to run it, which checks were captured and any known limitations. After `build_done`, this skill handles cleanup of copies retained for build. Use the consent and exact-path checks in the project-local lifecycle. A pause preserves the pending work and copies.
 3. Next actions, in order:
    - `/lvr-handoff` again — it refreshes `blueprint.json` and the entry prompt from the new state;
    - `/lvr-personal-brand` — after every milestone and release check passes;

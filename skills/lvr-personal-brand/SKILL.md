@@ -110,7 +110,7 @@ Run the checklist in `references/brand-templates.md`:
 - files under `brand/`, not in the bundle;
 - nothing posted, scheduled, or sent anywhere.
 
-Then journal `brand_done` (payload: files, verified claims, claimed claims, open questions) + state write. One checkpoint. Ask before removing eligible Recipe-owned copies installed for this run.
+Then journal `brand_done` (payload: files, verified claims, claimed claims, open questions) + state write. One checkpoint. Scope the cleanup list from `brand_started` through `brand_done` and ask before removing eligible copies.
 
 Close in plain language: what exists, what each file is for, what the owner must fill or approve, and the one next action (review `BRAND.md` first, then the profile copy). Never offer to post on the owner's behalf.
 

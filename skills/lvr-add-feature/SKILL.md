@@ -124,6 +124,7 @@ Script: `LVR journal append --type feature_done --payload '{…}'`
 
 1. Re-read the touched files and verify their impact rows. Run `LVR lint run`, `LVR crosscheck`, and `LVR cite check --file PATH` for each touched Markdown file. Fix introduced findings. Keep the feature open if a required check still fails. Record unrelated inherited gaps with their owners.
 2. Journal `feature_done` (payload: F-NN, scope, files touched, D-NNN, M-id or none). One checkpoint.
+   Use the [project-local lifecycle](references/booster-lifecycle.md) to ask about cleaning copies installed between this feature's `feature_started` and `feature_done` checkpoints. Keep user-owned copies and copies from earlier runs.
 3. Close in plain language:
    - what the product now does (or what was parked),
    - which milestone covers it,

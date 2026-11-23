@@ -76,3 +76,6 @@
 2026-11-23T07:05:10Z | codex/gpt-6 | task 34 | claimed; confirmed profile release gate and owner freshness limits | next: brand citation checks, evidence procedure and pinned prose pass
 2026-11-23T07:07:04Z | codex/gpt-6 | task 34 | brand evidence rules, prose aid and targeted citation checks implemented | next: same-context verify market age, release gate and shared regressions
 2026-11-23T07:09:55Z | codex/gpt-6 | task 34 | brand citations, release gate, editorial review and all shared regressions pass; closed | next: task 36 lifecycle ownership and cleanup after later runs
+2026-11-23T07:10:13Z | codex/gpt-6 | task 36 | claimed; mapped handoff, build and later-run ownership to existing managed receipts | next: scope cleanup by journal and align all skill instructions
+2026-11-23T07:13:13Z | codex/gpt-6 | task 36 | cleanup ownership, scoped receipt windows and keep decisions implemented | next: same-context verify approval bounds and existing lifecycle regressions
+2026-11-23T07:16:04Z | codex/gpt-6 | task 36 | scoped cleanup fixture and all shared regressions pass; closed | next: task 35 installation and skills README
