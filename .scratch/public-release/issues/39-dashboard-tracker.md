@@ -1,19 +1,19 @@
 # 39: Plan dashboard + session tracker (deterministic, read-only)
-Status: ready-for-agent · Blocked by: 21, 27, 28 · Type: task · Agent: Opus (data contract + UX) → Sonnet (build)
+Status: done (2026-11-23) · Blocked by: 21, 27, 28 · Type: task · Agent: Opus (data contract + UX) → Sonnet (build)
 Decision D13 (owner, 2026-11-19). It extends the existing F3 viewer (`src/lib/lvp-fs.ts` → `lvr-fs.ts`, `lvp-client.tsx`).
 
 Goal: a user who needs visuals opens a Recipe project folder and sees the plan, its progress, the agents and sessions used, and exactly how to continue. There is **no live connection to any harness and no LLM call**. The web app only parses files.
 
 ## A. Session registry (written by the skills, read by the web)
-- [ ] Schema v2 (ticket 27) adds `sessions[]` with these fields:
+- [x] Schema v2 (ticket 27) adds `sessions[]` with these fields:
   - harness, session_id (or null + reason), model, tier
   - skill run (`/lvr-*`)
   - started_at / ended_at, cwd
   - sections touched, agents delegated (profile, model, task), boosters installed
-- [ ] Journal events `session_start` / `session_end` carry the same data. `replay` rebuilds `sessions[]`.
-- [ ] Research how each harness exposes its session id: env var, hook payload (`session_id`), CLI flag, or transcript path. Do this for Claude Code, Codex, Gemini CLI, opencode, Cursor, Copilot, Kilo, Qwen, Kimi, and record source + date (D12).
+- [x] Journal events `session_start` / `session_end` carry the same data. `replay` rebuilds `sessions[]`.
+- [x] Research how each harness exposes its session id: env var, hook payload (`session_id`), CLI flag, or transcript path. Do this for Claude Code, Codex, Gemini CLI, opencode, Cursor, Copilot, Kilo, Qwen, Kimi, and record source + date (D12).
   - If no id is available: store null with the reason. Never invent one.
-- [ ] `references/harnesses.json` holds the resume command per harness, e.g.:
+- [x] `references/harnesses.json` holds the resume command per harness, e.g.:
   - `claude --resume <id>`
   - `codex resume <id>`
   - opencode session flags
@@ -21,15 +21,15 @@ Goal: a user who needs visuals opens a Recipe project folder and sees the plan, 
   - Verify each command live before shipping. Unverified rows are marked as such.
 
 ## B. Dashboard views (deterministic parsers only)
-- [ ] **Overview:** product types, status, current section/milestone, review verdict + lens scores, research freshness (expired facts count).
-- [ ] **Progress:** S0–S9 timeline with answers/decisions counts, loop-backs, blocked sections; milestones M0..Mn verified/pending from state + VERIFICATION build log.
-- [ ] **Plan files:** render the variable bundle (blueprint.json v2 list), with Mermaid ERD rendering (D7) and ASCII kept monospace.
-- [ ] **Sessions & agents:** table of sessions (harness, id, model, skill, time, sections), with the delegated agents and installed/uninstalled boosters under each.
-- [ ] **Continue panel:** next step computed from state (e.g. "S4 in progress, 6/9 facts known"), plus copy-ready commands:
+- [x] **Overview:** product types, status, current section/milestone, review verdict + lens scores, research freshness (expired facts count).
+- [x] **Progress:** S0–S9 timeline with answers/decisions counts, loop-backs, blocked sections; milestones M0..Mn verified/pending from state + VERIFICATION build log.
+- [x] **Plan files:** render the variable bundle (blueprint.json v2 list), with Mermaid ERD rendering (D7) and ASCII kept monospace.
+- [x] **Sessions & agents:** table of sessions (harness, id, model, skill, time, sections), with the delegated agents and installed/uninstalled boosters under each.
+- [x] **Continue panel:** next step computed from state (e.g. "S4 in progress, 6/9 facts known"), plus copy-ready commands:
   1. the resume command for the last session's harness + id
   2. `/lvr-continue` (any harness)
   3. the next skill to run (`/lvr-review-plan`, `/lvr-handoff`, `/lvr-build`).
-- [ ] **Mindmap** (generated from state + blueprint.json, no LLM). Tree:
+- [x] **Mindmap** (generated from state + blueprint.json, no LLM). Tree:
   - Idea → product types
   - → sections S0–S9 (status)
   - → features F-NN (in-MVP / parked)
@@ -41,7 +41,7 @@ Goal: a user who needs visuals opens a Recipe project folder and sees the plan, 
   - collapsible
   - click a node to open its source file/section
   - colour by status via theme tokens
-- [ ] **Diagrams:**
+- [x] **Diagrams:**
   1. Render every Mermaid block found in bundle files (ERD, and any future Mermaid).
   2. Show ASCII diagrams monospace and unwrapped, with horizontal scroll.
   3. Auto-generate view-only diagrams from data:
@@ -51,18 +51,18 @@ Goal: a user who needs visuals opens a Recipe project folder and sees the plan, 
      - entity relations from data-model.md
      - review heat map (lens × file)
   These generated diagrams are dashboard-only; the bundle format rule D7 stays unchanged.
-- [ ] Diagram engine: Mermaid (it has mindmap, flowchart, erDiagram, gantt), installed as an npm dependency.
+- [x] Diagram engine: Mermaid (it has mindmap, flowchart, erDiagram, gantt), installed as an npm dependency.
   - Rendered client-side, offline: no CDN (local tool, D13 no-network rule).
   - Pin the version and choose it per D12 freshness research. Use a lazy-load, so non-diagram views stay light.
   - Mermaid source is generated by a deterministic module (same state → byte-identical diagram text; unit-tested).
-- [ ] **Review ledger:** findings by lens/severity/status, including `missed-earlier` count + apologies.
-- [ ] **Decisions & assumptions:** filter by status (user_confirmed / assumed / designer_filled).
-- [ ] Support legacy projects: open `.lvp/` read-only through the 27 migration mapping.
+- [x] **Review ledger:** findings by lens/severity/status, including `missed-earlier` count + apologies.
+- [x] **Decisions & assumptions:** filter by status (user_confirmed / assumed / designer_filled).
+- [x] Support legacy projects: open `.lvp/` read-only through the 27 migration mapping.
 
 ## C. Template contract
-- [ ] All parsing lives in one module with typed readers per file/schema version. Unknown fields are ignored; missing files show "not yet generated" (never crash).
-- [ ] The UI copy is Bahasa Indonesia (AGENTS.md), using theme tokens only.
-- [ ] No writes to the project folder from the web, ever.
+- [x] All parsing lives in one module with typed readers per file/schema version. Unknown fields are ignored; missing files show "not yet generated" (never crash).
+- [x] The UI copy is Bahasa Indonesia (AGENTS.md), using theme tokens only.
+- [x] No writes to the project folder from the web, ever.
 
 Verify:
 - The fixtures (futsal web, KPR skill/plugin, a mid-S4 project, a legacy `.lvp/`) render every view, including the mindmap and every diagram.
@@ -74,3 +74,4 @@ Verify:
 
 ## Comments
 - Owner 2026-11-21 (spec V1): refused runs (wrong folder, no web) are listed as sessions marked cancelled ("batal").
+- Implementation and verification are in `runs/39-impl.md` and `runs/39-verify.md`. `node --test tests/lvr/dashboard.test.mjs` ran on Nodes 22 and 24. Chromium exercised six views across four disposable projects and all fifteen available diagrams with offline re-rendering. The project fixtures remained byte-identical. Eight checked CLI resume forms are available with a recorded ID; the unverified Cursor integration uses the fallback.

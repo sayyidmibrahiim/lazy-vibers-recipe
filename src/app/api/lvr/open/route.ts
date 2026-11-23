@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   }
   if (!detail) {
     return NextResponse.json(
-      { error: "Folder tidak ditemukan atau tidak memiliki .lvr/state.json yang valid." },
+      { error: "Folder tidak ditemukan atau tidak memiliki catatan proyek .lvr atau .lvp yang valid." },
       { status: 400 },
     );
   }

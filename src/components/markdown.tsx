@@ -9,11 +9,12 @@ function textOf(node: ReactNode): string {
     .join("");
 }
 
-export function Markdown({ content }: { content: string }) {
+export function Markdown({ content, allowImages = true }: { content: string; allowImages?: boolean }) {
   return (
     <div className="doc-prose">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        disallowedElements={allowImages ? undefined : ["img"]}
         components={{
           pre: ({ children, node, ...rest }) => {
             void node;

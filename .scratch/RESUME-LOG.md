@@ -85,3 +85,6 @@
 2026-11-23T07:17:49Z | codex/gpt-6 | task 37 | claimed; checked existing handoff helpers and v1 compatibility | next: review gate, source validation, v2 prompt and pinned builder aids
 2026-11-23T07:23:10Z | codex/gpt-6 | task 37 | review gate, versioned prompt, pinned lines and focused fixture implemented | next: same-context verify citation blockers, compatibility and shared regressions
 2026-11-23T07:26:04Z | codex/gpt-6 | task 37 | gated handoff, unchanged v1 behavior and all shared regressions pass; closed | next: task 39 read-only dashboard and session tracker
+2026-11-23T07:26:34Z | codex/gpt-6 | task 39 | claimed; mapped existing viewer, canonical state and offline Mermaid | next: typed filesystem readers, session capability sources and dashboard views
+2026-11-23T07:46:47Z | codex/gpt-6 | task 39 | typed reader, UI, session catalog and browser fixture implemented; initial production browser pass | next: same-context final rebuild, offline browser checks and regressions
+2026-11-23T07:50:53Z | codex/gpt-6 | task 39 | production build, four read-only browser trials, 29 public tests and all archive suites pass; closed | next: final sync audit and terminal owner dependencies report

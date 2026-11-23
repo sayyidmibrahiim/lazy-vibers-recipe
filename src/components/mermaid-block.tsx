@@ -44,6 +44,8 @@ export function MermaidBlock({ code }: { code: string }) {
     let cancelled = false;
     (async () => {
       try {
+        // Mermaid can insert transient markup before the SVG has been sanitized.
+        if (/\b(?:https?|ftp|file):\/\/|(?:^|[\s="'(])\/\/[a-z0-9.-]+\//i.test(code)) throw new Error("external diagram reference");
         const mermaid = (await import("mermaid")).default;
         mermaid.initialize({ startOnLoad: false, securityLevel: "strict", htmlLabels: false, flowchart: { htmlLabels: false }, theme: "neutral" });
         const { svg } = await mermaid.render(`mmd-${id}`, code);

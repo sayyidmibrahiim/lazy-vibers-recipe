@@ -30,6 +30,7 @@ const sources = [
   { src: path.join(SKILLS, "lvr-frameworks.json"), dest: (s) => path.join(s, "references", "frameworks.json") },
   { src: path.join(SKILLS, "lvr-boosters.json"), dest: (s) => path.join(s, "references", "boosters.json"), optional: true },
   { src: path.join(SKILLS, "lvr-freshness.json"), dest: (s) => path.join(s, "references", "freshness.json") },
+  { src: path.join(SKILLS, "lvr-harnesses.json"), dest: (s) => path.join(s, "references", "harnesses.json") },
   { src: path.join(ROOT, "docs", "spec", "05-boosters.md"), dest: (s) => path.join(s, "references", "booster-map.md"), only: "lvr-init-new-idea" },
   { src: path.join(ROOT, "docs", "spec", "15-adaptive-interview.md"), dest: (s) => path.join(s, "references", "sections", "adaptive-interview.md"), only: ["lvr-init-new-idea", "lvr-add-feature"] },
   { src: path.join(ROOT, "docs", "spec", "14-ai-feature.md"), dest: (s) => path.join(s, "references", "bundle", "ai-feature.md"), only: ["lvr-init-new-idea", "lvr-add-feature", "lvr-build"] },

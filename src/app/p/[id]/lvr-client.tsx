@@ -2,10 +2,15 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { MapAndDiagrams, ResumePanel, ReviewLedger, SessionPanel, statusText } from "./lvr-dashboard";
 import { Markdown } from "@/components/markdown";
 import type { LvrDocItem, LvrProjectDetail } from "@/lib/lvr-fs";
 
-type Tab = "ringkasan" | "bundle" | "pipeline" | "audit_brand";
+const tabs = [
+  ["ringkasan", "Ringkasan"], ["bundle", "Berkas rencana"], ["pipeline", "Progres dan keputusan"],
+  ["sesi", "Sesi dan agen"], ["peta", "Peta dan diagram"], ["audit_brand", "Pemeriksaan dan brand"],
+] as const;
+type Tab = typeof tabs[number][0];
 
 export function LvrProjectClient({
   detail,
@@ -18,10 +23,21 @@ export function LvrProjectClient({
   );
   const [copied, setCopied] = useState(false);
 
-  const activeDoc = detail.docs.find((d) => d.id === activeDocId) ?? detail.docs[0] ?? null;
+  const auditDocs = detail.docs.filter((doc) => doc.category === "review" || doc.category === "brand");
+  const bundleDocs = detail.docs.filter((doc) => doc.category !== "review" && doc.category !== "brand");
+  const visibleDocs = tab === "audit_brand" ? auditDocs : bundleDocs;
+  const activeDoc = visibleDocs.find((doc) => doc.id === activeDocId) ?? visibleDocs[0] ?? null;
+
+  function openFile(file: string) {
+    const doc = detail.docs.find((item) => item.relativePath === file);
+    if (!doc) return;
+    setActiveDocId(doc.id);
+    setCopied(false);
+    setTab(doc.category === "review" || doc.category === "brand" ? "audit_brand" : "bundle");
+  }
 
   async function copyDoc() {
-    if (!activeDoc) return;
+    if (!activeDoc?.available) return;
     try {
       await navigator.clipboard.writeText(activeDoc.content);
       setCopied(true);
@@ -45,71 +61,30 @@ export function LvrProjectClient({
               href="/"
               className="inline-flex items-center gap-1.5 font-mono text-xs text-ink/65 hover:text-ink"
             >
-              <span>&larr;</span> Semua project
+              <span>&larr;</span> Semua proyek
             </Link>
             <span className="text-line">/</span>
             <span className="font-semibold tracking-tight">{state.project.name}</span>
             <span className="label rounded border border-blueprint/30 bg-blueprint/5 px-2 py-0.5 text-blueprint">
-              {state.project.status}
+              {statusText(state.project.status)}
             </span>
           </div>
 
           <div className="hidden items-center gap-6 font-mono text-xs text-ink/65 md:flex">
             <span>{detail.docs.length} dokumen</span>
             <span>
-              Milestone: {verifiedMilestonesCount}/{totalMilestonesCount}
+              Tahap {verifiedMilestonesCount}/{totalMilestonesCount}
             </span>
-            <span>{detail.journalCount} events</span>
+            <span>{detail.journalCount} catatan</span>
           </div>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="mx-auto flex max-w-6xl gap-1 px-6">
-          <button
-            type="button"
-            onClick={() => setTab("ringkasan")}
-            className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-              tab === "ringkasan"
-                ? "border-blueprint text-blueprint"
-                : "border-transparent text-ink/65 hover:text-ink"
-            }`}
-          >
-            Ringkasan
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("bundle")}
-            className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-              tab === "bundle"
-                ? "border-blueprint text-blueprint"
-                : "border-transparent text-ink/65 hover:text-ink"
-            }`}
-          >
-            Dokumen Bundle ({detail.docs.filter((d) => d.category !== "review" && d.category !== "brand").length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("pipeline")}
-            className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-              tab === "pipeline"
-                ? "border-blueprint text-blueprint"
-                : "border-transparent text-ink/65 hover:text-ink"
-            }`}
-          >
-            Pipeline & Keputusan ({state.decisions.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab("audit_brand")}
-            className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-              tab === "audit_brand"
-                ? "border-blueprint text-blueprint"
-                : "border-transparent text-ink/65 hover:text-ink"
-            }`}
-          >
-            Review & Brand ({detail.docs.filter((d) => d.category === "review" || d.category === "brand").length})
-          </button>
-        </div>
+        <nav aria-label="Tampilan proyek" className="mx-auto flex max-w-6xl flex-wrap gap-x-1 px-4 sm:px-6">
+          {tabs.map(([id, label]) => <button type="button" aria-current={tab === id ? "page" : undefined} key={id} onClick={() => { setTab(id); setCopied(false); }}
+            className={`shrink-0 border-b-2 px-3 py-2.5 text-sm font-medium ${tab === id ? "border-blueprint text-blueprint" : "border-transparent text-ink/65 hover:text-ink"}`}>
+            {label}
+          </button>)}
+        </nav>
       </header>
 
       {/* Main Container */}
@@ -126,7 +101,7 @@ export function LvrProjectClient({
 
         {tab === "bundle" && (
           <BundleDocsTab
-            docs={detail.docs.filter((d) => d.category !== "review" && d.category !== "brand")}
+            docs={bundleDocs}
             activeDoc={activeDoc}
             onSelectDoc={setActiveDocId}
             onCopy={copyDoc}
@@ -134,17 +109,14 @@ export function LvrProjectClient({
           />
         )}
 
-        {tab === "pipeline" && <PipelineTab detail={detail} />}
+        {tab === "pipeline" && <PipelineTab detail={detail} openFile={openFile} />}
+        {tab === "sesi" && <SessionPanel detail={detail} />}
+        {tab === "peta" && <MapAndDiagrams detail={detail} openFile={openFile} />}
 
-        {tab === "audit_brand" && (
-          <AuditBrandTab
-            docs={detail.docs.filter((d) => d.category === "review" || d.category === "brand")}
-            activeDoc={activeDoc}
-            onSelectDoc={setActiveDocId}
-            onCopy={copyDoc}
-            copied={copied}
-          />
-        )}
+        {tab === "audit_brand" && <>
+          <ReviewLedger detail={detail} openFile={openFile} />
+          <AuditBrandTab docs={auditDocs} activeDoc={activeDoc} onSelectDoc={setActiveDocId} onCopy={copyDoc} copied={copied} />
+        </>}
       </main>
     </div>
   );
@@ -158,9 +130,9 @@ function OverviewTab({
   onSelectDoc: (id: string) => void;
 }) {
   const { state, blueprint, overviewMarkdown } = detail;
-  const stack = (blueprint?.stack as { components?: string[] })?.components ?? [];
-  const costs = blueprint?.costs as { monthly_usd?: number; one_time_usd?: number } | undefined;
-  const features = (blueprint?.features as Array<{ id: string; name: string; in_mvp?: boolean }>) ?? [];
+  const stack = blueprint?.stack?.components ?? [];
+  const costs = blueprint?.costs;
+  const features = blueprint?.features ?? [];
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
@@ -169,7 +141,7 @@ function OverviewTab({
           <p className="label text-blueprint">Ide awal</p>
           <p className="mt-3 text-base leading-relaxed text-ink/85">{state.project.idea_raw}</p>
           <p className="mt-4 font-mono text-xs text-ink/65">
-            Path folder: <code className="bg-paper px-1.5 py-0.5">{detail.folderPath}</code>
+            Folder proyek <code className="bg-paper px-1.5 py-0.5">{detail.folderPath}</code>
           </p>
         </div>
 
@@ -182,10 +154,10 @@ function OverviewTab({
                 onClick={() => onSelectDoc("OVERVIEW")}
                 className="text-xs text-blueprint hover:underline"
               >
-                Lihat di bundle &rarr;
+                Buka berkas &rarr;
               </button>
             </div>
-            <Markdown content={overviewMarkdown} />
+            <Markdown content={overviewMarkdown} allowImages={false} />
           </div>
         ) : (
           <div className="border border-line bg-card p-6 text-sm text-ink/65">
@@ -196,13 +168,25 @@ function OverviewTab({
 
       {/* Aside Summary */}
       <aside className="space-y-6">
+        <ResumePanel detail={detail} />
+        <section className="border border-line bg-card p-5" aria-labelledby="project-evidence">
+          <h2 id="project-evidence" className="label text-blueprint">Status rencana</h2>
+          <dl className="mt-3 space-y-2 text-sm">
+            <div><dt className="text-xs text-ink/65">Jenis produk</dt><dd>{state.productTypes.join(", ") || "Belum tercatat"}</dd></div>
+            <div><dt className="text-xs text-ink/65">Hasil pemeriksaan</dt><dd>{state.review?.verdict ?? "Belum diperiksa"}{state.review?.score != null ? ` · ${state.review.score}/10` : ""}</dd></div>
+            <div><dt className="text-xs text-ink/65">Riset</dt><dd>{detail.expiredFacts} fakta kedaluwarsa</dd></div>
+          </dl>
+          {state.review && Object.keys(state.review.lensScores).length ? <div className="mt-3 flex flex-wrap gap-2 text-xs">{Object.entries(state.review.lensScores).map(([lens, score]) => <span key={lens} className="border border-line bg-paper px-2 py-1">{lens} · {score}/10</span>)}</div> : null}
+          {detail.legacy ? <p className="mt-3 text-xs text-ink/65">Proyek lama · berkas .lvp dibuka dalam mode baca-saja.</p> : null}
+          {detail.invalidJournalLines ? <p className="mt-3 text-xs text-rust">{detail.invalidJournalLines} baris jurnal tidak terbaca.</p> : null}
+        </section>
         {blueprint ? (
           <div className="border border-line bg-card p-5">
-            <p className="label text-blueprint">Blueprint summary</p>
+            <p className="label text-blueprint">Isi blueprint</p>
 
             {stack.length > 0 && (
               <div className="mt-4">
-                <span className="text-xs font-medium text-ink/65">Stack:</span>
+                <span className="text-xs font-medium text-ink/65">Teknologi</span>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {stack.map((c) => (
                     <span
@@ -218,7 +202,7 @@ function OverviewTab({
 
             {costs && (
               <div className="mt-4 border-t border-line pt-3 text-xs">
-                <span className="font-medium text-ink/65">Estimasi Biaya:</span>
+                <span className="font-medium text-ink/65">Perkiraan biaya</span>
                 <div className="mt-1 flex justify-between font-mono">
                   <span>Bulanan:</span>
                   <span className="font-semibold">${costs.monthly_usd ?? 0}</span>
@@ -233,7 +217,7 @@ function OverviewTab({
             {features.length > 0 && (
               <div className="mt-4 border-t border-line pt-3">
                 <span className="text-xs font-medium text-ink/65">
-                  Fitur ({features.filter((f) => f.in_mvp).length} in-MVP):
+                  Fitur ({features.filter((f) => f.in_mvp).length} dalam cakupan):
                 </span>
                 <ul className="mt-2 space-y-1 text-xs">
                   {features.slice(0, 6).map((f) => (
@@ -255,7 +239,7 @@ function OverviewTab({
 
         {/* Milestone Card */}
         <div className="border border-line bg-card p-5">
-          <p className="label text-ink/65">Milestones progress</p>
+          <p className="label text-ink/65">Tahap pembangunan</p>
           <div className="mt-3 space-y-2">
             {state.milestones.map((m) => (
               <div
@@ -271,7 +255,7 @@ function OverviewTab({
                     m.verified ? "text-blueprint" : "text-ink/65"
                   }`}
                 >
-                  {m.verified ? "Verified" : "Pending"}
+                  {m.verified ? "Terverifikasi" : "Menunggu"}
                 </span>
               </div>
             ))}
@@ -302,7 +286,7 @@ function BundleDocsTab({
     <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
       {/* Sidebar Doc List */}
       <aside className="border border-line bg-card p-3">
-        <p className="label px-3 py-2 text-blueprint">SPEC Documents</p>
+        <p className="label px-3 py-2 text-blueprint">Dokumen spesifikasi</p>
         <nav className="space-y-0.5">
           {specDocs.map((d) => (
             <button
@@ -315,12 +299,12 @@ function BundleDocsTab({
                   : "text-ink/75 hover:bg-paper"
               }`}
             >
-              {d.title}
+              {d.title}{!d.available ? <span className="ml-2 text-xs text-ink/65">Belum dibuat</span> : null}
             </button>
           ))}
         </nav>
 
-        <p className="label mt-4 px-3 py-2 text-ink/65">Bundle Files</p>
+        <p className="label mt-4 px-3 py-2 text-ink/65">Berkas dan catatan rencana</p>
         <nav className="space-y-0.5">
           {otherDocs.map((d) => (
             <button
@@ -333,7 +317,7 @@ function BundleDocsTab({
                   : "text-ink/75 hover:bg-paper"
               }`}
             >
-              {d.title}
+              {d.title}{!d.available ? <span className="ml-2 text-xs text-ink/65">Belum dibuat</span> : null}
             </button>
           ))}
         </nav>
@@ -356,7 +340,7 @@ function BundleDocsTab({
                 {copied ? "Tersalin!" : "Salin markdown"}
               </button>
             </div>
-            <Markdown content={activeDoc.content} />
+            {!activeDoc.available ? <p className="text-sm text-ink/65">Berkas ini belum dibuat atau masih kosong.</p> : /\.json$/i.test(activeDoc.relativePath) ? <pre className="overflow-x-auto whitespace-pre font-mono text-xs">{activeDoc.content}</pre> : <Markdown content={activeDoc.content} allowImages={false} />}
           </div>
         ) : (
           <p className="text-sm text-ink/65">Pilih dokumen untuk membaca.</p>
@@ -366,26 +350,28 @@ function BundleDocsTab({
   );
 }
 
-function PipelineTab({ detail }: { detail: LvrProjectDetail }) {
+function PipelineTab({ detail, openFile }: { detail: LvrProjectDetail; openFile: (file: string) => void }) {
   const { state } = detail;
+  const [filter, setFilter] = useState("");
+  const decisions = state.decisions.filter((decision) => !filter || decision.status === filter);
   const sections = [
-    { key: "S0", name: "Intake", desc: "Penerimaan ide & verifikasi Folder Gate" },
-    { key: "S1", name: "Context", desc: "Masalah, target pengguna, bentuk platform" },
+    { key: "S0", name: "Ide awal", desc: "Penerimaan ide & verifikasi Folder Gate" },
+    { key: "S1", name: "Konteks", desc: "Masalah, target pengguna, bentuk platform" },
     { key: "S2", name: "Kondisi", desc: "Perangkat, akun, hosting, batas budget" },
     { key: "S3", name: "Data & Privasi", desc: "Login, data pribadi, payment, legalitas" },
     { key: "S4", name: "Fitur", desc: "Katalog fitur interaktif & ekspektasi" },
-    { key: "S5", name: "Deep Research", desc: "Scan kompetitor, opsi stack, tabel biaya" },
-    { key: "S6", name: "Feasibility Loop", desc: "Uji kelayakan, mitigasi risiko & konflik" },
-    { key: "S7", name: "Scope Lock", desc: "Pembekuan MVP vs Parking Lot" },
-    { key: "S8", name: "Milestone Plan", desc: "Pembagian M0..Mn & verifikasi" },
-    { key: "S9", name: "Doc Generation", desc: "Kompilasi 20 dokumen bundle" },
+    { key: "S5", name: "Riset", desc: "Scan kompetitor, opsi stack, tabel biaya" },
+    { key: "S6", name: "Uji kelayakan", desc: "Uji kelayakan, mitigasi risiko & konflik" },
+    { key: "S7", name: "Kunci cakupan", desc: "Pembekuan MVP vs Parking Lot" },
+    { key: "S8", name: "Tahap pembangunan", desc: "Pembagian M0..Mn & verifikasi" },
+    { key: "S9", name: "Blueprint", desc: "Penyusunan berkas dasar dan profil" },
   ];
 
   return (
     <div className="space-y-8">
       {/* Sections Grid */}
       <section className="border border-line bg-card p-6">
-        <h3 className="label text-blueprint">Sections S0–S9 Progress</h3>
+        <h3 className="label text-blueprint">Progres S0–S9</h3>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {sections.map((s) => {
             const secState = state.pipeline.sections[s.key];
@@ -406,33 +392,51 @@ function PipelineTab({ detail }: { detail: LvrProjectDetail }) {
                           : "text-ink/65"
                     }`}
                   >
-                    {status}
+                    {statusText(status)}
                   </span>
                 </div>
                 <p className="mt-1 font-medium text-ink">{s.name}</p>
                 <p className="mt-0.5 text-[11px] text-ink/65 leading-tight">{s.desc}</p>
+                <p className="mt-2 text-[11px] text-ink/75">{secState.answerCount} jawaban · {state.decisions.filter((item) => item.section === s.key).length} keputusan</p>
+                {secState.skippedCount ? <p className="text-[11px] text-ink/65">{secState.skippedCount} dilewati</p> : null}
+                {secState.record && detail.docs.some((file) => file.category === "section" && file.title === secState.record) ? <button type="button" className="mt-2 text-xs text-blueprint hover:underline" onClick={() => { const file = detail.docs.find((item) => item.category === "section" && item.title === secState.record); if (file) openFile(file.relativePath); }}>Buka catatan</button> : null}
               </div>
             );
           })}
         </div>
       </section>
 
-      {/* Decisions Log */}
       <section className="border border-line bg-card p-6">
-        <h3 className="label text-blueprint">Decisions Log ({state.decisions.length})</h3>
+        <h3 className="label text-blueprint">Pertanyaan yang perlu dijawab kembali</h3>
+        {state.pipeline.loop_backs.length ? <ul className="mt-3 space-y-2 text-sm">{state.pipeline.loop_backs.map((item) => <li key={item.id}><span className="font-mono text-blueprint">{item.id} · {item.target_section}</span> · {item.reason} <span className="text-ink/65">({item.resolved_at ? "Selesai" : "Terbuka"})</span></li>)}</ul> : <p className="mt-3 text-sm text-ink/65">Belum ada pertanyaan yang perlu dibuka kembali.</p>}
+      </section>
+      <section className="border border-line bg-card p-6">
+        <h3 className="label text-blueprint">Hasil tahap pembangunan</h3>
+        {state.milestones.length ? <ul className="mt-3 divide-y divide-line">{state.milestones.map((item) => {
+          const observed = detail.buildResults.findLast((entry) => entry.milestone === item.id);
+          return <li className="flex flex-wrap gap-2 py-2 text-sm" key={item.id}><span className="font-mono text-blueprint">{item.id}</span><span>{item.goal}</span><span className="text-ink/65">{item.verified ? "Terverifikasi" : "Menunggu verifikasi"}</span>{observed ? <button type="button" className="text-blueprint hover:underline" onClick={() => openFile("VERIFICATION.md")}>Uji terakhir {observed.result === "PASS" ? "lulus" : "gagal"}</button> : null}</li>;
+        })}</ul> : <p className="mt-3 text-sm text-ink/65">Tahap pembangunan belum direncanakan.</p>}
+      </section>
+      <section className="border border-line bg-card p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="label text-blueprint">Keputusan dan asumsi</h3>
+          <select aria-label="Filter keputusan" value={filter} onChange={(event) => setFilter(event.target.value)} className="border border-line bg-paper px-2 py-1.5 text-sm">
+            <option value="">Semua status</option><option value="user_confirmed">Dikonfirmasi</option><option value="assumed">Asumsi</option><option value="designer_filled">Dilengkapi perencana</option>
+          </select>
+        </div>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="border-b border-line font-mono text-ink/65">
               <tr>
                 <th className="py-2 pr-3">ID</th>
-                <th className="py-2 pr-3">Sec</th>
-                <th className="py-2 pr-4">Summary</th>
-                <th className="py-2 pr-4">Rationale</th>
+                <th className="py-2 pr-3">Bagian</th>
+                <th className="py-2 pr-4">Keputusan</th>
+                <th className="py-2 pr-4">Alasan</th>
                 <th className="py-2">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line/60">
-              {state.decisions.map((d) => (
+              {decisions.map((d) => (
                 <tr key={d.id}>
                   <td className="py-2.5 pr-3 font-mono text-blueprint font-medium">{d.id}</td>
                   <td className="py-2.5 pr-3 font-mono text-ink/65">{d.section}</td>
@@ -446,7 +450,7 @@ function PipelineTab({ detail }: { detail: LvrProjectDetail }) {
                           : "text-rust"
                       }`}
                     >
-                      {d.status}
+                      {statusText(d.status)}
                     </span>
                   </td>
                 </tr>
@@ -505,7 +509,7 @@ function AuditBrandTab({
                       : "text-ink/75 hover:bg-paper"
                   }`}
                 >
-                  {d.title}
+                  {d.title}{!d.available ? <span className="ml-2 text-xs text-ink/65">Belum dibuat</span> : null}
                 </button>
               ))}
             </nav>
@@ -514,7 +518,7 @@ function AuditBrandTab({
 
         {brandDocs.length > 0 && (
           <>
-            <p className="label mt-4 px-3 py-2 text-rust">Personal Brand Kit</p>
+            <p className="label mt-4 px-3 py-2 text-rust">Berkas personal brand</p>
             <nav className="space-y-0.5">
               {brandDocs.map((d) => (
                 <button
@@ -527,7 +531,7 @@ function AuditBrandTab({
                       : "text-ink/75 hover:bg-paper"
                   }`}
                 >
-                  {d.title}
+                  {d.title}{!d.available ? <span className="ml-2 text-xs text-ink/65">Belum dibuat</span> : null}
                 </button>
               ))}
             </nav>
@@ -552,7 +556,7 @@ function AuditBrandTab({
                 {copied ? "Tersalin!" : "Salin markdown"}
               </button>
             </div>
-            <Markdown content={activeDoc.content} />
+            {!activeDoc.available ? <p className="text-sm text-ink/65">Berkas ini belum dibuat atau masih kosong.</p> : /\.json$/i.test(activeDoc.relativePath) ? <pre className="overflow-x-auto whitespace-pre font-mono text-xs">{activeDoc.content}</pre> : <Markdown content={activeDoc.content} allowImages={false} />}
           </div>
         ) : (
           <p className="text-sm text-ink/65">Pilih dokumen untuk membaca.</p>

@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-11-23",
+  "harnesses": [
+    {
+      "id": "claude-code",
+      "aliases": [
+        "claude"
+      ],
+      "label": "Claude Code",
+      "argv": [
+        "claude",
+        "--resume",
+        "{id}"
+      ],
+      "verified": true,
+      "id_source": "Session ID shown in the CLI resume picker or supplied by an actual session hook.",
+      "source": "https://code.claude.com/docs/en/cli-reference",
+      "checked_with": "@anthropic-ai/claude-code@2.1.330 --help"
+    },
+    {
+      "id": "codex",
+      "aliases": [
+        "codex-cli"
+      ],
+      "label": "Codex",
+      "argv": [
+        "codex",
+        "resume",
+        "{id}"
+      ],
+      "verified": true,
+      "id_source": "Session UUID supplied by the active tool or shown by its resume picker.",
+      "source": "https://developers.openai.com/codex/cli/reference/",
+      "checked_with": "codex resume --help"
+    },
+    {
+      "id": "gemini-cli",
+      "aliases": [
+        "gemini"
+      ],
+      "label": "Gemini CLI",
+      "argv": [
+        "gemini",
+        "--resume",
+        "{id}"
+      ],
+      "verified": true,
+      "id_source": "Session UUID shown by the CLI, distinct from the transient list index.",
+      "source": "https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/session-management.md",
+      "checked_with": "@google/gemini-cli@0.70.0 --help and the official session guide",
+      "uuid_required": true
+    },
+    {
+      "id": "opencode",
+      "aliases": [
+        "open-code"
+      ],
+      "label": "OpenCode",
+      "argv": [
+        "opencode",
+        "--session",
+        "{id}"
+      ],
+      "verified": true,
+      "id_source": "A session ID returned by session management or shown by the active client.",
+      "source": "https://opencode.ai/docs/cli/",
+      "checked_with": "opencode-linux-x64-baseline@1.19.6 --help"
+    },
+    {
+      "id": "cursor",
+      "aliases": [
+        "cursor-agent"
+      ],
+      "label": "Cursor",
+      "argv": [],
+      "verified": false,
+      "id_source": "Use only an ID exposed by the active client.",
+      "source": "https://cursor.com/docs/cli/reference/parameters",
+      "checked_with": "Vendor CLI documentation returned HTTP 403 here. Local executable unavailable."
+    },
+    {
+      "id": "github-copilot",
+      "aliases": [
+        "copilot",
+        "copilot-cli"
+      ],
+      "label": "GitHub Copilot",
+      "argv": [
+        "copilot",
+        "--resume={id}"
+      ],
+      "verified": true,
+      "id_source": "A session ID returned by the interactive resume picker or exposed by the active client.",
+      "source": "https://github.com/github/copilot-cli",
+      "checked_with": "@github/copilot@1.0.114 --help"
+    },
+    {
+      "id": "kilo",
+      "aliases": [
+        "kilo-code",
+        "kilocode"
+      ],
+      "label": "Kilo",
+      "argv": [
+        "kilo",
+        "--session",
+        "{id}"
+      ],
+      "verified": true,
+      "id_source": "A session ID shown by the client or its session management commands.",
+      "source": "https://github.com/Kilo-Org/kilocode",
+      "checked_with": "@kilocode/cli-linux-x64-baseline@7.8.32 --help"
+    },
+    {
+      "id": "qwen-code",
+      "aliases": [
+        "qwen"
+      ],
+      "label": "Qwen Code",
+      "argv": [
+        "qwen",
+        "--resume",
+        "{id}"
+      ],
+      "verified": true,
+      "id_source": "Session ID shown by the session picker when chat recording is enabled.",
+      "source": "https://github.com/QwenLM/qwen-code/blob/main/docs/users/configuration/settings.md",
+      "checked_with": "@qwen-code/qwen-code@0.28.4 --help"
+    },
+    {
+      "id": "kimi-code",
+      "aliases": [
+        "kimi",
+        "kimi-code-cli"
+      ],
+      "label": "Kimi Code CLI",
+      "argv": [
+        "kimi",
+        "--session",
+        "{id}"
+      ],
+      "verified": true,
+      "id_source": "An actual ID shown by the tool or its session picker.",
+      "source": "https://moonshotai.github.io/kimi-code/en/",
+      "checked_with": "@moonshot-ai/kimi-code@2.7.2 --help"
+    }
+  ]
+}
