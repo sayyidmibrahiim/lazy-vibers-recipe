@@ -19,7 +19,7 @@ A failed preflight item is a `build_blocked` with the owning skill named, journa
 1. Read `state.milestones[]` in order.
 2. Select the first entry where `verified` is not `true`.
 3. Never re-run a verified milestone. Never reorder milestones.
-4. If every milestone is verified: verify deployment once more, then close `build_done` and point at `/lvr-personal-brand`.
+4. If every milestone is verified, rerun the release checks, then close `build_done` and point at `/lvr-personal-brand` after they pass.
 
 ## 3. Verification protocol
 
@@ -66,19 +66,17 @@ Append to `VERIFICATION.md`; never rewrite earlier entries.
 
 Then, on PASS only: set `state.milestones[i].verified = true` and `verified_at`, journal `milestone_verified`, regenerate nothing else. `blueprint.json` stays derived; `/lvr-handoff` refreshes it at the end.
 
-## 6. Deployment milestone
+## 6. Release verification
 
-The milestone that deploys the product ends with a live check:
+Use `LVR release plan` to read `release_check` from each confirmed profile. For an older bundle with a recorded web URL and no chosen type, the plan uses its web check. If an older bundle has neither, establish its type from the approved plan and confirm it with the owner if uncertain. Without Node, read the same fields in `profiles/<type>.json` and keep the same evidence.
 
-- Open the deployed URL; require the expected HTTP status (usually 200).
-- Check one user-visible fact from the milestone's acceptance criteria (expected text, a working API response, a rendered page element).
-- Record the URL, status, and captured evidence in `VERIFICATION.md`.
-- On pass: set `state.deployment = { "status": "live", "url": "<url>", "verified_at": "<ts>" }`, journal `deployment_verified`.
-- A deployment that cannot be checked (no public URL, auth wall) is not live: mark `pending` and say exactly what evidence is missing.
+1. Use the actual artifact or deployment specified by the milestone. Test the released version from a fresh client, runtime, harness, browser profile or device appropriate to its type. Open the web deployment from a clean client and check one expected product fact with a 2xx response. For installable products, prove installation and the profile's run criterion.
+2. Capture the environment, target including the artifact version, command or action, result, and timestamp in `VERIFICATION.md`. Record observed output with secrets removed. In `LVR release record --in -`, send JSON with `product_type`, `status` (`passed` or `failed`), `target`, `evidence` and the `clean_environment` used for a pass. Include numeric `http_status` and observed `product_fact` for a web pass. On web success, journal `deployment_verified` with the URL. Other types use their release records directly.
+3. Keep a missing or unsuccessful check open and report the specific artifact or evidence required. A prior entry or a working development copy cannot satisfy the current check.
 
 ## 7. Anti-cheating rules
 
 - The verification command is part of the contract; changing it to pass is a failure.
 - Test fixtures may be added; assertions and expected outputs may not be weakened.
 - A green build with a modified verification procedure is worse than a red build with the original procedure.
-- `.lvr/` writes are limited to `project.status` (`building` at `build_started`, `complete` at `build_done`), `milestones[].verified`, `verified_at`, `deployment`, and journal appends. Everything else is read-only.
+- `.lvr/` writes are limited to `project.status` (`building` at `build_started`, `complete` at `build_done`), `milestones[].verified`, `verified_at`, `deployment`, `release_check`, and journal appends. Everything else is read-only.

@@ -154,5 +154,9 @@
   },
   "bundle_files": [
     "ROUTES_SITEMAP.md"
-  ]
+  ],
+  "release_check": {
+    "kind": "url_2xx",
+    "procedure": "Open the deployed product from a clean client. Capture a 2xx HTTP status and one expected product fact visible in the response."
+  }
 }

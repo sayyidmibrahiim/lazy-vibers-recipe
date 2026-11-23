@@ -155,5 +155,9 @@
     "PLATFORM_PERMISSIONS.md",
     "STORE_LISTING.md",
     "OFFLINE_SYNC.md"
-  ]
+  ],
+  "release_check": {
+    "kind": "store_build",
+    "procedure": "Install the build from the store or a test channel such as TestFlight on a clean supported device or simulator. Capture the build identifier and a successful launch."
+  }
 }

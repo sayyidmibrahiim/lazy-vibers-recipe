@@ -154,5 +154,9 @@
     "OUTPUT_ERRORS.md",
     "CONFIG.md",
     "INSTALL_RELEASE.md"
-  ]
+  ],
+  "release_check": {
+    "kind": "package_install",
+    "procedure": "Install the published npm or PyPI package in a clean environment. Run the installed command with --help and capture its usage output and exit code 0."
+  }
 }

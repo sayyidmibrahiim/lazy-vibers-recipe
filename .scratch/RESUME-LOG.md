@@ -61,3 +61,6 @@
 2026-11-23T03:17:29Z | codex/gpt-6 | task 29 | claimed and matched K findings to current shared helpers | next: deterministic ids and add-feature capture, research, apply and resume contracts
 2026-11-23T03:24:26Z | codex/gpt-6 | task 29 | implementation and focused fixture written | next: same-context verify installed helper, reference parity and shared regressions
 2026-11-23T03:27:06Z | codex/gpt-6 | task 29 | installed add-feature fixture, 51 archive tests, 8 public tests and all shared suites pass; closed | next: task 31 per-profile release evidence
+2026-11-23T03:27:13Z | codex/gpt-6 | task 31 | claimed after ticket 29; reviewed product profile and release journal contracts | next: profile evidence definitions, shared release helpers and both skill gates
+2026-11-23T03:30:28Z | codex/gpt-6 | task 31 | profile checks, build and brand gates, and portable release fixtures implemented | next: same-context verify all profiles, failed evidence, legacy parity and shared regressions
+2026-11-23T03:34:58Z | codex/gpt-6 | task 31 | installed build and brand release procedures, clean CLI rehearsal and all regressions pass; closed | next: task 30 build verification and freshness

@@ -1,13 +1,13 @@
 ---
 name: lvr-personal-brand
-description: Builds a separate personal-brand kit (positioning, LinkedIn profile, content plan) for the owner of a finished, live LVR product. Machine-gates on every milestone verified plus a live deployment check. Use when the user wants to market themselves or the product, write a LinkedIn profile, or plan content after the product ships. Never posts, never invents traction, and never touches the Blueprint Bundle.
+description: Builds a separate personal-brand kit (positioning, LinkedIn profile, content plan) after every milestone and the release check for each product type pass. Use when the user wants to market themselves or the product, write a LinkedIn profile, or plan content after the product ships. Never posts, never invents traction, and never touches the Blueprint Bundle.
 ---
 
 # lvr-personal-brand
 
 The post-build branding skill of the LVR pipeline. It turns a verified, deployed product into an honest personal-brand kit: what the owner built, who it helps, what proof exists, and what to say next. It is a separate output — deliberately outside the product pipeline and outside the Blueprint Bundle.
 
-The gate is machine-checkable because branding before proof produces fiction. No verified milestones, no live product, no brand run.
+The gate requires verified milestones and current evidence that people can use the released product.
 
 ## Load first
 
@@ -21,7 +21,7 @@ Before any check or file write:
 
 ## Flow at a glance
 
-1. **Gate** — every milestone verified; deployment live; live URL checked now. Any failure → refuse with the exact unmet gate.
+1. **Gate** — every milestone verified and every confirmed type's release proof checked in this run. A failure stops drafting and names the missing evidence.
 2. **Open** — journal `brand_started`; load product evidence.
 3. **Owner facts** — ask only what the bundle cannot answer.
 4. **Evidence table** — every claim `verified`, owner-approved `(claimed)`, or forbidden.
@@ -30,23 +30,25 @@ Before any check or file write:
 
 ## Step 1 — Gate
 
-`TARGET` = cwd (or the folder the user named). Run in order; the first failure stops with plain guidance. Nothing is written on a refusal.
+`TARGET` = cwd (or the folder the user named). Run in order. The first failure stops with plain guidance before any kit files are written.
+
+Script: `LVR release plan` before writing the kit.
 
 1. **Project exists** — `TARGET/.lvr/state.json` exists and parses. Missing/unreadable → `/lvr-init-new-idea` or `/lvr-continue`.
 2. **Milestones verified** — `state.milestones[]` is non-empty and every entry has `verified: true`. Any unverified → name the first one and say: "The product is not finished yet. Run `/lvr-build` to execute and verify milestone `<M>` first."
-3. **Deployment live** — `state.deployment.status` = "live" with a URL. Missing or `pending` → "There is no verified live product yet. Run `/lvr-build` through the deployment milestone first."
-4. **Live check now** — fetch the deployment URL with the harness's HTTP tool. Require a 2xx status and one expected product fact (the product name or a user-visible string from `OVERVIEW.md`). Check fails, tool unavailable, or the page needs credentials → refuse: "The live check did not pass (`<reason>`), so the brand gate is not met. Fix the deployment, then re-run." Never accept the state field alone as proof; it records a past check, not the current one.
+3. **Release evidence** — get the check for every confirmed type from `LVR release plan`. Without Node, read `release_check` in the corresponding `references/profiles/<type>.json`. Web requires a recorded live deployment URL. An installable product requires a passing recorded check with the exact artifact or version and evidence. Older web bundles with a recorded deployment URL use the web profile. When evidence is missing, name the type and direct the owner to `/lvr-build`.
+4. **Check the release now** — use a clean client for web and require a 2xx response with one expected product fact from `OVERVIEW.md` or `VERIFICATION.md`. For each other type, repeat its profile procedure on the recorded artifact from a clean environment. Capture what ran and the observed output. A record from a previous run is only a pointer. If a check fails or the necessary tool, release or access is unavailable, stop and name the missing proof. No brand kit is ready without every check passing.
 5. **Bundle present** — `AGENTS.md`, `OVERVIEW.md`, `DECISIONS.md`, `VERIFICATION.md` exist. Missing → "The bundle is incomplete (`<file>` is missing). Run `/lvr-continue` to finish S9, then re-run." (`/lvr-handoff` only lints; it does not write these files.)
 
 No handoff requirement: the brand kit needs the product evidence, not the builder prompt.
 
 ## Step 2 — Open and load evidence
 
-Script: `LVR journal append --type brand_started --payload '{"url":"<url>","live_check":"…"}'`
+Script: `LVR journal append --type brand_started --in -` with the checked targets, product types and observed results.
 
-1. Journal `brand_started` (payload: deployment URL, live-check result) + a state write (no field change). One checkpoint.
+1. Journal `brand_started` with each checked target and the observed proof. Include the live URL for web or the artifact identity for an installable product. One checkpoint.
 2. Load, in this order: `OVERVIEW.md` (owner-visible truth), `DECISIONS.md` (why it is shaped this way), `SCOPE.md` (what is in and parked), `VERIFICATION.md` (what is proven), `RESEARCH.md` (market context with sources), `HANDOVER.md` (how it runs), `state.json` (milestones, deployment, user language). `SCOPE.md`, `RESEARCH.md`, and `HANDOVER.md` are not gated: a missing one is skipped, and the kit names it under `Open questions for the owner` (the claims it would have backed stay `unverified`).
-3. Extract a one-screen product brief: name, one line, audience, problem, in-MVP features, verified milestones, live URL, parked items, stack. No transcript, no invented context (principle 13).
+3. Extract a one-screen product brief with name, one line, audience, problem, in-MVP features, verified milestones, release targets, parked items and stack. Use recorded product evidence (principle 13).
 
 ## Step 3 — Owner facts
 
@@ -99,7 +101,7 @@ Run the checklist in `references/brand-templates.md`:
 - every product claim `verified` or approved `(claimed)`;
 - no invented traction;
 - names consistent with the bundle;
-- links resolve; the live URL check from Step 1 still holds;
+- links resolve and the release evidence from Step 1 still applies;
 - files under `brand/`, not in the bundle;
 - nothing posted, scheduled, or sent anywhere.
 
@@ -113,7 +115,7 @@ Close in plain language: what exists, what each file is for, what the owner must
 
 ## Idempotency
 
-- Re-running re-checks the gate from disk and the live URL every time.
+- Re-running checks the gate from disk and repeats the release procedures on the recorded artifacts.
 - Existing brand files are never overwritten wholesale: show the drift, then regenerate one file on explicit request.
 - Files already generated and unchanged are skipped, not duplicated.
 

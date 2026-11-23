@@ -55,7 +55,7 @@ const AGENT_STATUS = ["started", "done", "failed"];
 const CONFIDENCE = ["high", "medium", "low"];
 const REVIEW_VERDICTS = ["BUILD-READY", "FIX-THEN-BUILD", "NOT-READY", "INCOMPLETE"];
 const REVIEW_SCOPES = ["full", "scope-only"];
-const RELEASE_KINDS = ["url_2xx", "package_install", "mcp_tools_listed", "workflow_import_run", "skill_trigger", "extension_load", "store_build", "build_runs"];
+const RELEASE_KINDS = ["url_2xx", "package_install", "mcp_tools_listed", "workflow_import_run", "skill_trigger", "extension_load", "store_build", "build_runs", "agent_flow", "rag_answer"];
 const EVIDENCE_RE = /^(?:S(?:10|[0-9])\.q[0-9]+|D-\d{3,}|U-\d{2,}|RQ-\d{3,})$/;
 const FACT_KEY_RE = /^[a-z0-9][a-z0-9_.-]*$/;
 const LEGACY_SESSION_REASON = "not recorded (written before session tracking)";
@@ -2759,6 +2759,8 @@ function validateProfile(data, file) {
   if (!isStr(data.id) || !PRODUCT_TYPE_RE.test(data.id) || path.basename(file) !== `${data.id}.json`) bad("id");
   if (!nonEmpty(data.label)) bad("label");
   if (!isObj(data.flags) || !Object.entries(data.flags).every(([key, value]) => PROFILE_FLAGS.includes(key) && typeof value === "boolean")) bad("flags");
+  const release = data.release_check;
+  if (release !== undefined && (!isObj(release) || !isStr(release.kind) || !/^[a-z][a-z0-9_]*$/.test(release.kind) || !nonEmpty(release.procedure))) bad("release_check");
   if (!Array.isArray(data.bundle_files) || !data.bundle_files.every(profileFilePath)) bad("bundle_files");
   if (!isObj(data.sections)) bad("sections");
   for (const [section, entry] of Object.entries(data.sections)) {
@@ -2946,6 +2948,58 @@ function profileAddFileCommand(dir, flags) {
     };
     writeFileAtomic(path.join(dir, PROFILE_PLAN_PATH), JSON.stringify(next, null, 2) + "\n", "PROFILE_PLAN_WRITE_FAILED");
     return { file, flag, decision_id: decision, changed: true };
+  });
+}
+
+function releasePlan(dir) {
+  const loaded = loadState(dir);
+  if (loaded.kind !== "valid") throw fail("STATE_INVALID", "Release checks require readable project state.");
+  const { product, deployment, release_check: recorded } = loaded.state;
+  const confirmed = product?.status === "decided" && product.confirmed === true;
+  const legacyWeb = !confirmed && !product?.types?.length && nonEmpty(deployment?.url);
+  const types = confirmed ? product.types : legacyWeb ? ["web"] : [];
+  if (!types.length) throw fail("PRODUCT_UNCONFIRMED", "Confirm the product type before checking release readiness.");
+  const profiles = loadProfiles();
+  const checks = types.map((type) => {
+    const check = profiles.get(type)?.release_check;
+    if (!check) throw fail("RELEASE_CHECK_MISSING", `No release check is defined for ${type}.`, { type });
+    const result = recorded?.[legacyWeb ? "default" : type];
+    const target = (type === "web" ? deployment?.url : null) ?? result?.target ?? null;
+    return {
+      product_type: type, kind: check.kind, procedure: check.procedure, target,
+      recorded: result?.kind === check.kind && result.target === target ? result : null,
+    };
+  });
+  return { checks, legacy_web: legacyWeb };
+}
+
+async function cmdReleaseRecord({ dir, flags }) {
+  const payload = await readPayloadInput(flags);
+  if (!isObj(payload)) throw fail("BAD_JSON_INPUT", "Give the captured release check as a JSON object.");
+  const { product_type: type, status, target, evidence, clean_environment: environment, http_status: httpStatus, product_fact: fact } = payload;
+  if (!["passed", "failed"].includes(status)) throw invalid("status", "passed|failed");
+  if (!nonEmpty(target)) throw invalid("target", "the checked artifact or deployment");
+  if (!nonEmpty(evidence)) throw invalid("evidence", "captured output or the observed failure");
+  if (status === "passed" && !nonEmpty(environment)) throw invalid("clean_environment", "the environment used for the clean install and run");
+  if (type === "web" && status === "passed") {
+    let url;
+    try { url = new URL(target); } catch { /* reported below */ }
+    if (!url || !["http:", "https:"].includes(url.protocol) || url.username || url.password) throw invalid("target", "an HTTP(S) deployment URL without credentials");
+    if (!Number.isInteger(httpStatus) || httpStatus < 200 || httpStatus >= 300) throw invalid("http_status", "a 2xx status from the deployed product");
+    if (!nonEmpty(fact)) throw invalid("product_fact", "an expected product fact observed in the response");
+  }
+  needLvr(dir);
+  return withLock(dir, "release record", () => {
+    guardSchema(dir);
+    const plan = releasePlan(dir);
+    const check = plan.checks.find((entry) => entry.product_type === type);
+    if (!check) throw invalid("product_type", "a product type from this project's release plan");
+    return appendLocked(dir, "release_checked", {
+      product_type: plan.legacy_web ? "default" : type, kind: check.kind, status, target, evidence,
+      ...(nonEmpty(environment) ? { clean_environment: environment } : {}),
+      ...(type === "web" && Number.isInteger(httpStatus) ? { http_status: httpStatus } : {}),
+      ...(type === "web" && nonEmpty(fact) ? { product_fact: fact } : {}),
+    });
   });
 }
 
@@ -8282,6 +8336,13 @@ async function cmdNextBundleIds({ dir, flags }) {
 }
 
 const COMMANDS = {
+  "release plan": {
+    help: "Read the release procedure and latest recorded evidence for each confirmed product type.", flags: [],
+    run: async ({ dir }) => releasePlan(dir),
+  },
+  "release record": {
+    help: "Journal an observed release check for a confirmed product type. [--in FILE|-]", flags: ["in"], run: cmdReleaseRecord,
+  },
   "ids next": {
     help: "Read the next feature, decision and milestone IDs. [--reserve --in FILE|- to journal a feature request]",
     flags: ["reserve", "in"], run: cmdNextBundleIds,

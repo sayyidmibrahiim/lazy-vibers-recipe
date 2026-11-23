@@ -42,7 +42,7 @@ For <audience> who <problem>, <product> is a <category> that <differentiator>.
 Unlike <alternative>, it <proof-backed difference>.
 
 ## Message pillars
-1. <pillar> — proof: <verified feature / milestone / live URL>
+1. <pillar> — proof: <verified feature, milestone or release evidence>
 2. <pillar> — proof: <...>
 3. <pillar> — proof: <...>
 
@@ -56,7 +56,7 @@ Unlike <alternative>, it <proof-backed difference>.
 - Long (60 words): <...>
 
 ## Links
-- Product: <live URL, verified <date>>
+- Product: <verified web URL or public artifact link with version and date, when available>
 - Source: <repo or none>
 ```
 
@@ -118,6 +118,6 @@ Goal: <job / consulting / product users / community> · cadence: <n posts/week f
 - [ ] Every product claim appears in the evidence table as `verified` or owner-approved `(claimed)`.
 - [ ] No metric, user count, revenue, award, or endorsement without evidence.
 - [ ] Product name and one-line match `OVERVIEW.md` and `blueprint.json`.
-- [ ] Links resolve; the live URL check passed this run.
+- [ ] Links resolve and the applicable release checks passed this run.
 - [ ] Files live under `brand/`, not in the bundle.
 - [ ] Nothing was posted, scheduled, or sent to a platform.

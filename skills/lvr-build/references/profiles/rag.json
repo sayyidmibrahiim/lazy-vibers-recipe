@@ -198,5 +198,9 @@
     "CHUNKING_EMBEDDING.md",
     "RETRIEVAL_DESIGN.md",
     "RAG_EVAL_PLAN.md"
-  ]
+  ],
+  "release_check": {
+    "kind": "rag_answer",
+    "procedure": "Install the release in a clean environment. Load the approved test corpus and capture one correctly sourced answer from the promised interface."
+  }
 }

@@ -151,5 +151,9 @@
     "EXTENSION_MANIFEST_PLAN.md",
     "PRIVACY_POLICY_OUTLINE.md",
     "STORE_LISTING.md"
-  ]
+  ],
+  "release_check": {
+    "kind": "extension_load",
+    "procedure": "Install the store release or load the unpacked release into a clean browser profile. Capture the installed extension and one successful core action."
+  }
 }

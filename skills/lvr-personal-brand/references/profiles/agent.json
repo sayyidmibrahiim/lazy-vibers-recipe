@@ -243,5 +243,9 @@
     "TOOLS.md",
     "EVALS.md",
     "INSTALL_MANIFESTS.md"
-  ]
+  ],
+  "release_check": {
+    "kind": "agent_flow",
+    "procedure": "Install the agent in a clean supported harness. Run one approved representative task and capture its expected output and any required approval."
+  }
 }

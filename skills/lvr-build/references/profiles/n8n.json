@@ -168,5 +168,9 @@
     "CREDENTIALS_CHECKLIST.md",
     "ERROR_HANDLING.md",
     "TEST_DATA.md"
-  ]
+  ],
+  "release_check": {
+    "kind": "workflow_import_run",
+    "procedure": "Import the release workflow into a clean n8n instance. Run the recorded test input and capture the successful execution and its expected output."
+  }
 }

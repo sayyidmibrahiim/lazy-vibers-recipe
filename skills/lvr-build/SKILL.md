@@ -28,7 +28,7 @@ Before any check or file write:
 5. **Build + verify** — implement, run the recorded procedure exactly, capture output.
 6. **Record** — append to `VERIFICATION.md`; on pass set state fields; journal the result.
 7. **Next or stop** — next unverified milestone, or a plain failure report at the first unresolvable one.
-8. **Close** — `build_done` when all milestones pass; deployment gate; point at `/lvr-handoff` then `/lvr-personal-brand`.
+8. **Close** — `build_done` after every milestone and the release checks pass; point at `/lvr-handoff` then `/lvr-personal-brand`.
 
 ## Step 1 — Precondition
 
@@ -64,7 +64,7 @@ Follow `references/build-loop.md` §2:
 
 - first entry in `state.milestones[]` where `verified` is not `true`;
 - never re-run a verified milestone, never reorder;
-- all verified → skip to Step 8.
+- all verified → run the final release checks in Step 7, then close at Step 8.
 
 Journal `milestone_started` (payload: id, goal). One checkpoint.
 
@@ -75,6 +75,7 @@ Journal `milestone_started` (payload: id, goal). One checkpoint.
 3. Run the verification procedure exactly as written; capture command, exit code, full output, timestamp (`references/build-loop.md` §3).
 4. Never edit bundle documents, assertions, or expected outputs to make a check pass. Never substitute a command.
 5. A procedure that is wrong or impossible is a bundle defect: stop, journal `build_blocked`, and recommend `/lvr-review-plan` (lens L12, check L12.1).
+6. When the milestone produces a release, run Step 7 for its release targets before recording the milestone result.
 
 ## Step 6 — Record the result
 
@@ -94,25 +95,24 @@ On **FAIL**:
 - follow the failure ladder (`references/build-loop.md` §4): one fix attempt, then a fresh-assumption check, then stop. Two failures maximum; no third blind attempt.
 - on an unresolvable failure: journal `build_blocked` (payload: milestone, command, output, owner), keep the milestone unverified, and close with a plain report.
 
-## Step 7 — Deployment check
+## Step 7 — Release check
 
-Script: `LVR journal append --type deployment_verified --payload '{"url":"<url>"}'` (fills `state.deployment`).
+Script: `LVR release plan` and `LVR release record --in -`. For a passing web check also record `LVR journal append --type deployment_verified --payload '{"url":"<url>"}'`.
 
-When the milestone deploys the product, run `references/build-loop.md` §6:
+Run `references/build-loop.md` §6 when a milestone releases a product and after all milestones are verified. During a milestone check the types it releases. At the end check every confirmed type.
 
-- live URL + expected HTTP status + one user-visible fact;
-- on pass set `state.deployment = { "status": "live", "url": "<url>", "verified_at": "<ts>" }`, journal `deployment_verified`;
-- unverifiable deployment → `status: "pending"`, say exactly what evidence is missing.
+- Use the exact released artifact or deployment and a clean environment. Capture its type-specific output and journal the result. A web release checks the deployed URL for a 2xx response and one expected product fact.
+- A failing release check stops the current release step. Say which type, artifact and observation blocked it. Keep failed milestone checks unverified and preserve previously verified milestones. Resume the release check when evidence is available.
 
 ## Step 8 — Close
 
 Script: `LVR journal append --type build_done --payload '{…}'`
 
-1. All milestones verified → journal `build_done` (payload: milestones, deployment status) + a state write setting `project.status` = "complete" (the script's reducer does this). One checkpoint.
-2. Report plainly: what now works, how to run it, which checks were captured, what remains (deployment pending, known limitations).
+1. All milestones and release checks passed → journal `build_done` (payload: milestones and release results) + a state write setting `project.status` = "complete" (the script's reducer does this). One checkpoint.
+2. Report plainly what works, how to run it, which checks were captured and any known limitations.
 3. Next actions, in order:
    - `/lvr-handoff` again — it refreshes `blueprint.json` and the entry prompt from the new state;
-   - `/lvr-personal-brand` — only after every milestone is verified and deployment is live;
+   - `/lvr-personal-brand` — after every milestone and release check passes;
    - `/lvr-add-feature` — for anything outside the frozen scope, never a quiet edit.
 4. A blocked build closes with the exact failing command, output, suspected cause, and next owner. Do not call it done.
 
@@ -123,12 +123,13 @@ Backward-compatible additions, documented in conventions §2:
 - `state.project.status`: `building` at `build_started`, `complete` at `build_done`.
 - `state.milestones[i].verified: boolean` + `verified_at: string`.
 - `state.deployment: { status: "live|pending", url?: string, verified_at?: string }`.
+- `state.release_check[product_type]` holds the latest observed result for each checked type.
 
 `.lvr/` writes are limited to those fields and journal appends. Everything else under `.lvr/` is read-only.
 
 ## Journal events added by this skill
 
-`build_started`, `milestone_started`, `milestone_verified`, `milestone_failed`, `build_blocked`, `deployment_verified`, `build_done`. Payloads are named above.
+`build_started`, `milestone_started`, `milestone_verified`, `milestone_failed`, `build_blocked`, `release_checked`, `deployment_verified`, `build_done`. Payloads are named above.
 
 ## Idempotency and resume
 

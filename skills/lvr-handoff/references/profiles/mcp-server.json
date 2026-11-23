@@ -159,5 +159,9 @@
     "TRANSPORT_AUTH.md",
     "MCP_EVAL.md",
     "INSTALL_MANIFEST.md"
-  ]
+  ],
+  "release_check": {
+    "kind": "mcp_tools_listed",
+    "procedure": "Install the server in a clean environment, connect the intended MCP client, and capture tools/list with the expected tool names."
+  }
 }

@@ -152,5 +152,9 @@
     "BALANCING.md",
     "SAVE_DATA.md",
     "ASSET_LIST.md"
-  ]
+  ],
+  "release_check": {
+    "kind": "build_runs",
+    "procedure": "Install or extract the release build in a clean supported environment. Launch it and capture one successful playable flow."
+  }
 }

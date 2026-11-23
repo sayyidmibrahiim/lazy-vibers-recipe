@@ -206,5 +206,9 @@
     "TOOLS.md",
     "EVALS.md",
     "INSTALL_MANIFESTS.md"
-  ]
+  ],
+  "release_check": {
+    "kind": "skill_trigger",
+    "procedure": "Install the released skill or plugin in one supported clean harness. Run a documented trigger and capture the loading signal and expected result."
+  }
 }
