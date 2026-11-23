@@ -1,0 +1,277 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "agency": {
+      "repo": "msitarzewski/agency-agents",
+      "sha": "8ae6164602c95ca78828b148b9052460ee426885",
+      "license": "MIT"
+    },
+    "wshobson": {
+      "repo": "wshobson/agents",
+      "sha": "42203085cfc5736204bf0f6d436dff7e1da0bf3f",
+      "license": "MIT"
+    }
+  },
+  "routes": [
+    {
+      "task": "db-design",
+      "tier": "deep",
+      "sections": [
+        "S6",
+        "S9"
+      ],
+      "source": "wshobson",
+      "path": "plugins/database-design/agents/database-architect.md",
+      "sha256": "cada2f67ad4c0e6788007a8d0cef92ba333d88820cb0845e415c7a5d03151f4b",
+      "card": "Choose the simplest store that keeps the required information. Compare local files, SQLite and a managed database only where their differences matter.",
+      "outputs": [
+        "storage trade-offs",
+        "entities and relations",
+        "migration and restore checks"
+      ]
+    },
+    {
+      "task": "threat-model",
+      "tier": "deep",
+      "sections": [
+        "S3",
+        "S6",
+        "S9"
+      ],
+      "source": "agency",
+      "path": "security/security-architect.md",
+      "sha256": "0f7cd89d723764da98f399a71378ec3dd26e2245f095f43421137db8267b8d93",
+      "card": "Identify sensitive assets, trust boundaries and realistic misuse outcomes. Recommend checks and state the residual risks.",
+      "outputs": [
+        "assets and boundaries",
+        "abuse controls",
+        "remaining risks and verification"
+      ]
+    },
+    {
+      "task": "research",
+      "tier": "standard",
+      "sections": [
+        "S5"
+      ],
+      "source": "agency",
+      "path": "product/product-trend-researcher.md",
+      "sha256": "69c8e54a9413ba411195e8d5274ee3cd88fa8cda18486db70c0f19ce374550a2",
+      "card": "Compare products by verifiable facts. Record dated primary sources and competing explanations where evidence conflicts.",
+      "outputs": [
+        "market and comparables",
+        "source evidence",
+        "decision implications"
+      ]
+    },
+    {
+      "task": "domain-research",
+      "tier": "standard",
+      "sections": [
+        "S1",
+        "S2",
+        "S3",
+        "S5",
+        "S6"
+      ],
+      "source": "agency",
+      "path": "research/research-synthesist.md",
+      "sha256": "3618b4a2a73523147731ae38ac4096cea0e83a7de930f55ea9ea6c69e3c77f30",
+      "card": "Assess whether evidence answers the actual market and domain question. Separate cited gaps, assumptions and conflicts.",
+      "outputs": [
+        "relevant evidence",
+        "open questions",
+        "conclusions with limits"
+      ]
+    },
+    {
+      "task": "architecture",
+      "tier": "deep",
+      "sections": [
+        "S6",
+        "S9"
+      ],
+      "source": "agency",
+      "path": "engineering/engineering-software-architect.md",
+      "sha256": "b85121691776147bacde26673e68fbbacd6a7f0816d1ca8e203c264d25ce1d30",
+      "card": "Compare two realistic boundaries and dependencies. Explain the trade-offs and write acceptance checks without implementation code.",
+      "outputs": [
+        "structure and trade-offs",
+        "failure boundaries",
+        "architecture decisions"
+      ]
+    },
+    {
+      "task": "api",
+      "tier": "standard",
+      "sections": [
+        "S9"
+      ],
+      "source": "agency",
+      "path": "engineering/engineering-api-platform-engineer.md",
+      "sha256": "21076c3abab2c93f459ff7e2becc83287a200d966c40fc1db868fcbcf36067dd",
+      "card": "Define a contract only for required interfaces. Identify authorization, validation, error and retry behavior.",
+      "outputs": [
+        "interfaces and callers",
+        "failure contract",
+        "acceptance checks"
+      ]
+    },
+    {
+      "task": "ux",
+      "tier": "standard",
+      "sections": [
+        "S4",
+        "S9"
+      ],
+      "source": "agency",
+      "path": "design/design-ux-researcher.md",
+      "sha256": "25f59c4333df2d0f1170ff7a1b11ea8415fd3d0ef80c3e0985209aeb4018680f",
+      "card": "Trace the most important user task and note where users may lose their place. State accessibility and observable recovery requirements.",
+      "outputs": [
+        "user tasks",
+        "layout and recovery choices",
+        "accessibility checks"
+      ]
+    },
+    {
+      "task": "interview",
+      "tier": "standard",
+      "sections": [
+        "S1",
+        "S4",
+        "S7"
+      ],
+      "source": "agency",
+      "path": "product/product-manager.md",
+      "sha256": "4a3fe4661e72e5173877bcba7c362392181774b20efc27ac1789171e98676c9d",
+      "card": "Review the interview for unsupported assumptions and priorities that affect a real decision. Return proposed questions for the Conductor.",
+      "outputs": [
+        "evidence gaps",
+        "priority trade-offs",
+        "questions for the conductor"
+      ]
+    },
+    {
+      "task": "qa",
+      "tier": "standard",
+      "sections": [
+        "S8",
+        "S9"
+      ],
+      "source": "agency",
+      "path": "testing/testing-reality-checker.md",
+      "sha256": "6d32fcdb114233e13902ec6372d50293b120e85d490b5e81d372c29808f988a1",
+      "card": "Look for important behavior the acceptance plan does not demonstrate. Require an observable result for each material risk.",
+      "outputs": [
+        "coverage evidence",
+        "missing checks",
+        "verification recommendations"
+      ]
+    },
+    {
+      "task": "writer",
+      "tier": "fast",
+      "sections": [
+        "S9"
+      ],
+      "source": "agency",
+      "path": "engineering/engineering-technical-writer.md",
+      "sha256": "bf5c809977e10904b988ab8b218853ce8dfa38b2cbd89a7d2cfadba44ac25761",
+      "card": "Make the plan readable for its intended reader. Preserve evidence, names and decisions while improving clarity.",
+      "outputs": [
+        "reader and goals",
+        "specific edits",
+        "meaning to preserve"
+      ]
+    },
+    {
+      "task": "cost",
+      "tier": "standard",
+      "sections": [
+        "S2",
+        "S5",
+        "S6",
+        "S9"
+      ],
+      "source": "agency",
+      "path": "engineering/engineering-finops-engineer.md",
+      "sha256": "2971ce273c45e96002127fd8456cfcb3dce761595aab5b6428cd1f5036dc9cd1",
+      "card": "Use dated rates and recorded usage. Separate recurring cost, variable cost, one-time purchases and capacity limits.",
+      "outputs": [
+        "usage and units",
+        "typical and busy cost",
+        "budget actions"
+      ]
+    },
+    {
+      "task": "game-design",
+      "tier": "standard",
+      "sections": [
+        "S4",
+        "S8",
+        "S9"
+      ],
+      "source": "agency",
+      "path": "game-development/game-designer.md",
+      "sha256": "203c4d7f0358a628ea21e3b9c16980f28003bd035b5cfd41a2daec04f6b84e5a",
+      "card": "Explain the core player loop and one playtest. Tie settings and fail states to the experience requested by the owner.",
+      "outputs": [
+        "core loop",
+        "player and failure states",
+        "playtest checks"
+      ]
+    },
+    {
+      "task": "rag",
+      "tier": "deep",
+      "sections": [
+        "S8",
+        "S9"
+      ],
+      "source": "agency",
+      "path": "engineering/engineering-rag-pipeline-engineer.md",
+      "sha256": "d9b75715fc6eb5712054658727a6f9082d4be2579766d2b42a6060595caa9a96",
+      "card": "Trace the source, access filter, retrieval and grounded answer. Set eval cases for missing evidence and inaccessible documents.",
+      "outputs": [
+        "retrieval and provenance",
+        "permission boundary",
+        "grounding evaluations"
+      ]
+    },
+    {
+      "task": "mcp",
+      "tier": "standard",
+      "sections": [
+        "S4",
+        "S9"
+      ],
+      "source": "agency",
+      "path": "specialized/specialized-mcp-builder.md",
+      "sha256": "f1a9bbde3c5672408a5e0d71d3d888fd635e517ad8b1c5db210aa87e62c39dd4",
+      "card": "Plan tools and resources, validate inputs and outputs, define permissions and describe observable failure cases.",
+      "outputs": [
+        "tool and resource contracts",
+        "permission boundary",
+        "verification checks"
+      ]
+    },
+    {
+      "task": "n8n",
+      "tier": "standard",
+      "sections": [
+        "S4",
+        "S9"
+      ],
+      "source": "agency",
+      "path": "specialized/automation-governance-architect.md",
+      "sha256": "8aab89104fec352f1f601ec5e6db11c9628d0b2072e6324484fd7e4c8462f55e",
+      "card": "Identify each authorized trigger, branch and handover. Include replays, approval and partial failure recovery.",
+      "outputs": [
+        "workflow logic",
+        "credentials and human approval",
+        "retry and recovery verification"
+      ]
+    }
+  ]
+}
