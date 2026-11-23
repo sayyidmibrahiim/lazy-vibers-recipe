@@ -438,6 +438,7 @@
       "license_verified": "2026-11-23",
       "tier": "conditional",
       "sections": [
+        "S4",
         "S9"
       ],
       "triggers": {
@@ -841,11 +842,21 @@
       "license_verified": "2026-11-23",
       "tier": "conditional",
       "sections": [
-        "S8"
+        "S8",
+        "S9"
       ],
       "triggers": {
-        "product_type": [
-          "rag"
+        "any": [
+          {
+            "product_type": [
+              "rag"
+            ]
+          },
+          {
+            "flags": {
+              "has_rag": true
+            }
+          }
         ]
       },
       "source_paths": [

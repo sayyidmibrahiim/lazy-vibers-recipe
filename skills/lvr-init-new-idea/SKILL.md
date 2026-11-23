@@ -375,6 +375,8 @@ Purpose: feature expectations captured in detail, iteratively, until the user sa
 
 **First batch** — bank question 1 ("If this app could do only ONE thing on day one, what would it be?"); question 2 (the walk-through) follows as its own turn regardless of tier — F-01's script is the section's first real work.
 
+**AI feature interview** — for each feature that uses a model, apply the [S4 AI questions](references/bundle/ai-feature.md#s4-capture). Record input, output, source permissions and what must never be wrong. Carry `product.flags.has_llm` on the evidence-bearing answer, and `product.flags.has_rag` when there is retrieval. Apply `prompt-engineer` when available. Keep the work within the normal batch limit.
+
 **Interface interview** — when the profile plan has `has_ui: true`, use its [feel, voice and accessibility questions](references/bundle/ui-spec.md#s4-interview) after a feature walk-through. Apply `ux-copy` and `antislop-human` from the S4 booster plan, or the internal reference if degraded. Record the concrete answers that feed UI_SPEC.md. Skip questions already answered.
 
 **Decision surfaces**:
@@ -645,6 +647,8 @@ Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the B
 
 **Profile files** — read the frozen `profile_files` from `LVR profile plan`. Draft each additional file from the relevant profile questions and records. Keep the previously closed bundle outputs and existing IDs. The blueprint generator copies the extra paths into `profile_files` when the list is nonempty. For a skill/plugin or agent, use [the personal workflow templates](references/bundle/workflow.md) for the draft skill, local profile schema, tools, evaluations and install plan. Carry each destination's exact data boundary into the plan.
 
+**AI feature output** — when the frozen profile plan includes `SPEC/ai.md`, use [the AI specification guide](references/bundle/ai-feature.md). Apply `prompt-engineer` and `evaluate-rag` for retrieval work. Carry model choice, fallback, prompt contract, data boundaries, safeguards, hallucination policy, per-call cost and the runnable evaluation set. Run `LVR ai cases` and `LVR ai eval` with the dry-run adapter, then document the real model checks in VERIFICATION.md.
+
 **Interface output** — when the frozen profile plan lists `UI_SPEC.md`, compile it with [the measurable UI specification](references/bundle/ui-spec.md). Use the recorded feel, voice and accessibility choices. Run the packaged [contrast checker](references/third-party/antislop-human/contrast-check.py) on the planned palette when Python is available. Copy the verified helper and its MIT license to `.lvr/verification/` for builder checks, and put the exact checks and expected results in VERIFICATION.md. Preserve existing frozen plans when resuming.
 
 **Quality, operations and data sources** — use [the S9 checklist](references/bundle/plan-quality.md#s9--data-sources-and-integrations). Carry S4 failures into requirements and flows, S3 abuse controls and S6 conclusions into SECURITY.md, and S2/S5 cost evidence into RESEARCH.md and OVERVIEW.md. Place measurable ops and restore steps in MILESTONES.md, VERIFICATION.md and HANDOVER.md. Add the named data sources and integrations section to SPEC/architecture.md, with permissions, refresh cadence, stale-data handling and source evidence.
@@ -700,6 +704,7 @@ Script: a confirmed display-name change is `LVR decision record --event doc_gene
 
 - [ ] Every base Markdown file and frozen profile addition exists and is non-empty. Apply the documented bundle format to each file.
 - [ ] The cross-check list above passes on every item.
+- [ ] If SPEC/ai.md is planned, it has a checked prompt and data contract, fallback, cost and at least ten runnable cases with observable pass conditions.
 - [ ] If UI_SPEC.md is planned, it has concrete tokens, screens and states, copy, motion, layout and accessibility checks. Its contrast results and outstanding builder checks are recorded.
 - [ ] Feature failure paths and abuse controls have verification steps. The bundle records its quality and operations targets, and a named data sources and integrations section.
 - [ ] blueprint.json matches `state.json` and follows the schema in `references/bundle/templates.md` §19.

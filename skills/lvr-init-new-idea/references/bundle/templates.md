@@ -175,3 +175,7 @@ Fill: identical content in both files; the agents.md entry point stays the singl
 ## Conditional UI specification
 
 When a frozen profile lists `UI_SPEC.md`, draft it from S4 and the [interface specification guide](ui-spec.md). Add its named build checks to VERIFICATION.md, with recorded palette results and exact contrast-helper invocations.
+
+## Conditional AI feature specification
+
+When the frozen plan includes `SPEC/ai.md`, use the [AI feature guide](ai-feature.md) for the model, fallback, prompt, retrieval, safety, usage costs and runnable evaluation set. Include the test adapter or model runner procedure and release checks in VERIFICATION.md.

@@ -45,7 +45,7 @@ const TIERS = ["T1", "T2", "T3"];
 // v2 enums
 const PRODUCT_STATUS = ["unasked", "pending", "decided"];
 const PRODUCT_SOURCE = ["user", "ai_recommended"];
-const PRODUCT_FLAGS = ["stores_data", "has_ui", "has_llm", "regulated_domain", "public_form"];
+const PRODUCT_FLAGS = ["stores_data", "has_ui", "has_llm", "regulated_domain", "public_form", "has_rag"];
 const PRODUCT_TYPE_RE = /^[a-z][a-z0-9-]{0,31}$/;
 const SESSION_END = ["done", "paused", "context_guard", "error", "cancelled"];
 const BOOSTER_KINDS = ["skill", "mcp", "agent"];
@@ -2741,6 +2741,12 @@ const UI_SPEC_QUESTIONS = [
   { id: "ui-voice", question: "What should the app say when an action works, and when the person has to try again?", why: "The user's words set the tone and the next step for key messages.", feeds: [UI_SPEC_FILE] },
   { id: "ui-access", question: "How will people use this on a small screen, with a keyboard, or if they need more time or larger text?", why: "The answer turns real access needs into checks for the main user tasks.", feeds: [UI_SPEC_FILE] },
 ];
+const AI_SPEC_FILE = "SPEC/ai.md";
+const AI_SPEC_QUESTIONS = [
+  { id: "ai-inputs", question: "For this AI feature, what information does a person give it and where may it look for more?", why: "This sets the input and data permissions.", feeds: [AI_SPEC_FILE] },
+  { id: "ai-output", question: "What should a good answer contain, and what should the person be able to do after reading it?", why: "The answer defines a checkable output and next action.", feeds: [AI_SPEC_FILE] },
+  { id: "ai-critical", question: "What must this feature never get wrong, and what should happen when it cannot tell?", why: "The answer identifies mandatory safeguards and fallback behavior.", feeds: [AI_SPEC_FILE] },
+];
 const profileFilePath = (file) => boosterPath(file) && file.split("/").every((part) => !part.startsWith("."));
 const profileNames = (values) => Array.isArray(values) && values.every((name) => isStr(name) && PRODUCT_TYPE_RE.test(name));
 const profileReferences = (values) => Array.isArray(values) && values.every((name) => isStr(name) && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(name));
@@ -2821,6 +2827,15 @@ function mergeProfiles(profiles, types, explicitFlags) {
   return { types, missing_profiles: missing, flags: { ...flags, ...explicitFlags }, sections, profile_files: [...extraFiles].sort(cmpStr) };
 }
 
+function addProfileArtifact(plan, file, questions, boosters, criterion) {
+  if (!plan.profile_files.includes(file)) plan.profile_files.push(file);
+  plan.profile_files.sort(cmpStr);
+  const s4 = (plan.sections.S4 ??= { questions: [], exit_criteria: [], boosters: [], agents: [] });
+  s4.questions.push(...questions.filter((question) => !s4.questions.some((entry) => entry.id === question.id)));
+  s4.exit_criteria.push(criterion);
+  s4.boosters = [...new Set([...s4.boosters, ...boosters])];
+}
+
 function productProfilePlan(dir, config) {
   const { profiles: directory, types: selection } = config;
   const profiles = loadProfiles(directory);
@@ -2832,13 +2847,11 @@ function productProfilePlan(dir, config) {
   const confirmed = product?.status === "decided" && product.confirmed === true;
   const types = [...new Set(explicit ?? (confirmed ? product.types : []))].sort(cmpStr);
   const plan = mergeProfiles(profiles, types, product?.flags);
-  if (types.length && plan.flags.has_ui === true && (confirmed || directory === undefined)) {
-    if (!plan.profile_files.includes(UI_SPEC_FILE)) plan.profile_files.push(UI_SPEC_FILE);
-    plan.profile_files.sort(cmpStr);
-    const s4 = (plan.sections.S4 ??= { questions: [], exit_criteria: [], boosters: [], agents: [] });
-    s4.questions.push(...UI_SPEC_QUESTIONS.filter((question) => !s4.questions.some((entry) => entry.id === question.id)));
-    s4.exit_criteria.push("Record visual direction, copy voice and the accessibility needs for each main task.");
-    s4.boosters = [...new Set([...s4.boosters, "ux-copy", "antislop-human"])];
+  if (types.length && (confirmed || directory === undefined)) {
+    if (plan.flags.has_ui === true) addProfileArtifact(plan, UI_SPEC_FILE, UI_SPEC_QUESTIONS, ["ux-copy", "antislop-human"],
+      "Record visual direction, copy voice and the accessibility needs for each main task.");
+    if (plan.flags.has_llm === true) addProfileArtifact(plan, AI_SPEC_FILE, AI_SPEC_QUESTIONS, ["prompt-engineer"],
+      "Record inputs, outputs, approved sources and critical error handling for each AI feature.");
   }
   return {
     status: explicit ? "preview" : confirmed ? "decided" : product?.status ?? "unasked",
@@ -7977,6 +7990,70 @@ async function cmdFrameworkRank({ flags }) {
   };
 }
 
+// ---------------------------------------------------------------- 11e. AI feature evaluation
+const AI_EVAL_OPS = ["equals", "contains", "absent", "at_most"];
+
+function aiEvalCases(dir, file) {
+  const spec = path.resolve(dir, file ?? AI_SPEC_FILE);
+  const text = tryReadLF(spec);
+  if (text === null) throw fail("FILE_NOT_FOUND", "Could not read the AI evaluation specification.", { path: showPath(dir, spec) });
+  const blocks = [...text.matchAll(/^## Runnable eval set\s*\n[ \t]*```json[ \t]*\n([\s\S]*?)^```[ \t]*$/gm)];
+  if (blocks.length !== 1) throw fail("AI_EVAL_INVALID", "Add exactly one JSON block under '## Runnable eval set' in the AI specification.");
+  const { cases } = parseJsonObject(blocks[0][1], "AI eval set");
+  if (!Array.isArray(cases) || cases.length < 10) throw fail("AI_EVAL_INVALID", "The AI evaluation set needs at least ten cases.");
+  const ids = new Set();
+  for (const entry of cases) {
+    if (!isObj(entry) || !/^E\d{2,}$/.test(entry.id ?? "") || ids.has(entry.id) || !/^F-\d{2,}$/.test(entry.feature ?? "") || !isObj(entry.input) || !Array.isArray(entry.checks) || !entry.checks.length) {
+      throw fail("AI_EVAL_INVALID", "Each eval case needs a unique E-number, feature ID, input object and checks array.");
+    }
+    ids.add(entry.id);
+    for (const check of entry.checks) {
+      if (!isObj(check) || !isStr(check.path) || !check.path.startsWith("/") || /~(?![01])/.test(check.path)) {
+        throw fail("AI_EVAL_INVALID", `Case ${entry.id} has an invalid JSON Pointer.`);
+      }
+      const operations = Object.keys(check).filter((key) => key !== "path");
+      const [operation] = operations;
+      if (operations.length !== 1 || !AI_EVAL_OPS.includes(operation) || (operation === "absent" && check.absent !== true)
+        || (operation === "at_most" && !Number.isFinite(check.at_most))) {
+        throw fail("AI_EVAL_INVALID", `Case ${entry.id} needs one valid operation per check.`);
+      }
+    }
+  }
+  return { path: showPath(dir, spec), sha256: sha256(text), cases };
+}
+
+function aiEvalMatches(response, check) {
+  const { found, value } = ptrGet(response, check.path);
+  if (check.absent) return !found;
+  if (!found) return false;
+  if (Object.hasOwn(check, "equals")) return canonJson(value) === canonJson(check.equals);
+  if (Object.hasOwn(check, "at_most")) return Number.isFinite(value) && value <= check.at_most;
+  if (Array.isArray(value)) return value.some((item) => canonJson(item) === canonJson(check.contains));
+  return isStr(value) && isStr(check.contains) && value.includes(check.contains);
+}
+
+function cmdAiCases({ dir, flags }) {
+  const { cases, ...spec } = aiEvalCases(dir, flags.file);
+  return { spec, cases: cases.map(({ id, feature, input }) => ({ id, feature, input })) };
+}
+
+async function cmdAiEval({ dir, flags }) {
+  const { cases, ...spec } = aiEvalCases(dir, flags.file);
+  const input = await readPayloadInput(flags);
+  const result = input?.results;
+  const ids = new Set(cases.map((entry) => entry.id));
+  if (!isObj(result) || Object.keys(result).some((id) => !ids.has(id)) || Object.values(result).some((response) => !isObj(response))) {
+    throw fail("BAD_JSON_INPUT", "Provide results keyed by the case ID, with one response object per case.");
+  }
+  const report = cases.map(({ id, feature, checks }) => {
+    if (!Object.hasOwn(result, id)) return { id, feature, verdict: "missing" };
+    const failed = checks.filter((check) => !aiEvalMatches(result[id], check)).map((check) => check.path);
+    return { id, feature, verdict: failed.length ? "fail" : "pass", ...(failed.length ? { failed_paths: failed } : {}) };
+  });
+  const passed = report.filter((entry) => entry.verdict === "pass").length;
+  return { spec, passed, total: cases.length, clean: passed === cases.length, cases: report };
+}
+
 const COMMANDS = {
   version: {
     help: "Print the script version, schema number, node version and sha256 of this file.", flags: [],
@@ -7993,6 +8070,14 @@ const COMMANDS = {
   "framework rank": {
     help: "Rank cited framework candidates with hard checks and persona weights. --in FILE|-",
     flags: ["in"], run: cmdFrameworkRank,
+  },
+  "ai cases": {
+    help: "Read the documented AI eval inputs without exposing expected answers. [--file SPEC/ai.md]",
+    flags: ["file"], run: cmdAiCases,
+  },
+  "ai eval": {
+    help: "Check recorded AI eval responses against the specification. --in FILE|- [--file SPEC/ai.md]",
+    flags: ["in", "file"], run: cmdAiEval,
   },
   "meta events": { help: "List the valid journal event types.", flags: [], run: async () => ({ events: EVENT_TYPES }) },
   "journal append": {

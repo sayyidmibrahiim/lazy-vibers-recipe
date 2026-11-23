@@ -39,3 +39,6 @@
 2026-11-23T02:13:06Z | codex/gpt-6 | task 14 | claimed and matched the UI research to the pinned checker and existing profile tests | next: add conditional output, interview questions and measurable specification
 2026-11-23T02:17:23Z | codex/gpt-6 | task 14 | wired the UI flag, S4 interview, S9 format and pinned contrast checker | next: same-context futsal UI audit and shared regressions
 2026-11-23T02:20:17Z | codex/gpt-6 | task 14 | futsal rules and five contrast pairs verified with the pinned Python tool; all regressions passed; closed | next: ticket 15 AI feature spec with runnable evaluations
+2026-11-23T02:21:08Z | codex/gpt-6 | task 15 | claimed and identified workflow and retrieval fixtures | next: wire conditional AI specification and a read-only evaluation route
+2026-11-23T02:24:40Z | codex/gpt-6 | task 15 | AI module routing, local eval commands and two spec rehearsals implemented | next: same-context admission, negative eval and shared regression checks
+2026-11-23T02:27:47Z | codex/gpt-6 | task 15 | both ten-case local rehearsals, flags, grading failures and shared regressions verified; closed | next: ticket 16 adaptive interview depth and evidence progress
