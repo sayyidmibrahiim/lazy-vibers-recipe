@@ -14,4 +14,4 @@ Verify: a PASS/FAIL table in Comments.
 | Claude Code, Gemini CLI, OpenCode | PENDING owner |
 | macOS and Windows runner evidence | PENDING owner |
 
-The matrix workflow, platform tests, `19-impl.md`, and `19-verify.md` are in the original cloud workspace. The remote runners still need evidence. [Repository handoff](../../../docs/agents/continuation.md)
+Commit `5cc63ba` on `handoff/tickets-19-20` saves the matrix workflow, platform tests, `19-impl.md`, and `19-verify.md`. The remote runners still need evidence. [Repository handoff](../../../docs/agents/continuation.md)

@@ -32,4 +32,4 @@ Each one is picked by rubric score. No coding/builder agents in 1.0.
 
 ## Comments
 
-Planning routes, project-local ownership checks, and native wrapper installation passed the scripted Linux checks. The implementation is saved in stash `af6d741` in the original cloud workspace. The next step is to run the actual database and threat-model delegations in Claude Code and OpenCode. The original workspace contains `17-impl.md` and `17-verify.md`. [Repository handoff](../../../docs/agents/continuation.md)
+Planning routes, project-local ownership checks, and native wrapper installation passed the scripted Linux checks. Commit `da9b0d0` on `handoff/ticket-17` preserves the complete draft and both run notes. Reapply it to the current helper before running the actual database and threat-model delegations in Claude Code and OpenCode. [Repository handoff](../../../docs/agents/continuation.md)
