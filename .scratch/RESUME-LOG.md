@@ -73,3 +73,6 @@
 2026-11-23T06:58:31Z | codex/gpt-6 | task 33 | claimed remaining profile evidence, freshness and booster work after ticket 38 | next: register v2 evidence paths and complete practical review steps
 2026-11-23T07:02:02Z | codex/gpt-6 | task 33 | profile evidence and documented review operations implemented | next: same-context verify v2 coverage, confinement and old review regressions
 2026-11-23T07:04:52Z | codex/gpt-6 | task 33 | v2 profile evidence, 51 archive tests, 20 portable tests and all shared suites pass; closed | next: task 34 brand evidence and prose
+2026-11-23T07:05:10Z | codex/gpt-6 | task 34 | claimed; confirmed profile release gate and owner freshness limits | next: brand citation checks, evidence procedure and pinned prose pass
+2026-11-23T07:07:04Z | codex/gpt-6 | task 34 | brand evidence rules, prose aid and targeted citation checks implemented | next: same-context verify market age, release gate and shared regressions
+2026-11-23T07:09:55Z | codex/gpt-6 | task 34 | brand citations, release gate, editorial review and all shared regressions pass; closed | next: task 36 lifecycle ownership and cleanup after later runs

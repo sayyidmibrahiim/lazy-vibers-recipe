@@ -1,26 +1,27 @@
 # Brand Templates
 
-Companion to `/lvr-personal-brand`. Three files, one evidence rule: every claim about the product or the owner traces to the bundle or the live product. Nothing is invented.
+Companion to `/lvr-personal-brand`. Each claim about the product or its owner needs a recorded source.
 
 Output folder: `brand/` in the project folder, beside the Blueprint Bundle. These files are never part of the bundle and never change it.
 
 ## Evidence table first
 
-Before drafting, build this table from the bundle + live check:
+Before drafting, make an evidence table from the bundle, current release checks and dated sources.
 
 ```
 claim | evidence | status
 "works with X" | VERIFICATION.md M2 PASS | verified
 "handles N users" | none | forbidden
-"built solo in N weeks" | journal timestamps | verified
+"the project reached M2 on <date>" | journal milestone_verified for M2 | verified
 "used by <company>" | none | forbidden
 ```
 
 Rules:
 
-- `verified` = a captured verification result, a live page fact, or a recorded user answer.
+- `verified` means a captured verification result, a current release fact, a recorded owner answer or a cited fact within its freshness limit. Tie the precise statement to the evidence. Dates alone cannot establish who did the work.
 - `unverified` = the owner says it but no artifact proves it; it may appear only with the owner's explicit approval and a `(claimed)` marker.
 - `forbidden` = invented metrics, users, revenue, awards, or endorsements. Never write them, even as a placeholder.
+- Check market and LinkedIn facts when used. Use `freshness.json` and the current platform guidance for limits and formats. Keep citations in the kit for the owner's review.
 
 ## 1. `brand/BRAND.md`
 
@@ -66,7 +67,7 @@ Unlike <alternative>, it <proof-backed difference>.
 # LinkedIn Profile — <owner name>
 
 ## Headline options
-1. <role + product + audience> (max 220 chars)
+1. <role + product + audience within the current verified headline limit>
 2. <outcome-led variant>
 3. <builder-led variant>
 
@@ -76,12 +77,12 @@ Every product claim carries the same evidence rule. No metrics without a source.
 
 ## Experience entry
 **<Title> — <Product>** · <start year> – Present
-- Built <what>, verified by <milestone / live check>.
+- Built <what>, verified by <milestone or release procedure>.
 - <one user-visible outcome, evidence-backed>
 - Stack: <from DECISIONS.md>
 
 ## Featured
-- <live product URL> — verified <date>
+- <release URL or public artifact when available> — verified <date>
 - <repo / case study / none>
 
 ## Skills
@@ -119,5 +120,7 @@ Goal: <job / consulting / product users / community> · cadence: <n posts/week f
 - [ ] No metric, user count, revenue, award, or endorsement without evidence.
 - [ ] Product name and one-line match `OVERVIEW.md` and `blueprint.json`.
 - [ ] Links resolve and the applicable release checks passed this run.
+- [ ] Applicable market and platform citations pass `LVR cite check` for the draft and any localized variants.
+- [ ] The prose pass preserves facts, citations and the owner's wording where it carries meaning.
 - [ ] Files live under `brand/`, not in the bundle.
 - [ ] Nothing was posted, scheduled, or sent to a platform.

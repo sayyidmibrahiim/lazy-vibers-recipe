@@ -49,6 +49,7 @@ Script: `LVR journal append --type brand_started --in -` with the checked target
 1. Journal `brand_started` with each checked target and the observed proof. Include the live URL for web or the artifact identity for an installable product. One checkpoint.
 2. Load, in this order: `OVERVIEW.md` (owner-visible truth), `DECISIONS.md` (why it is shaped this way), `SCOPE.md` (what is in and parked), `VERIFICATION.md` (what is proven), `RESEARCH.md` (market context with sources), `HANDOVER.md` (how it runs), `state.json` (milestones, deployment, user language). `SCOPE.md`, `RESEARCH.md`, and `HANDOVER.md` are not gated: a missing one is skipped, and the kit names it under `Open questions for the owner` (the claims it would have backed stay `unverified`).
 3. Extract a one-screen product brief with name, one line, audience, problem, in-MVP features, verified milestones, release targets, parked items and stack. Use recorded product evidence (principle 13).
+4. For workflow products, read the public purpose, permissions and output contracts. Leave personal profile values, raw evaluation inputs and tool configuration out of the brand kit. Cite approved aggregate evidence or synthetic examples instead.
 
 ## Step 3 — Owner facts
 
@@ -67,12 +68,12 @@ Skip and enough controls stay visible. A skipped fact becomes a visible `Open qu
 
 Build the table from `references/brand-templates.md` before drafting. Walk every claim the kit might make:
 
-- product capability → `VERIFICATION.md` result or live-page fact;
-- owner experience → recorded answers or journal dates;
-- market claim → `RESEARCH.md` source + date;
-- anything else → `unverified` (needs owner approval + `(claimed)`) or `forbidden`.
+- Product capability uses a recorded `VERIFICATION.md` result or a visible fact from the release check. Name the procedure and date. A model/workflow evaluation or a UI compliance claim needs captured results, scope and denominator for a pass rate. A planned test is an open question.
+- Owner experience uses recorded answers or dated project evidence for the specific claim. Confirm a title or individual contribution when the record cannot establish it.
+- Market and platform facts need current live sources. Reuse the citations in `RESEARCH.md` within their `freshness.json` limit, then check the key facts on the actual source pages. Verify LinkedIn limits and formats on current first-party guidance when they affect the draft. Cite the sources and dates in the private evidence notes. Stop external research when search/fetch is unavailable and use the enable steps in conventions §10.
+- An unproven owner-supplied claim needs explicit approval and the `(claimed)` marker. Invented users, revenue, awards, endorsements or results stay out of the kit.
 
-No metric, user count, revenue, award, or endorsement enters the kit without evidence. An honest kit with three proof points beats a fictional one with thirty.
+If a writer or marketing specialist will help, use a verified planning-only route when available. Send only the approved public-facing evidence and give any suggestion the same fact check. Journal the actual transport using `agent_delegated`. The inline route uses the same boundaries.
 
 ## Step 5 — Draft the three files
 
@@ -89,12 +90,15 @@ Rules:
 - Use the templates verbatim in structure; content comes from the evidence table.
 - Same product name, one line, and audience names as `OVERVIEW.md` and `blueprint.json`.
 - English source. When the owner asked for another language, write `brand/<FILE>.<lang>.md` as a variant and keep the English source intact.
+- Keep the evidence and citation tags in the relevant draft. Preserve them during the prose edit so the owner can trace market facts, platform limits and observed verification.
 - No Mermaid; ASCII diagrams only if one helps.
 - After each file: journal `brand_file_generated` (payload: path, claims count, unverified count) + state write. One checkpoint per file.
 
 ## Step 6 — Self-check and close
 
-Script: `LVR journal append --type brand_done --payload '{…}'`
+Script: `LVR cite check --file brand/BRAND.md --file brand/LINKEDIN-PROFILE.md --file brand/CONTENT-PLAN.md`. Include each localized file too. After the checks, use `LVR journal append --type brand_done --payload '{…}'`.
+
+Use `LVR booster plan --section S9 --harness NAME` and the [project-local lifecycle](references/booster-lifecycle.md) to load `anti-slop` from its verified pin. Load `ux-copy` when it fits the approved product and owner voice. Run the prose pass after the first draft. Remove filler and repetitive phrasing while preserving facts, sources, structure and the owner's voice. If an aid cannot load, record the degradation and carry out the same edit inline.
 
 Run the checklist in `references/brand-templates.md`:
 
@@ -102,10 +106,11 @@ Run the checklist in `references/brand-templates.md`:
 - no invented traction;
 - names consistent with the bundle;
 - links resolve and the release evidence from Step 1 still applies;
+- cite check reports zero findings for the generated files and no prose edit changed an approved claim or citation;
 - files under `brand/`, not in the bundle;
 - nothing posted, scheduled, or sent anywhere.
 
-Then journal `brand_done` (payload: files, verified claims, claimed claims, open questions) + state write. One checkpoint.
+Then journal `brand_done` (payload: files, verified claims, claimed claims, open questions) + state write. One checkpoint. Ask before removing eligible Recipe-owned copies installed for this run.
 
 Close in plain language: what exists, what each file is for, what the owner must fill or approve, and the one next action (review `BRAND.md` first, then the profile copy). Never offer to post on the owner's behalf.
 

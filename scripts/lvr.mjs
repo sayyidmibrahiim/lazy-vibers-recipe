@@ -4165,6 +4165,7 @@ function researchIndex(j) {
 const BRIEF_SECTION_RE = /^S[1-8]$/;
 /** Research zones that cover a whole file (A5: the bundle files that restate vendor, legal and cost facts). */
 const WHOLE_FILE_ZONES = ["RESEARCH.md", "OVERVIEW.md", "SPEC/architecture.md", "SECURITY.md", "CAPABILITIES.md"];
+const BRAND_MARKDOWN = /^brand\/[^/]+\.md$/i;
 const MONEY_CATS = ["price", "quota", "legal", "regulation", "statistic"];
 const VERSION_CATS = ["version", "quota", "legal", "regulation"];
 /** `line` with the spans of `tags` blanked (the tags were found on a same-length copy of the line). */
@@ -4173,6 +4174,7 @@ function fileOwner(rel) {
   const m = rel.match(/^\.lvr\/docs\/sections\/S(\d+)-(.*)\.md$/);
   if (m) return m[1] === "4" && m[2] === "additions" ? "lvr-add-feature" : `S${m[1]}`;
   if (/^\.lvr\/docs\/research\//.test(rel)) return "S0";
+  if (BRAND_MARKDOWN.test(rel)) return "lvr-personal-brand";
   return "S9";
 }
 
@@ -4296,7 +4298,7 @@ function citeAnalyze({ dir, files, all, state, journal, F, today, freshnessCateg
     for (const h of heads) exempt.add(h.line);
     const zone = new Set();
     const zoneSection = (title) => { for (const h of heads) if (h.text.trim().toLowerCase() === title) { zone.add(h.line); for (let i = 1; i <= bodyOf(code, heads, h).length; i++) zone.add(h.line + i); } };
-    if (WHOLE_FILE_ZONES.includes(rel) || /^\.lvr\/docs\/sections\/S5-.*\.md$/.test(rel) || /^\.lvr\/docs\/research\/.*\.md$/.test(rel)) code.forEach((_, i) => zone.add(i));
+    if (WHOLE_FILE_ZONES.includes(rel) || BRAND_MARKDOWN.test(rel) || /^\.lvr\/docs\/sections\/S5-.*\.md$/.test(rel) || /^\.lvr\/docs\/research\/.*\.md$/.test(rel)) code.forEach((_, i) => zone.add(i));
     else if (/^\.lvr\/docs\/sections\/S2-.*\.md$/.test(rel)) zoneSection("prices quoted");
 
     // Domain Brief rows (I13) + owners

@@ -98,17 +98,17 @@ Post-lock captures and their decision lines live in `.lvr/docs/sections/S4-addit
 
 ### `/lvr-personal-brand` (v1, implemented)
 
-**Precondition (machine-checked, every run)**: state readable; `state.milestones[]` non-empty and every entry `verified: true`; `state.deployment.status` = `"live"` with a URL; that URL fetched now returns 2xx and one expected product fact; `AGENTS.md`, `OVERVIEW.md`, `DECISIONS.md`, `VERIFICATION.md` present. Any failure → refuse naming the exact unmet gate. Handoff is not required.
+**Precondition**: state readable, all milestones verified, and release proof for each confirmed product type passes again in a clean environment. Web checks the recorded deployment for 2xx and one expected product fact. Installable products repeat the profile check on the recorded artifact. Require `AGENTS.md`, `OVERVIEW.md`, `DECISIONS.md` and `VERIFICATION.md`. Name the missing evidence if the gate fails. Handoff is optional.
 
 **Gate rationale**: branding before proof produces fiction, so the gate is evidence, not a checkbox.
 
 **Flow**:
-1. Gate: the five checks above, live URL included; a stored `deployment` field alone is never accepted.
+1. Gate using `release plan` and current observed product evidence.
 2. Open: journal `brand_started`; load `OVERVIEW.md` → `DECISIONS.md` → `SCOPE.md` → `VERIFICATION.md` → `RESEARCH.md` → `HANDOVER.md` → `state.json`. `SCOPE.md`, `RESEARCH.md` and `HANDOVER.md` are not gated: a missing one is skipped and named in the kit's open questions.
 3. Owner facts: ask only what the bundle cannot answer (display name, role, brand goal, audience priority, tone, links, exclusions). Skipped fact → visible open question, never a guess.
-4. Evidence table: every claim `verified` / owner-approved `(claimed)` / `forbidden`.
+4. Use verified product results and current cited facts. Mark owner-approved statements without proof as `(claimed)`. Use live first-party guidance for platform limits and redact private workflow inputs.
 5. Draft one file per turn under `brand/`: `BRAND.md`, `LINKEDIN-PROFILE.md`, `CONTENT-PLAN.md`; journal `brand_file_generated` per file.
-6. Self-check (evidence rule, name consistency, links, nothing posted) then journal `brand_done`.
+6. Run the anti-slop prose pass, verify citations and links, then journal `brand_done`. Use the project-local lifecycle for cleanup.
 
 **Never**: post, schedule, or message on any platform · invent metrics, users, revenue, awards, endorsements · place brand files in the Blueprint Bundle or edit bundle files · replace the English source with a localized variant · run before the gate passes.
 
