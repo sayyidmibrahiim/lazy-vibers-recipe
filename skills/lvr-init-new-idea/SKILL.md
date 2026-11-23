@@ -397,8 +397,8 @@ Purpose: competitor scan, stack candidates with reasons, cost table, regional av
 **Work strategy** — four outputs, in order (templates and sub-query lists: `references/sections/S5-research.md`):
 
 1. **Competitor scan** — ≥3 direct or adjacent products: what they do, pricing model, one lesson for this idea.
-2. **Stack options** — ≥2 candidate stacks with a trade-offs table (budget fit, hands-on fit, S3 coverage, S4 coverage, regional availability, maintenance).
-3. **Recommended stack** — exactly ONE, with reasons tied to the recorded answers (S1 users/platform, S2 budget/devices/hands-on, S3 auth/payments, S4 features) — never a generic "best stack".
+2. **Stack options / S5b** — run [framework discovery](references/sections/S5b-framework.md) for a new stack or a compatible addition when needed. Shortlist comparable options for the confirmed profiles, apply hard checks, rank dated signals and document the trade-offs. A confirmed existing stack or a project without a framework choice can skip discovery with a recorded reason.
+3. **Recommended stack** — present one recommendation and its strongest downside with other eligible S5b options. Tie the reasons to S1–S4. Let the user choose, then record the selection and its recheck date.
 4. **Cost table** — build on the S2 fact-sheet; add regional payment-gateway availability for the user's market (S2 country + S3 payments answers) and every new recurring cost the recommended stack introduces.
 
 **Tier chunking (conventions §7)** — T1: full queries per output. T2: split each output into sub-queries; append each sub-query's findings to the record before the next one starts. T3: one sub-topic per turn, append every step. Never hold the whole research in context — the file on disk is the memory (principle 13); `/lvr-continue` resumes from the last complete sub-query.
@@ -415,7 +415,7 @@ Purpose: competitor scan, stack candidates with reasons, cost table, regional av
 **Exit criteria** (engine step 5; cite the record section, answer id, or decision id):
 
 - [ ] Competitor scan covers ≥3 direct/adjacent products with what they do and a pricing model.
-- [ ] ≥2 stack options with a trade-offs table.
+- [ ] ≥2 eligible stack options with trade-offs and a recorded S5b choice, or a documented reason discovery was skipped.
 - [ ] One recommended stack with reasons tied to the S1–S4 answers and S2 resources.
 - [ ] Cost table present, built on the S2 fact-sheet, with regional payment-gateway availability for the user's market.
 - [ ] Every claim carries a cite group or a logged `[unverified: …]` marker; `LVR cite check --file .lvr/docs/sections/S5-research.md` is clean.
@@ -432,6 +432,7 @@ Purpose: competitor scan, stack candidates with reasons, cost table, regional av
 
 ## Competitor scan
 ## Stack options and trade-offs
+<S5b conditions, filtered options, weights, ranked options, signal dates and snapshot reference; or the reason discovery was skipped>
 ## Recommended stack
 ## Cost table and regional availability
 
@@ -623,6 +624,8 @@ Script: close S8 with `LVR journal append --type section_done --payload '{"secti
 ```
 
 ### S9 — Compile
+
+Before compiling a project with a recorded framework decision, recheck S5b evidence if its `recheck_by` date is due. Carry verified pins and documentation sources to the stack section of `SPEC/architecture.md`. Route a feasibility change through S6 and preserve the chosen stack until the user confirms a change.
 
 Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the Blueprint Bundle of 20 base Markdown files, frozen profile additions and the derived index (conventions §8; the per-file specs are packaged in `references/bundle/templates.md`). The bundle lives in the project folder next to `.lvr/` and must be self-sufficient: any harness, with no LVR skills installed, can build the product from it. Mostly AI work: the Conductor compiles; the user is brought in only when a gap needs their call. English is the source — the bundle is written in English; the web UI renders it in User Language (principle 5, conventions §4). The bundle files are S9's output: no `S9-*.md` Section Record is written (conventions §5).
 

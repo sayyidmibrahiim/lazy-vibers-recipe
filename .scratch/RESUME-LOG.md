@@ -29,3 +29,7 @@
 2026-11-22T18:56:35Z | codex/gpt-6 | task 10 | workflow pack and six synthetic KPR evaluations verified; closed | next: ticket 11 data storage and schemas
 2026-11-22T18:56:58Z | codex/gpt-6 | task 11 | claimed, pinned reference sources resolved and storage module drafted | next: wire data flags, vendor routes and the ERD exception
 2026-11-22T19:01:57Z | codex/gpt-6 | task 11 | data routes, Supabase and local schemas, ERD checks and shared regressions verified; closed | next: ticket 12 framework evidence and ranking
+2026-11-22T19:02:41Z | codex/gpt-6 | task 12 | claimed, source reachability checked and J prototype inspected | next: ship candidate catalogue, cited signal collection and stable cached ranking
+2026-11-23T01:59:16Z | codex/gpt-6 | task 12 | candidate catalogue, source harvest, weighted rank and S5b procedure implemented | next: fixture coverage for provenance, mismatches, rate limits and replay
+2026-11-23T02:04:12Z | codex/gpt-6 | task 12 | implementation and fixture rehearsal complete | next: finish same-context regression and commit ticket 12
+2026-11-23T02:04:40Z | codex/gpt-6 | task 12 | 34 focused tests, dated live package signals, synced references and shared regressions verified; closed | next: ticket 13 unhappy paths and futsal quality audit

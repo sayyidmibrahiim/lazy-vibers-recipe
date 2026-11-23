@@ -1,0 +1,6 @@
+# Ticket 12 — same-context verify
+
+- PASS — `node --test .scratch/public-release/fixtures/12/framework.test.mjs`, 7 cases. Package and SDK version precedence, original UTC dates, registry major skew, top-hit Context7 mismatch, HTML docs fallback, rate-limit cache and GitHub-only credentials are checked. Fresh and offline cache produce the same rank and weights. Exact-version critical advisory, unknown and failed hard constraints, near ties, missing data and journal replay with a verified snapshot checksum are exercised.
+- PASS — npm, PyPI and pub.dev supplied dated versions in a disposable project (Next 16.4.6, FastAPI 0.165.0, Riverpod 3.5.0) and the offline rerun preserved them. This environment could not reach other sources needed for a complete live signal matrix. They were exercised with controlled responses in the fixture.
+- PASS — `node --test .scratch/public-release/fixtures/{05,06,07,08,09,10,11,12}/*.test.mjs`, 34/34. Shared fixture runs 03, 04 (104), 26, 27 (191 cases, 240 fuzzed events), 38 and 40 passed.
+- PASS — `npm run check:skills` (124 checked), reference byte comparison, `npm run lint` (one preexisting warning in the archived research probe), `tsc --noEmit` and `git diff --check`.

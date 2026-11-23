@@ -65,8 +65,9 @@ The plan merges confirmed profiles in ID order. It deduplicates files and identi
 - Purpose: competitor scan, comparable products, tech stack candidates with **reasons**, cost table, availability in the user's region (payment gateways, app stores).
 - Booster: load `discover-competitive-analysis` for the scan. Web search and fetch remain required (spec 07 §1).
 - Rules: every claim carries a cite tag (spec 07 §3) and is journaled (`research_logged`); key facts need two independent sources or one primary source; recommendations cite the research they rest on. Research uses English sources plus primary local sources for the user's market (regulators, local price pages); results summarized in English. `cite check` on the record is clean before S5 closes.
+- After the competitor scan, run [S5b framework discovery](11-framework-discovery.md) when the product needs a stack choice. Store the confirmed choice and evidence in the S5 decision.
 - Output: `S5-research.md`; becomes `RESEARCH.md`.
-- Exit: ≥2 stack options with trade-offs + a recommended stack with reasons + cost table.
+- Exit: ≥2 eligible stack options with trade-offs and a recorded choice, or a documented reason to skip discovery. Include the cost table.
 
 ## S6 — Feasibility loop
 

@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import crypto from "node:crypto";
+import * as http from "node:http";
 import { fileURLToPath } from "node:url";
 
 // ---------------------------------------------------------------- 1. constants
@@ -102,7 +103,7 @@ const sha256 = (s) => crypto.createHash("sha256").update(s).digest("hex");
 const ptrEsc = (s) => String(s).replace(/~/g, "~0").replace(/\//g, "~1");
 const secNum = (s) => parseInt(String(s).slice(1), 10);
 
-const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check", "all", "context", "remove-legacy", "confirm"]);
+const BOOL_FLAGS = new Set(["pretty", "help", "version", "no-state", "strict", "write", "force", "print-state", "journal", "amend", "skipped", "no-journal", "accept-loss", "check", "all", "context", "remove-legacy", "confirm", "offline", "refresh"]);
 /** Every `--file` value in order (cite check takes several); a symbol key so the unknown-flag check never sees it. */
 const FILE_LIST = Symbol("files");
 /** Repeatable review flags (--text, --claim, --id): every value in order. */
@@ -7311,10 +7312,672 @@ async function cmdReplay({ dir, flags }) {
   return { report, sha256: sha256(serialize(state)), ...out };
 }
 
+// ---------------------------------------------------------------- 11d. framework discovery
+const FRAMEWORK_TTL = 14;
+const FRAMEWORK_ID = /^[a-z0-9][a-z0-9.-]{0,79}$/;
+const FRAMEWORK_REPO = /^[a-z0-9_.-]+\/[a-z0-9_.-]+$/i;
+const FRAMEWORK_PACKAGE = /^(?:@[a-z0-9][a-z0-9_.-]*\/)?[a-z0-9][a-z0-9_.-]*$/i;
+const FRAMEWORK_VERSION = /^[0-9][a-z0-9.+!_-]{0,99}$/i;
+const FRAMEWORK_REGISTRIES = {
+  npm: { osv: "npm", deps: "npm" },
+  pypi: { osv: "PyPI", deps: "pypi" },
+  crate: { osv: "crates.io", deps: "cargo" },
+  pub: { osv: "Pub" },
+};
+const frameworkDay = (s) => isStr(s) && s.length === 10 && parseDay(s)?.ok;
+const frameworkDate = (s) => frameworkDay(s?.slice?.(0, 10)) ? s.slice(0, 10) : null;
+const frameworkSemver = (s) => isStr(s) ? /^v?(\d+)\.(\d+)\.(\d+)$/.exec(s) : null;
+const frameworkMajor = (s) => isStr(s) ? /^(?:v)?(\d+)\./.exec(s)?.[1] : undefined;
+const frameworkNumber = (n) => Number.isFinite(n) && n >= 0 ? n : null;
+
+function frameworkCatalogue() {
+  const files = [path.join(SCRIPT_DIR, "..", "references", "frameworks.json"), path.join(SCRIPT_DIR, "..", "skills", "lvr-frameworks.json")];
+  for (const file of files) {
+    const raw = tryReadLF(file);
+    if (raw !== null) {
+      const data = parseJsonObject(raw, "Framework catalogue");
+      if (data.schema_version === 1 && Array.isArray(data.candidates)) return data;
+      throw fail("FRAMEWORK_CATALOGUE_INVALID", "The framework catalogue has an unsupported schema.");
+    }
+  }
+  throw fail("FRAMEWORK_CATALOGUE_MISSING", "Install the skill with its references/frameworks.json.");
+}
+
+function frameworkCandidate(entry, seedIds) {
+  if (!isObj(entry) || !FRAMEWORK_ID.test(entry.id ?? "") || !PRODUCT_TYPE_RE.test(entry.type ?? "") || seedIds.has(entry.id)) {
+    throw fail("BAD_JSON_INPUT", "An added framework needs a unique id and a candidate type.");
+  }
+  const candidate = { id: entry.id, type: entry.type };
+  for (const key of ["gh", "npm", "pypi", "crate", "pub", "eol", "c7"]) {
+    const value = entry[key];
+    if (value === undefined) continue;
+    const valid = key === "gh" ? FRAMEWORK_REPO.test(value) && !value.split("/").some((part) => part === "." || part === "..")
+      : key === "c7" ? isStr(value) && value.trim().length > 0 && value.length <= 100
+      : key === "npm" ? FRAMEWORK_PACKAGE.test(value) : FRAMEWORK_ID.test(value);
+    if (!isStr(value) || !valid) throw fail("BAD_JSON_INPUT", `Invalid ${key} for framework ${entry.id}.`);
+    candidate[key] = value;
+  }
+  if (!candidate.gh && !Object.keys(FRAMEWORK_REGISTRIES).some((key) => candidate[key])) {
+    throw fail("BAD_JSON_INPUT", `Framework ${entry.id} needs an upstream repository or public package.`);
+  }
+  return candidate;
+}
+
+const FRAMEWORK_HTTP_LIMIT = 2 * 1024 * 1024;
+async function frameworkBody(response, mode) {
+  const reader = response.body?.getReader();
+  if (!reader) return "";
+  const limit = mode === "sample" ? 4096 : FRAMEWORK_HTTP_LIMIT;
+  const decoder = new TextDecoder();
+  let length = 0, text = "";
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) return text + decoder.decode();
+      const remaining = limit - length;
+      if (mode === "sample" && value.length >= remaining) return text + decoder.decode(value.subarray(0, remaining));
+      if (value.length > remaining) throw new Error("response_too_large");
+      length += value.length;
+      text += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
+}
+
+function frameworkProjectPath(dir, target) {
+  const file = confine(dir, path.resolve(dir, target));
+  for (let current = file; current !== dir; current = path.dirname(current)) {
+    try {
+      if (fs.lstatSync(current).isSymbolicLink()) throw fail("PATH_OUTSIDE_DIR", "Framework evidence paths must use real project directories.");
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+  }
+  return file;
+}
+
+function frameworkCache(dir, flags) {
+  const folder = frameworkProjectPath(dir, flags.cache ?? ".lvr/cache/framework-signals");
+  const file = (key) => path.join(folder, sha256(key) + ".json");
+  const read = (key) => {
+    const raw = tryReadLF(file(key));
+    try { return raw === null ? undefined : JSON.parse(raw); } catch { return undefined; }
+  };
+  const write = (key, data) => {
+    fs.mkdirSync(folder, { recursive: true });
+    writeFileAtomic(file(key), JSON.stringify(data) + "\n", "FRAMEWORK_CACHE_WRITE_FAILED");
+  };
+  return { read, write };
+}
+
+function frameworkRequests(cache, { offline, refresh }, clock) {
+  const token = process.env.LVR_GITHUB_TOKEN;
+  if (!offline && (process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy)) {
+    http.setGlobalProxyFromEnv?.();
+  }
+  const active = new Map();
+  const observed = new Map();
+  const instant = clock.day * DAY_MS + (Date.parse(now()) % DAY_MS || 0);
+  let nextCrate = 0;
+
+  async function fetchSignal(source, { body, mode = "json", project } = {}) {
+    const hostname = new URL(source).hostname;
+    const key = JSON.stringify([source, body ?? null, mode]);
+    const current = cache.read(key);
+    const age = frameworkDay(current?.fetched) ? clock.day - parseDay(current.fetched).day : -1;
+    const cached = age >= 0 && Object.hasOwn(current, "data") && current.source === source;
+    const unavailable = (reason) => cached
+      ? { ...current, reason, stale: age >= FRAMEWORK_TTL }
+      : { source, fetched: null, data: null, reason };
+    if (cached && !refresh && age < FRAMEWORK_TTL) return current;
+    if (offline) return unavailable("offline");
+    const rateKey = `rate:${hostname}:${hostname === "api.github.com" && token ? "authenticated" : "public"}`;
+    const limit = cache.read(rateKey);
+    if (Number.isFinite(limit?.until) && limit.until > instant) return unavailable("rate_limited");
+
+    // crates.io asks clients to stay at one request per second.
+    if (hostname === "crates.io") {
+      const start = Math.max(Date.now(), nextCrate);
+      nextCrate = start + 1000;
+      if (start > Date.now()) await new Promise((resolve) => setTimeout(resolve, start - Date.now()));
+    }
+    let response, data;
+    try {
+      response = await fetch(source, {
+        method: body ? "POST" : "GET",
+        headers: {
+          "User-Agent": "lazy-vibers-recipe/1.0",
+          Accept: mode === "sample" ? "text/plain, text/markdown" : "application/json",
+          ...(body ? { "Content-Type": "application/json" } : {}),
+          ...(mode === "sample" ? { Range: "bytes=0-4095" } : {}),
+          ...(hostname === "api.github.com" && token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: body ? JSON.stringify(body) : undefined,
+        redirect: "manual",
+        signal: AbortSignal.timeout(6500),
+      });
+      const remaining = response.headers.get("x-ratelimit-remaining");
+      const limited = response.status === 429 || (response.status === 403 && (remaining === "0" || response.headers.has("retry-after")));
+      if (limited || (hostname === "api.github.com" && remaining === "0")) {
+        const retry = response.headers.get("retry-after");
+        const reset = Number(response.headers.get("x-ratelimit-reset")) * 1000;
+        const retryUntil = retry === null ? NaN : /^\d+$/.test(retry) ? instant + Number(retry) * 1000 : Date.parse(retry);
+        const until = Math.max(reset || 0, retryUntil || 0, instant + (reset || retryUntil ? 1000 : 3600000));
+        cache.write(rateKey, { until });
+      }
+      if (limited || (!response.ok && response.status !== 404)) {
+        await response.body?.cancel().catch(() => {});
+        return unavailable(limited ? "rate_limited" : `http_${response.status}`);
+      }
+      if (response.status === 404) {
+        await response.body?.cancel().catch(() => {});
+        data = null;
+      } else {
+        const raw = await frameworkBody(response, mode);
+        const parsed = mode === "sample" ? stripBom(raw) : JSON.parse(raw);
+        if (mode !== "sample" && !isObj(parsed) && !Array.isArray(parsed)) return unavailable("unexpected_response");
+        data = project?.(parsed) ?? parsed;
+      }
+    } catch (error) {
+      if (error instanceof LvrError) throw error;
+      return unavailable(response ? "invalid_response" : "network_unavailable");
+    }
+    const result = { source, fetched: clock.iso, data, ...(data === null ? { reason: "http_404" } : {}) };
+    cache.write(key, result);
+    return result;
+  }
+
+  return (source, options) => {
+    const key = JSON.stringify([source, options?.body ?? null, options?.mode ?? "json"]);
+    if (observed.has(key)) return Promise.resolve(observed.get(key));
+    if (!active.has(key)) {
+      active.set(key, fetchSignal(source, options).then((response) => {
+        observed.set(key, response);
+        return response;
+      }).finally(() => active.delete(key)));
+    }
+    return active.get(key);
+  };
+}
+
+function frameworkSignal(response, value, reason = "missing_field") {
+  return {
+    value: value ?? null,
+    source: response.source,
+    fetched: response.fetched,
+    ...(response.stale ? { stale: true } : {}),
+    ...(response.reason || value === undefined || value === null ? { reason: response.reason ?? reason } : {}),
+  };
+}
+
+function frameworkLicense(value) {
+  const text = isStr(value) ? value.trim() : null;
+  return text && !/^(?:NOASSERTION|UNKNOWN|NONE|UNLICENSED)$/i.test(text) ? text.slice(0, 160) : null;
+}
+
+function frameworkLicenseClass(value) {
+  if (!value) return null;
+  if (/\b(?:BSL|BUSL|SSPL|FSL|SUL|sustainable use|source available|elastic license|ELv2)\b/i.test(value)) return "source-available";
+  if (/\b(?:A?GPL|LGPL|MPL|EUPL|CDDL|OSL)\b/i.test(value)) return "osi-copyleft";
+  if (/\b(?:MIT|BSD|Apache|ISC|Unlicense|Zlib|0BSD|PSF)\b/i.test(value)) return "osi-permissive";
+  if (/proprietary|all rights reserved/i.test(value)) return "proprietary";
+  return "unknown";
+}
+
+function frameworkRegistrySource(candidate, key, request, pin) {
+  const name = encodeURIComponent(candidate[key]);
+  const version = pin ? encodeURIComponent(pin) : "";
+  if (key === "npm") {
+    return request(`https://registry.npmjs.org/${name}/${version || "latest"}`, { project: ({ version, license, deprecated, engines }) => ({ version, license: frameworkLicense(license?.type ?? license), deprecated: typeof version === "string" ? Boolean(deprecated) : null, runtime: engines?.node }) });
+  }
+  if (key === "pypi") {
+    return request(`https://pypi.org/pypi/${name}${version ? "/" + version : ""}/json`, { project: ({ info, urls }) => ({
+      version: info?.version, license: frameworkLicense(info?.license_expression ?? info?.license),
+      published: urls?.map((url) => frameworkDate(url.upload_time_iso_8601)).filter(Boolean).sort()[0],
+      deprecated: urls?.length ? urls.every((url) => url.yanked === true) : null, runtime: info?.requires_python,
+    }) });
+  }
+  if (key === "crate") {
+    return request(`https://crates.io/api/v1/crates/${name}${version ? "/" + version : ""}`, { project: (data) => {
+      const latest = data.crate?.max_stable_version || data.crate?.max_version;
+      const selected = version ? data.version : data.versions?.find((item) => item.num === latest);
+      return {
+        version: selected?.num ?? latest, license: frameworkLicense(selected?.license),
+        published: frameworkDate(selected?.created_at), deprecated: selected?.yanked, runtime: selected?.rust_version,
+        recent_downloads: data.crate?.recent_downloads,
+      };
+    } });
+  }
+  return request(`https://pub.dev/api/packages/${name}${version ? "/versions/" + version : ""}`, { project: (data) => {
+    const selected = version ? data : data.latest;
+    return { version: selected?.version, published: frameworkDate(selected?.published), deprecated: selected?.retracted ?? data.isDiscontinued, runtime: selected?.pubspec?.environment?.sdk };
+  } });
+}
+
+function frameworkC7Match(candidate, results) {
+  const expected = candidate.gh && "/" + candidate.gh.toLowerCase();
+  const safe = Array.isArray(results) ? results : [];
+  const match = expected ? safe.find((result) => isStr(result?.id) && result.id.toLowerCase() === expected) : undefined;
+  if (!match) return safe.length ? { status: "unmatched" } : null;
+  return {
+    status: "matched", id: match.id, benchmark: frameworkNumber(match.benchmarkScore),
+    snippets: frameworkNumber(match.totalSnippets), updated: frameworkDate(match.lastUpdateDate),
+  };
+}
+
+function frameworkCvss3(vector) {
+  if (!isStr(vector) || !/^CVSS:3\.[01]\//.test(vector)) return null;
+  const metrics = Object.fromEntries(vector.split("/").slice(1).map((metric) => metric.split(":")));
+  if (!["C", "U"].includes(metrics.S)) return null;
+  const changed = metrics.S === "C";
+  const impact = { H: 0.56, L: 0.22, N: 0 };
+  const values = [
+    { N: 0.85, A: 0.62, L: 0.55, P: 0.2 }[metrics.AV], { L: 0.77, H: 0.44 }[metrics.AC],
+    { N: 0.85, L: changed ? 0.68 : 0.62, H: changed ? 0.5 : 0.27 }[metrics.PR], { N: 0.85, R: 0.62 }[metrics.UI],
+    impact[metrics.C], impact[metrics.I], impact[metrics.A],
+  ];
+  if (!values.every(Number.isFinite)) return null;
+  const [av, ac, pr, ui, c, i, a] = values;
+  const baseImpact = 1 - (1 - c) * (1 - i) * (1 - a);
+  const damage = changed ? 7.52 * (baseImpact - 0.029) - 3.25 * (baseImpact - 0.02) ** 15 : 6.42 * baseImpact;
+  if (damage <= 0) return 0;
+  const score = (damage + 8.22 * av * ac * pr * ui) * (changed ? 1.08 : 1);
+  return Math.ceil(Math.min(score, 10) * 10 - 1e-8) / 10;
+}
+
+function frameworkAdvisories(raw) {
+  if (!isObj(raw) || (raw.vulns !== undefined && !Array.isArray(raw.vulns))) return null;
+  const records = raw.vulns ?? [];
+  if (records.some((item) => !isStr(item?.id))) return null;
+  const active = records.filter((item) => !item.withdrawn);
+  const critical = active.filter((item) => /^critical$/i.test(item.database_specific?.severity ?? "")
+    || (Array.isArray(item.severity) && item.severity.some((severity) => {
+      const score = frameworkCvss3(severity?.score) ?? Number(severity?.score);
+      return Number.isFinite(score) && score >= 9 && score <= 10;
+    })));
+  return { ids: [...new Set(active.map((item) => item.id))].sort(), critical_ids: [...new Set(critical.map((item) => item.id))].sort(), ...(raw.next_page_token ? { partial: true } : {}) };
+}
+
+async function frameworkSignalsFor(candidate, request, clock, pin) {
+  const { id, type, gh } = candidate;
+  const signals = {}, warnings = [];
+  const put = (name, response, value, reason) => { signals[name] = frameworkSignal(response, value, reason); };
+  const repo = gh && `https://api.github.com/repos/${gh}`;
+  const packageKey = Object.keys(FRAMEWORK_REGISTRIES).find((key) => candidate[key]);
+  const pkg = packageKey && candidate[packageKey];
+  const registry = packageKey && FRAMEWORK_REGISTRIES[packageKey];
+  const github = repo && request(repo, { project: ({ pushed_at, archived, stargazers_count, license }) => ({ pushed_at, archived, stargazers_count, license: license?.spdx_id }) });
+  const release = repo && request(repo + "/releases/latest", { project: ({ tag_name, published_at }) => ({ tag_name, published_at }) });
+  const packageMeta = registry && frameworkRegistrySource(candidate, packageKey, request, pin);
+  const c7 = candidate.c7 && request(`https://context7.com/api/v1/search?query=${encodeURIComponent(candidate.c7)}`, {
+    project: ({ results }) => ({ match: frameworkC7Match(candidate, results) }),
+  });
+  const docs = candidate.llms && request(candidate.llms, { mode: "sample", project: (sample) => ({ available: /^\s*#\s+\S/.test(sample) && !/<(?:!DOCTYPE|html)\b/i.test(sample) }) });
+  const sdk = candidate.sdk === "flutter" && request("https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json", {
+    project: ({ current_release, releases }) => {
+      const stable = releases?.find((item) => item.hash === current_release?.stable && item.channel === "stable");
+      return { version: stable?.version, published: frameworkDate(stable?.release_date) };
+    },
+  });
+  const card = gh && request(`https://api.securityscorecards.dev/projects/github.com/${gh}`, { project: ({ score }) => ({ score: frameworkNumber(score) }) });
+  const eol = candidate.eol && request(`https://endoflife.date/api/${encodeURIComponent(candidate.eol)}.json`);
+  const downloadUrls = {
+    npm: `https://api.npmjs.org/downloads/point/last-week/${pkg}`,
+    pypi: `https://pypistats.org/api/packages/${pkg}/recent`,
+  };
+  const downloads = downloadUrls[packageKey] && request(downloadUrls[packageKey], { project: (data) => ({ weekly: frameworkNumber(data.downloads ?? data.data?.last_week) }) });
+  const [g, rel, p, context7, llms, scorecard, lifecycle, dl, sdkRelease] = await Promise.all([github, release, packageMeta, c7, docs, card, eol, downloads, sdk]);
+
+  if (g) {
+    put("github_pushed", g, frameworkDate(g.data?.pushed_at));
+    put("github_archived", g, g.data?.archived);
+    put("github_stars", g, frameworkNumber(g.data?.stargazers_count));
+    put("github_license", g, frameworkLicense(g.data?.license));
+  }
+  const tag = rel?.data?.tag_name;
+  const releaseTag = frameworkSemver(tag);
+  if (rel) {
+    put("github_release_tag", rel, tag);
+    put("github_released", rel, releaseTag ? frameworkDate(rel.data?.published_at) : null, "noncanonical_tag");
+    if (tag && !releaseTag) warnings.push("noncanonical_github_release_tag");
+  }
+  const publishedVersion = isStr(p?.data?.version) && FRAMEWORK_VERSION.test(p.data.version) ? p.data.version : null;
+  if (publishedVersion && releaseTag && frameworkMajor(publishedVersion) && releaseTag[1] !== frameworkMajor(publishedVersion)) warnings.push("github_registry_major_skew");
+  if (pin && publishedVersion && pin !== publishedVersion) warnings.push("registry_normalized_requested_version");
+  const version = (registry || pin) ? publishedVersion : sdkRelease ? sdkRelease.data?.version ?? null : releaseTag?.[0]?.replace(/^v/, "") ?? null;
+  if (p) {
+    put("version", p, version);
+    put("package_license", p, p.data?.license);
+    put("runtime_requirement", p, p.data?.runtime);
+    put("package_deprecated", p, p.data?.deprecated);
+  } else if (sdkRelease) put("version", sdkRelease, version, pin ? "pin_has_no_registry" : "sdk_version_unavailable");
+  else if (rel) put("version", rel, version, pin ? "pin_has_no_registry" : "noncanonical_tag");
+
+  const deps = registry?.deps && version && request(`https://api.deps.dev/v3/systems/${registry.deps}/packages/${encodeURIComponent(pkg)}/versions/${encodeURIComponent(version)}`, {
+    project: ({ publishedAt, licenses, advisoryKeys, isDeprecated }) => ({
+      published: frameworkDate(publishedAt), license: Array.isArray(licenses) ? frameworkLicense(licenses.join(" AND ")) : null,
+      advisory_ids: Array.isArray(advisoryKeys) ? advisoryKeys.map((advisory) => advisory.id).filter(isStr).sort() : null, deprecated: isDeprecated,
+    }),
+  });
+  const vuln = registry && version && request("https://api.osv.dev/v1/query", {
+    body: { package: { name: pkg, ecosystem: registry.osv }, version },
+    project: (raw) => ({ advisories: frameworkAdvisories(raw) }),
+  });
+  const [dependency, osv] = await Promise.all([deps, vuln]);
+  if (dependency) {
+    put("deps_published", dependency, dependency.data?.published);
+    put("deps_license", dependency, dependency.data?.license);
+    put("deps_advisories", dependency, dependency.data?.advisory_ids);
+    put("deps_deprecated", dependency, dependency.data?.deprecated);
+  }
+  if (osv) put("version_advisories", osv, osv.data?.advisories);
+  if (registry && !version) put("version_advisories", { source: "https://api.osv.dev/v1/query", fetched: null }, null, "version_unavailable");
+  if (p?.data?.published) put("version_published", p, p.data.published);
+  else if (dependency) put("version_published", dependency, dependency.data?.published);
+  else if (p) put("version_published", p, null, "registry_date_unavailable");
+  else if (sdkRelease) put("version_published", sdkRelease, version ? sdkRelease.data?.published : null);
+  else if (rel) put("version_published", rel, releaseTag ? frameworkDate(rel.data?.published_at) : null, "noncanonical_tag");
+  const licenseSource = [signals.package_license, signals.deps_license, signals.github_license]
+    .filter((signal) => signal?.value).sort((a, b) => Number(Boolean(a.stale)) - Number(Boolean(b.stale)))[0]
+    ?? signals.package_license ?? signals.deps_license ?? signals.github_license;
+  if (licenseSource) {
+    signals.license = licenseSource;
+    put("license_class", licenseSource, frameworkLicenseClass(licenseSource.value));
+  }
+  if (dl) put("weekly_downloads", dl, dl.data?.weekly);
+  if (packageKey === "crate") put("crate_recent_downloads", p, p.data?.recent_downloads);
+  if (llms) put("llms_txt", llms, llms.data?.available ?? (llms.reason === "http_404" ? false : null));
+  if (context7) {
+    put("context7", context7, context7.data?.match, "no_matching_results");
+    if (context7.data?.match?.status === "unmatched") warnings.push("context7_repository_unmatched");
+  }
+  if (scorecard) put("openssf_scorecard", scorecard, scorecard.data?.score);
+  if (lifecycle) {
+    const major = frameworkMajor(version);
+    const normalized = isStr(version) ? version.replace(/^v/, "") : "";
+    const cycles = Array.isArray(lifecycle.data) ? lifecycle.data.filter((item) => {
+      const cycle = String(item?.cycle ?? "");
+      return cycle && (normalized === cycle || normalized.startsWith(cycle + "."));
+    }) : [];
+    const row = cycles.sort((a, b) => String(b.cycle).length - String(a.cycle).length)[0];
+    put("end_of_life", lifecycle, typeof row?.eol === "boolean" ? row.eol : frameworkDate(row?.eol), major ? "cycle_not_found" : "version_unavailable");
+  }
+  for (const [name, sourceName] of [["days_since_push", "github_pushed"], ["days_since_release", "version_published"]]) {
+    const source = signals[sourceName];
+    if (source) {
+      const day = frameworkDay(source.value) ? parseDay(source.value).day : null;
+      put(name, source, day !== null && day <= clock.day ? clock.day - day : null, "date_unavailable_or_future");
+    }
+  }
+  return { id, type, default: candidate.default === true, ...(candidate.gh ? { repository: candidate.gh } : {}), ...(registry ? { package: { name: pkg, ecosystem: registry.osv } } : {}), signals, warnings };
+}
+
+async function cmdFrameworkSignals({ dir, flags, args }) {
+  if (flags.offline && flags.refresh) throw fail("BAD_JSON_INPUT", "Use either --offline or --refresh.");
+  const input = (await readPayloadInput(flags)) ?? {};
+  const seeds = frameworkCatalogue().candidates;
+  const candidates = new Map(seeds.map((candidate) => [candidate.id, candidate]));
+  if (input.additions !== undefined && !Array.isArray(input.additions)) throw fail("BAD_JSON_INPUT", "additions must be an array.");
+  for (const entry of input.additions ?? []) {
+    const candidate = frameworkCandidate(entry, candidates);
+    candidates.set(candidate.id, candidate);
+  }
+  const ids = [...new Set([...args.flatMap((arg) => arg.split(",")), ...(Array.isArray(input.ids) ? input.ids : [])])];
+  if (!ids.length || ids.length > 20 || ids.some((id) => !candidates.has(id))) {
+    throw fail("BAD_JSON_INPUT", "Select 1–20 known framework IDs. Use framework candidates to list IDs or --in to add leads.", { unknown_ids: ids.filter((id) => !candidates.has(id)) });
+  }
+  const versions = input.versions ?? {};
+  if (!isObj(versions) || Object.entries(versions).some(([id, version]) => !ids.includes(id) || !isStr(version) || !FRAMEWORK_VERSION.test(version))) {
+    throw fail("BAD_JSON_INPUT", "versions must map a selected candidate ID to its exact package version.");
+  }
+  const output = flags.out && frameworkProjectPath(dir, flags.out);
+  if (output && (output === dir || path.basename(output) === "state.json" || path.basename(output) === "journal.ndjson")) {
+    throw fail("FRAMEWORK_REPORT_PATH_INVALID", "Use a separate path for the signals snapshot.");
+  }
+  const clock = todayInfo();
+  const request = frameworkRequests(frameworkCache(dir, flags), flags, clock);
+  const reports = [];
+  for (let index = 0; index < ids.length; index += 3) {
+    reports.push(...await Promise.all(ids.slice(index, index + 3).map((id) => frameworkSignalsFor(candidates.get(id), request, clock, Object.hasOwn(versions, id) ? versions[id] : undefined))));
+  }
+  const result = { schema_version: 1, as_of: clock.iso, candidates: reports };
+  if (output) {
+    const content = JSON.stringify(result, null, 2) + "\n";
+    writeFileAtomic(output, content, "FRAMEWORK_REPORT_WRITE_FAILED");
+    result.signals_ref = { path: relPath(dir, output), sha256: sha256(content) };
+  }
+  return result;
+}
+
+function cmdFrameworkCandidates({ flags }) {
+  const type = need(flags, "type");
+  const catalogue = frameworkCatalogue();
+  return { type, candidates: catalogue.candidates.filter((candidate) => candidate.profiles.includes(type) && (!flags.slot || candidate.type === flags.slot)) };
+}
+
+const FRAMEWORK_CRITERIA = ["C1", "C2", "C3", "C4", "C5", "C6", "C7"];
+const FRAMEWORK_BASE_WEIGHTS = [25, 15, 15, 15, 10, 10, 10];
+const FRAMEWORK_HARD_RULES = ["license", "platform", "budget", "hosting", "skill", "capability"];
+const FRAMEWORK_ANCHORED = new Set(["C1", "C2", "C5", "C7"]);
+
+function frameworkWeights(persona = {}) {
+  if (!isObj(persona)
+    || (persona.user_skill !== undefined && ![0, 1, 2].includes(persona.user_skill))
+    || (persona.builder !== undefined && !["agent", "user+agent", "team"].includes(persona.builder))
+    || (persona.team_size !== undefined && !(Number.isSafeInteger(persona.team_size) && persona.team_size > 0))
+    || (persona.budget_monthly_usd_max !== undefined && frameworkNumber(persona.budget_monthly_usd_max) === null)
+    || (persona.must_self_host !== undefined && typeof persona.must_self_host !== "boolean")) {
+    throw fail("BAD_JSON_INPUT", "Invalid framework persona. Use the values recorded in S2.");
+  }
+  const weights = Object.fromEntries(FRAMEWORK_CRITERIA.map((criterion, index) => [criterion, FRAMEWORK_BASE_WEIGHTS[index]]));
+  if (persona.user_skill === 0 && persona.builder === "agent") {
+    weights.C2 += 5; weights.C3 += 5; weights.C6 -= 5; weights.C7 -= 5;
+  }
+  if (persona.team_size >= 3) {
+    weights.C6 += 5; weights.C2 -= 5;
+  }
+  if (persona.budget_monthly_usd_max === 0) {
+    weights.C5 += 5; weights.C7 -= 5;
+  }
+  if (persona.must_self_host) {
+    weights.C6 += 5; weights.C4 -= 5;
+  }
+  return weights;
+}
+
+function frameworkSourceValid(source) {
+  if (!isStr(source)) return false;
+  try {
+    const url = new URL(source);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch { return false; }
+}
+
+function frameworkCitationValid(citation, asOf) {
+  return isObj(citation) && frameworkSourceValid(citation.source) && frameworkDay(citation.fetched) && citation.fetched <= asOf;
+}
+
+function frameworkEvidenceValid(evidence, asOf) {
+  return Array.isArray(evidence) && evidence.length > 0
+    && evidence.every((item) => frameworkCitationValid(item, asOf) || (isObj(item) && EVIDENCE_RE.test(item.ref ?? "")));
+}
+
+function frameworkMetrics(candidate, asOf) {
+  const signals = candidate.signals;
+  const valid = (name) => {
+    const item = signals[name];
+    return item && item.value !== null && !item.stale && item.fetched <= asOf && parseDay(asOf).day - parseDay(item.fetched).day < FRAMEWORK_TTL;
+  };
+  const value = (name) => valid(name) ? signals[name].value : undefined;
+  const number = (name) => frameworkNumber(value(name));
+  const cite = (...names) => names.filter(valid).map((name) => ({ signal: name, source: signals[name].source, fetched: signals[name].fetched }));
+  const matrix = {};
+  const docs = value("llms_txt");
+  const context7 = value("context7");
+  if (typeof docs === "boolean" || isObj(context7)) {
+    const strongContext = context7?.status === "matched" && context7.benchmark >= 70 && context7.snippets >= 1000;
+    const available = (docs === true ? 1 : 0) + (strongContext ? 1 : 0);
+    matrix.C3 = { score: available * 2.5, evidence: cite("llms_txt", "context7"), reason: "Verified llms.txt and matching Context7 coverage.", ...(typeof docs !== "boolean" || !isObj(context7) ? { partial: true } : {}) };
+  }
+  const push = number("days_since_push");
+  const released = number("days_since_release");
+  const scorecard = number("openssf_scorecard");
+  if (released !== null || push !== null || scorecard !== null) {
+    const age = released ?? push;
+    const activity = age === null ? null : age <= 90 ? 5 : age <= 180 ? 4 : age <= 365 ? 3 : age <= 730 ? 1 : 0;
+    const score = activity === null ? Math.min(scorecard / 2, 5) : Math.min(activity + (scorecard >= 7 ? 0.5 : 0), 5);
+    matrix.C4 = { score, evidence: cite(released === null ? "days_since_push" : "days_since_release", "openssf_scorecard"), reason: "Release or repository activity, with OpenSSF Scorecard when available.", ...(released === null ? { partial: true } : {}) };
+  }
+  const eol = value("end_of_life");
+  const license = value("license_class");
+  const versionAdvisories = value("version_advisories");
+  const unsupported = eol === true || (frameworkDay(eol) && eol < asOf);
+  const support = unsupported ? 0 : eol === false || frameworkDay(eol) ? 5 : null;
+  const licenseScore = license === "osi-permissive" ? 5 : ["osi-copyleft", "source-available", "proprietary"].includes(license) ? 2.5 : null;
+  if (support !== null || licenseScore !== null) {
+    const known = [support, licenseScore].filter((score) => score !== null);
+    matrix.C6 = { score: known.reduce((sum, score) => sum + score, 0) / known.length, evidence: cite("end_of_life", "license_class"), reason: "Lifecycle of the selected version and license terms.", ...(known.length < 2 ? { partial: true } : {}) };
+  }
+
+  const rejected = [];
+  const review = [];
+  if (value("github_archived") === true) rejected.push({ rule: "archived", evidence: cite("github_archived") });
+  if (value("package_deprecated") === true || value("deps_deprecated") === true) rejected.push({ rule: "deprecated", evidence: cite("package_deprecated", "deps_deprecated") });
+  if (unsupported) rejected.push({ rule: "unsupported_version", evidence: cite("end_of_life") });
+  if (released !== null && push !== null && released > 365 && push > 180) rejected.push({ rule: "inactive", evidence: cite("days_since_release", "days_since_push") });
+  if (Array.isArray(versionAdvisories?.critical_ids) && versionAdvisories.critical_ids.length) rejected.push({ rule: "critical_advisory", evidence: cite("version_advisories") });
+  if (versionAdvisories?.ids?.length || value("deps_advisories")?.length) review.push("review_version_advisories");
+  if (candidate.package && (!isObj(versionAdvisories) || versionAdvisories.partial)) review.push("version_advisory_coverage_incomplete");
+  if (value("version") === undefined) review.push("pin_unverified");
+  if (!license || license === "unknown") review.push("license_unverified");
+  if (["osi-copyleft", "source-available", "proprietary"].includes(license)) review.push("review_license_terms");
+  return { matrix, rejected, review };
+}
+
+function frameworkAssess(candidate, assessment, required, asOf) {
+  if (!isObj(assessment) || (assessment.hard !== undefined && !isObj(assessment.hard)) || (assessment.scores !== undefined && !isObj(assessment.scores))) {
+    throw fail("BAD_JSON_INPUT", `Provide hard checks and anchored scores for ${candidate.id}.`);
+  }
+  const { matrix, rejected, review } = frameworkMetrics(candidate, asOf);
+  const unresolved = [];
+  let margin = null;
+  for (const [rule, check] of Object.entries(assessment.hard ?? {})) {
+    if (!FRAMEWORK_HARD_RULES.includes(rule) || !isObj(check) || ![true, false, null].includes(check.pass)
+      || !isStr(check.reason) || !check.reason.trim()
+      || (check.pass !== null && !frameworkEvidenceValid(check.evidence, asOf))
+      || (check.evidence !== undefined && !frameworkEvidenceValid(check.evidence, asOf))
+      || (check.margin !== undefined && (check.pass !== true || frameworkNumber(check.margin) === null || check.margin > 1))) {
+      throw fail("BAD_JSON_INPUT", `Invalid hard check ${rule} for ${candidate.id}. Cite the decision or dated source.`);
+    }
+    if (check.pass === false) rejected.push({ rule, reason: check.reason, evidence: check.evidence });
+    if (check.pass === null) unresolved.push(rule);
+    if (check.margin !== undefined) margin = Math.min(margin ?? check.margin, check.margin);
+  }
+  for (const rule of required) if (!Object.hasOwn(assessment.hard ?? {}, rule)) unresolved.push(rule);
+  for (const [criterion, entry] of Object.entries(assessment.scores ?? {})) {
+    if (!FRAMEWORK_ANCHORED.has(criterion) || !isObj(entry) || frameworkNumber(entry.score) === null || entry.score > 5
+      || !isStr(entry.reason) || !entry.reason.trim() || !frameworkEvidenceValid(entry.evidence, asOf)) {
+      throw fail("BAD_JSON_INPUT", `Invalid anchored score for ${criterion} on ${candidate.id}.`);
+    }
+    matrix[criterion] = { score: entry.score, evidence: entry.evidence, reason: entry.reason };
+  }
+  const cost = frameworkNumber(assessment.cost_usd_monthly);
+  if (assessment.cost_usd_monthly !== undefined && (cost === null || !frameworkEvidenceValid(assessment.cost_evidence, asOf))) {
+    throw fail("BAD_JSON_INPUT", `Provide evidence for the monthly cost of ${candidate.id}.`);
+  }
+  return { matrix, rejected, unresolved, review, margin, cost };
+}
+
+function frameworkTie(a, b, comparableMargin, comparableCost) {
+  if (comparableMargin && a.margin !== b.margin) return b.margin - a.margin;
+  const buildability = (b.matrix.C3?.score ?? -1) - (a.matrix.C3?.score ?? -1);
+  if (buildability) return buildability;
+  if (comparableCost && a.cost_usd_monthly !== b.cost_usd_monthly) return a.cost_usd_monthly - b.cost_usd_monthly;
+  const health = (b.matrix.C4?.score ?? -1) - (a.matrix.C4?.score ?? -1);
+  return health || Number(b.conservative_default) - Number(a.conservative_default) || cmpStr(a.id, b.id);
+}
+
+async function cmdFrameworkRank({ flags }) {
+  const input = await readPayloadInput(flags);
+  const snapshot = input?.signals;
+  const assessment = input?.assessment;
+  const required = input?.required_hard ?? [];
+  if (snapshot?.schema_version !== 1 || !frameworkDay(snapshot.as_of) || !Array.isArray(snapshot.candidates) || !snapshot.candidates.length
+    || !isObj(assessment) || !Array.isArray(required) || required.some((rule) => !FRAMEWORK_HARD_RULES.includes(rule))) {
+    throw fail("BAD_JSON_INPUT", "Provide the complete signals snapshot, assessment and applicable required_hard checks.");
+  }
+  const weights = frameworkWeights(input.persona);
+  const seen = new Set();
+  const filtered = [], ranked = [];
+  for (const candidate of snapshot.candidates) {
+    if (!isObj(candidate) || !isStr(candidate.id) || !FRAMEWORK_ID.test(candidate.id) || seen.has(candidate.id) || !isObj(candidate.signals)) {
+      throw fail("BAD_JSON_INPUT", "The signals snapshot contains an invalid or duplicate candidate.");
+    }
+    if (Object.values(candidate.signals).some((item) => !isObj(item) || !Object.hasOwn(item, "value")
+      || !frameworkSourceValid(item.source) || (item.fetched !== null && !frameworkCitationValid(item, snapshot.as_of))
+      || (item.fetched === null && (item.value !== null || !isStr(item.reason))))) {
+      throw fail("BAD_JSON_INPUT", `Every observation for ${candidate.id} needs its source and fetch date, or a reason it is unavailable.`);
+    }
+    seen.add(candidate.id);
+    const notes = assessment[candidate.id];
+    const { matrix, rejected, unresolved, review, margin, cost } = frameworkAssess(candidate, notes, required, snapshot.as_of);
+    if (rejected.length) {
+      filtered.push({ id: candidate.id, reasons: rejected });
+      continue;
+    }
+    const missing = FRAMEWORK_CRITERIA.filter((criterion) => !matrix[criterion]);
+    const provisional = FRAMEWORK_CRITERIA.reduce((sum, criterion) => sum + (matrix[criterion]?.score ?? 2.5) * weights[criterion] / 5, 0);
+    ranked.push({
+      id: candidate.id, score: Number(provisional.toFixed(2)), matrix, missing,
+      unresolved_hard: unresolved, review, margin, cost_usd_monthly: cost, conservative_default: candidate.default === true,
+      hard: notes.hard ?? {}, ...(cost === null ? {} : { cost_evidence: notes.cost_evidence }),
+    });
+  }
+  ranked.sort((a, b) => b.score - a.score || cmpStr(a.id, b.id));
+  // Each near-tie cohort is anchored to its highest total to keep ranking transitive.
+  // A tiebreak is meaningful only where comparable margin/cost evidence exists.
+  for (let index = 0; index < ranked.length;) {
+    const first = ranked[index].score;
+    let end = index + 1;
+    while (end < ranked.length && first - ranked[end].score < 5) end++;
+    const group = ranked.slice(index, end);
+    const comparableMargin = group.every((item) => item.margin !== null);
+    const comparableCost = group.every((item) => item.cost_usd_monthly !== null);
+    group.sort((a, b) => frameworkTie(a, b, comparableMargin, comparableCost));
+    ranked.splice(index, group.length, ...group);
+    index = end;
+  }
+  const eligible = ranked.filter((item) => !item.unresolved_hard.length);
+  const asOfDay = parseDay(snapshot.as_of).day;
+  const evidenceDays = snapshot.candidates.flatMap((candidate) => Object.values(candidate.signals)
+    .filter((item) => item.value !== null && !item.stale && asOfDay - parseDay(item.fetched).day < FRAMEWORK_TTL)
+    .map((item) => parseDay(item.fetched).day));
+  filtered.sort((a, b) => cmpStr(a.id, b.id));
+  return {
+    as_of: snapshot.as_of, weights, ranked, filtered,
+    top_three: eligible.slice(0, 3).map((item) => item.id),
+    needs_loop_back: eligible.length < 2,
+    recheck_by: new Date((Math.min(asOfDay, ...evidenceDays) + FRAMEWORK_TTL) * DAY_MS).toISOString().slice(0, 10),
+  };
+}
+
 const COMMANDS = {
   version: {
     help: "Print the script version, schema number, node version and sha256 of this file.", flags: [],
     run: async () => ({ version: VERSION, lvr_schema: LVR_SCHEMA, node: process.versions.node, platform: process.platform, sha256: sha256(fs.readFileSync(SELF)) }),
+  },
+  signals: {
+    help: "Collect cited framework signals. signals ID[,ID...] [--in FILE|-] [--cache DIR] [--offline | --refresh] [--out FILE]",
+    flags: ["in", "cache", "offline", "refresh", "out"], run: cmdFrameworkSignals,
+  },
+  "framework candidates": {
+    help: "List catalogue leads for a confirmed profile. --type PROFILE [--slot TYPE]",
+    flags: ["type", "slot"], run: cmdFrameworkCandidates,
+  },
+  "framework rank": {
+    help: "Rank cited framework candidates with hard checks and persona weights. --in FILE|-",
+    flags: ["in"], run: cmdFrameworkRank,
   },
   "meta events": { help: "List the valid journal event types.", flags: [], run: async () => ({ events: EVENT_TYPES }) },
   "journal append": {
@@ -7576,7 +8239,7 @@ async function main() {
     if (parseInt(process.versions.node, 10) < 22) throw fail("NODE_TOO_OLD", `Node.js 22 or newer is required (this is ${process.versions.node}).`);
     const { pos, flags } = parseArgv(argv);
     pretty = !!flags.pretty;
-    const single = new Set(["version", "replay"]);
+    const single = new Set(["version", "replay", "signals"]);
     let key = pos.length ? (single.has(pos[0]) ? pos[0] : pos.length > 1 ? `${pos[0]} ${pos[1]}` : pos[0]) : "";
     if (!pos.length && flags.version) key = "version";
     if (flags.help || !key) {
@@ -7591,7 +8254,7 @@ async function main() {
     for (const k of Object.keys(flags)) if (!allowed.has(k)) throw fail("UNKNOWN_FLAG", `Unknown flag --${k} for "${key}".`, { flag: k });
     const dir = ["slug make", "slug validate", "probe prompts", "probe grade", "version", "meta events"].includes(key) ? path.resolve(flags.dir || process.cwd()) : resolveDir(flags);
     if (!["slug make", "slug validate", "slug free", "probe prompts", "probe grade", "version", "meta events"].includes(key)) guardNewer(dir);
-    const data = await cmd.run({ dir, flags });
+    const data = await cmd.run({ dir, flags, args: pos.slice(1) });
     emit({ ok: true, cmd: key, ...data }, pretty);
   } catch (e) {
     const known = e instanceof LvrError;
