@@ -6,6 +6,7 @@ See [the section booster map](05-boosters.md) for the installed sources and use 
 
 ## Interview mechanics (all question Sections)
 
+- Track each exit fact with [journal-backed interview coverage](15-adaptive-interview.md). Confirm facts already supplied together, ask focused follow-ups for missing evidence, and show progress.
 - **Micro-batch adaptive**: 1–3 questions per turn. The Conductor chooses the next batch from the previous answers; batches never exceed 3.
 - Every question is phrased in **plain language oriented to the outcome** ("Do you already pay for a server somewhere?" not "Do you have VPS infrastructure?"), spoken in **User Language**, with a one-line reason why it matters.
 - Controls always visible: **skip** (recorded, does not block), **cukup/that's enough for this Section** (jump to exit criteria check).

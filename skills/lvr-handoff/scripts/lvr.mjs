@@ -8054,6 +8054,68 @@ async function cmdAiEval({ dir, flags }) {
   return { spec, passed, total: cases.length, clean: passed === cases.length, cases: report };
 }
 
+// ---------------------------------------------------------------- 11f. interview progress
+function interviewEvidence(state, journal, section) {
+  const limit = secNum(section);
+  const refs = new Map();
+  for (const [id, record] of Object.entries(state.pipeline.sections)) {
+    if (!SEC_RE.test(id) || secNum(id) > limit) continue;
+    for (const [answerId, answer] of Object.entries(record.answers ?? {})) {
+      if (!answer.skipped && isStr(answer.a) && answer.a.trim()) refs.set(answerId, "known");
+    }
+  }
+  for (const decision of state.decisions) {
+    if (secNum(decision.section) <= limit && nonEmpty(decision.summary)) {
+      refs.set(decision.id, decision.status === "user_confirmed" ? "known" : "assumption");
+    }
+  }
+  for (const event of journal.events) {
+    if (!RESEARCH_TYPES.includes(event.type)) continue;
+    const p = event.payload;
+    if (p.section && secNum(p.section) > limit) continue;
+    if (p.outcome === "found" && p.sources?.length && p.purpose !== "web_check") {
+      refs.set(p.id, "known");
+      for (const id of p.findings ?? []) if (/^U-\d{2,}$/.test(id)) refs.set(id, "known");
+    } else if (p.outcome === "failed") {
+      for (const id of p.findings ?? []) refs.delete(id);
+    }
+  }
+  return refs;
+}
+
+async function cmdInterviewProgress({ dir, flags }) {
+  const loaded = loadState(dir);
+  if (loaded.kind !== "valid") throw fail("STATE_INVALID", "Interview progress needs a readable current project state.");
+  const section = flags.section ?? loaded.state.pipeline.current_section;
+  if (!SECTIONS.includes(section) || section === "S10") throw invalid("section", "S0..S9");
+  const input = await readPayloadInput(flags);
+  const required = input?.required;
+  const proposed = input?.proposed ?? {};
+  if (!Array.isArray(required) || !required.length || required.some((key) => !isStr(key) || !FACT_KEY_RE.test(key))
+    || new Set(required).size !== required.length || !isObj(proposed)
+    || Object.entries(proposed).some(([key, ids]) => !required.includes(key) || !Array.isArray(ids) || ids.some((id) => !isStr(id) || !EVIDENCE_RE.test(id)))) {
+    throw fail("BAD_JSON_INPUT", "Provide unique required fact keys and optional proposed evidence IDs for those keys.");
+  }
+  const journal = readJournal(dir);
+  if (!journal.healthy) throw fail("JOURNAL_UNHEALTHY", "Interview progress needs a readable project journal.");
+  const refs = interviewEvidence(loaded.state, journal, section);
+  const stored = loaded.state.pipeline.sections[section]?.coverage ?? {};
+  const facts = required.map((key) => {
+    const evidence = Object.hasOwn(stored, key) ? stored[key] : [];
+    const unavailable = evidence.filter((id) => !refs.has(id));
+    if (evidence.length && !unavailable.length) {
+      return { key, status: evidence.some((id) => refs.get(id) === "known") ? "known" : "assumption", evidence };
+    }
+    const preview = Object.hasOwn(proposed, key) ? proposed[key] : [];
+    const unknown = [...new Set([...unavailable, ...preview.filter((id) => refs.get(id) !== "known")])];
+    if (preview.length && preview.every((id) => refs.get(id) === "known")) return { key, status: "confirm", evidence: preview };
+    return { key, status: "missing", ...(unknown.length ? { unavailable: unknown } : {}) };
+  });
+  const count = (status) => facts.filter((entry) => entry.status === status).length;
+  const known = count("known");
+  return { section, known, total: facts.length, confirmation: count("confirm"), assumptions: count("assumption"), missing: count("missing"), progress: `${section}: ${known} of ${facts.length} facts known`, facts };
+}
+
 const COMMANDS = {
   version: {
     help: "Print the script version, schema number, node version and sha256 of this file.", flags: [],
@@ -8078,6 +8140,10 @@ const COMMANDS = {
   "ai eval": {
     help: "Check recorded AI eval responses against the specification. --in FILE|- [--file SPEC/ai.md]",
     flags: ["in", "file"], run: cmdAiEval,
+  },
+  "interview progress": {
+    help: "Report known, proposed, assumed and missing interview facts. --in FILE|- [--section S0..S9]",
+    flags: ["in", "section"], run: cmdInterviewProgress,
   },
   "meta events": { help: "List the valid journal event types.", flags: [], run: async () => ({ events: EVENT_TYPES }) },
   "journal append": {

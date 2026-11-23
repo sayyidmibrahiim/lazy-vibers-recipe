@@ -6,7 +6,7 @@ Turn a raw idea into a verified Blueprint Bundle that any AI agent can build.
 
 This repo holds two related things.
 
-The LVR skills are portable agent skills for the LVR pipeline. The pipeline interviews a non-technical owner through sections S0 to S9. The result is a verified Blueprint Bundle of 20 files that any AI agent can build from.
+The LVR skills turn an idea into a build plan through a guided interview. Start with as much detail as you have. The interview confirms details you already gave in one batch and asks focused follow-ups where a decision still needs evidence. It shows what is known and records assumptions you can review. The Blueprint Bundle gives a builder the base plan and the extra files your product needs.
 
 The web MVP is a local Next.js app. You write an idea and answer four interview questions. The app then generates five markdown documents: PRD, requirements, data model, API contract, and architecture. Generation runs through an OpenAI-compatible LLM proxy. The app is single-user and has no auth.
 

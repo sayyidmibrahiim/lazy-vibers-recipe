@@ -42,3 +42,6 @@
 2026-11-23T02:21:08Z | codex/gpt-6 | task 15 | claimed and identified workflow and retrieval fixtures | next: wire conditional AI specification and a read-only evaluation route
 2026-11-23T02:24:40Z | codex/gpt-6 | task 15 | AI module routing, local eval commands and two spec rehearsals implemented | next: same-context admission, negative eval and shared regression checks
 2026-11-23T02:27:47Z | codex/gpt-6 | task 15 | both ten-case local rehearsals, flags, grading failures and shared regressions verified; closed | next: ticket 16 adaptive interview depth and evidence progress
+2026-11-23T02:28:07Z | codex/gpt-6 | task 16 | claimed and traced existing journal-backed coverage slots | next: add evidence progress, confirmation batching and rich/thin rehearsal
+2026-11-23T02:35:07Z | codex/gpt-6 | task 16 | evidence crosscheck, progress, user pacing and rich/thin bundle rehearsal implemented | next: finish same-context shared verification
+2026-11-23T02:37:42Z | codex/gpt-6 | task 16 | rich/thin, assumption audit, state replay and all regressions passed; closed | next: ticket 17 planning specialist routing and local lifecycle
