@@ -17,7 +17,7 @@ The six core entries are PM skills, grilling, planning-and-task-breakdown, ponyt
 | S0 | grilling for targeted follow-ups | | |
 | S1 | grilling for ready decisions | define-problem-statement, mom-test | define-jtbd-canvas |
 | S2 | grilling for budget and device questions | | Internal cost leads, then verify every actual price live |
-| S3 | grilling for unresolved data and privacy choices | | Domain Brief sources |
+| S3 | grilling for unresolved data and privacy choices | threat-modeling when public forms, stored data or a regulated domain apply | Domain Brief sources |
 | S4 | grilling for the feature capture rounds | mom-test, deliver-edge-cases, user-stories, deliver-acceptance-criteria. For UI ideas, use applicable impeccable, emil-design-eng, antislop-human, and antislop-layoutmobile guidance for layout, motion and accessibility. | |
 | S5 | discover-competitive-analysis for the scan | | |
 | S6 | | architecture-designer, threat-modeling when applicable | cost-estimator for the checklist and cost model. Refresh every price before using it. |

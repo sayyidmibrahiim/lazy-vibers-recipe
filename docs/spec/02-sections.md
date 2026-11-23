@@ -46,6 +46,7 @@ The plan merges confirmed profiles in ID order. It deduplicates files and identi
 
 ## S3 — Data & privasi
 
+- Run the [abuse and access checks](12-plan-quality.md#s3--abuse-and-access) for S3. Record accountless forms and the rate-limit and human-verification decisions.
 - Purpose: login? personal data? payments/money? third-party services? where data may legally live.
 - Booster: grilling for ready decisions. The Domain Brief's regulation items for the user's market feed the questions and decisions (a legal decision cites its `U-NN` item).
 - Output: `S3-data.md`; feeds `SPEC/data-model.md` (auth, PII), `SPEC/api.md`, `SECURITY.md`.
@@ -57,6 +58,7 @@ The plan merges confirmed profiles in ID order. It deduplicates files and identi
 - Booster: load grilling. Apply `mom-test`, `deliver-edge-cases`, `user-stories`, and `deliver-acceptance-criteria`. Apply applicable interface aids.
 - Mechanics: per feature — name, who uses it, step-by-step happy path (the "klik tombol ini → selesai" script), edge cases the user cares about. Features get IDs `F-01…`.
 - Output: `S4-fitur.md`; feeds `SPEC/requirements.md` + `USER_FLOWS.md`.
+- Every captured feature names abandonment, invalid input, concurrency/retry and expiry/hold outcomes, using deliver-edge-cases and the [internal checks](12-plan-quality.md#s4--unhappy-paths).
 - Post-lock additions: recorded by `/lvr-add-feature` in `S4-additions.md` (append-only); S4 itself is never re-run.
 - Exit: user explicitly says enough; feature list has no "and whatever else" placeholders.
 
@@ -66,6 +68,7 @@ The plan merges confirmed profiles in ID order. It deduplicates files and identi
 - Booster: load `discover-competitive-analysis` for the scan. Web search and fetch remain required (spec 07 §1).
 - Rules: every claim carries a cite tag (spec 07 §3) and is journaled (`research_logged`); key facts need two independent sources or one primary source; recommendations cite the research they rest on. Research uses English sources plus primary local sources for the user's market (regulators, local price pages); results summarized in English. `cite check` on the record is clean before S5 closes.
 - After the competitor scan, run [S5b framework discovery](11-framework-discovery.md) when the product needs a stack choice. Store the confirmed choice and evidence in the S5 decision.
+- Carry the S2 volume basis into S5 and model typical/busy-month variable costs, including model tokens, following [the quality checks](12-plan-quality.md).
 - Output: `S5-research.md`; becomes `RESEARCH.md`.
 - Exit: ≥2 eligible stack options with trade-offs and a recorded choice, or a documented reason to skip discovery. Include the cost table.
 
@@ -74,6 +77,7 @@ The plan merges confirmed profiles in ID order. It deduplicates files and identi
 - Purpose: confront research findings with answers; open conflicts, risks, cost surprises.
 - Booster: apply `architecture-designer` and applicable `threat-modeling`. Use `cost-estimator` as a reference and re-verify prices.
 - Mechanics: each finding → `risk` (blocks) or `note` (informational). An unverified key fact that a decision or the plan rests on is a `risk` unless the user confirms it. Any risk → **loop-back is mandatory, not optional**: open `loop_backs[]` entry, jump to the affected earlier Section (S1–S4), ask targeted questions, close the entry on resolution, return to S6. Repeat until no blocking risks.
+- Always record a finance, health, legal and minors screen. Research applicable rules and route unknown requirements through the feasibility loop.
 - Output: risk list appended to `S5-research.md`; loop-backs in state.
 - Exit: zero blocking risks (or risk consciously accepted by user → becomes a decision with rationale).
 

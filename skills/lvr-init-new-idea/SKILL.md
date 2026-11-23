@@ -311,6 +311,8 @@ Purpose: what the user already has and can pay — devices, accounts, hosting, b
 
 **First batch** — bank questions 1 → 2 → 3 (devices, existing payments, ceiling), trimmed to the tier limit (conventions §7).
 
+**Usage and costs** — reuse the volume in S1 or ask for a normal and a busy month within the batch limit. Keep units and sources. Apply the [usage-cost check](references/bundle/plan-quality.md#s2-and-s5--costs-at-different-usage-levels) and carry the figures to S5.
+
 **Hard rule (conventions §5)** — before closing S2, cross-check the S1 platform shape against the fact-sheet: any paid account the chosen platform needs and the user lacks (e.g. iOS → Apple Developer USD 99/yr) is surfaced NOW with the verified price and a proceed/defer choice — never deferred to S5.
 
 **Decision surfaces**:
@@ -324,6 +326,7 @@ Purpose: what the user already has and can pay — devices, accounts, hosting, b
 
 - [ ] Budget ceiling recorded (a number, or an explicit "nothing").
 - [ ] Deployment surface and devices/accounts list recorded.
+- [ ] Typical and busy-month activity recorded with units and evidence, or remaining unknowns identified.
 - [ ] Every paid account the platform needs surfaced with a verified price and a recorded proceed/defer answer.
 
 **Section Record** — `S2-kondisi.md` on the shared S1 skeleton, plus a `## Prices quoted` table (`| Item | Price quoted | Type | Source |`): one row per price shown to the user, its Source cell a cite group or an `[unverified: price · RQ-NNN]` marker. S5, S9 and the bundle copy these tags; `cite check` checks them.
@@ -337,6 +340,8 @@ Purpose: login, personal data, payments, third-party services, where data may le
 **Question strategy** — establish in this order: login yes/no (the biggest fork); if login, reuse-existing-account vs new username+password; the personal-data inventory; which of it is sensitive; money inside the app; then third-party connections, where data may legally live, offline behavior, erasure, who sees whose data, and what must survive a loss.
 
 **First batch** — bank questions 1 → 3 → 5 (login, data inventory, money) — the three exit-criteria questions; trim to the tier limit (conventions §7).
+
+**Abuse and access** — follow the [S3 checklist](references/bundle/plan-quality.md#s3--abuse-and-access). Record `product.flags.public_form` from the answer about accountless submissions. Plan and apply `threat-modeling` when applicable, with the internal checklist as fallback. Record rate-limit and CAPTCHA decisions for each public form, including recovery and a verification check.
 
 **Decision surfaces**:
 
@@ -354,8 +359,9 @@ Purpose: login, personal data, payments, third-party services, where data may le
 - [ ] Auth yes/no recorded (and method when yes).
 - [ ] Payments yes/no recorded.
 - [ ] The privacy-policy decision recorded when any of its triggers holds.
+- [ ] Abuse outcomes, controls and verification recorded. Public forms include rate-limit and CAPTCHA decisions.
 
-**Section Record** — `S3-data.md` on the shared S1 skeleton.
+**Section Record** — `S3-data.md` on the shared S1 skeleton, plus `## Abuse and access` with form evidence, risk scenarios, controls and decision IDs.
 
 ### S4 — Features
 
@@ -363,7 +369,7 @@ Purpose: feature expectations captured in detail, iteratively, until the user sa
 
 **Booster** — load grilling at the start of the capture rounds. Apply `mom-test`, `deliver-edge-cases`, `user-stories` and `deliver-acceptance-criteria` where relevant. Use the UI aids from the section plan for interface ideas. Keep the bank and surface degraded mode when using it alone.
 
-**Capture format (F-01…)** — every feature is captured per the format in `references/sections/S4-features.md`: plain-words name, one named kind of user, a click-by-click happy-path script ("posting ke IG" style — a stranger holding the phone could follow it without asking anything), priority must/should/could confirmed aloud, and the failure cases the user cares about. When capturing each F-NN, also coin an English display name — the record keeps the user's verbatim words; the English name is what SPEC/requirements.md, USER_FLOWS.md, and blueprint.json use. A name without a script is a placeholder, not a feature.
+**Capture format (F-01…)** — every feature is captured per the format in `references/sections/S4-features.md`: plain-words name, one named kind of user, a click-by-click happy-path script ("posting ke IG" style — a stranger holding the phone could follow it without asking anything), priority must/should/could confirmed aloud, and the failure cases the user cares about. Apply `deliver-edge-cases` to every F-NN and record the [four unhappy paths](references/bundle/plan-quality.md#s4--unhappy-paths), including recovery and a test or a reason a path cannot occur. When capturing each F-NN, also coin an English display name — the record keeps the user's verbatim words; the English name is what SPEC/requirements.md, USER_FLOWS.md, and blueprint.json use. A name without a script is a placeholder, not a feature.
 
 **Question strategy** — a capture loop: the one thing (the F-01 seed); walk it through like holding the phone — that IS the script; the next thing, one feature per script, never a blob; per feature: who taps it, what "done" leaves behind, what would annoy them; repair weak scripts by copying the old workaround; the three-that-matter round assigns priorities; the first-run emptiness question surfaces empty-state decisions.
 
@@ -376,12 +382,13 @@ Purpose: feature expectations captured in detail, iteratively, until the user sa
 - A feature named as a blob and split into parts → the split recorded `designer_filled` until the user corrects it.
 - Features left unmentioned after the three-that-matter round default to `could`, said visibly; the user's acceptance of that default is one `user_confirmed` decision.
 
-**The "enough" protocol** — on "cukup"/enough: stop capturing (no "are you sure?"); scan every F-NN for a complete script and a priority, and scan the F-NN feature blocks (name, who, priority, happy path) for placeholder language ("and whatever else", "etc."); then one final complete-or-drop batch covering all failing features — for each, fix the failure (finish its script in one last walk-through, or confirm the missing priority aloud: must/should/could) or drop it into a "named but not captured" list (recorded, never counted as a feature); refusing the batch → exit criterion unmet → Section `blocked` with the failing features named. Full protocol: `references/sections/S4-features.md`.
+**The "enough" protocol** — on "cukup"/enough: stop capturing (no "are you sure?"); draft routine unhappy-path defaults for correction and scan every F-NN for a complete script, a priority and the four unhappy paths, and scan the F-NN feature blocks (name, who, priority, happy path) for placeholder language ("and whatever else", "etc."); then one final complete-or-drop batch covering all failing features — for each, fix the failure (finish its script in one last walk-through, confirm the missing priority aloud, or resolve the behavior that blocks an unhappy path) or drop it into a "named but not captured" list (recorded, never counted as a feature); refusing the batch → exit criterion unmet → Section `blocked` with the failing features named. Full protocol: `references/sections/S4-features.md`.
 
 **Exit criteria** (engine step 5; cite the satisfying answer id or decision id):
 
 - [ ] The user explicitly said enough (the control, or the natural end of the capture loop).
 - [ ] Every captured F-NN has a complete click-by-click happy path and a priority.
+- [ ] Every F-NN covers abandonment, invalid input, concurrency/retry, and expiry/hold. Each path has observable recovery or a reason it is inapplicable.
 - [ ] No "and whatever else"/"etc." placeholders in the F-NN feature blocks (name, who, priority, happy path); verbatim answer quotes keep the user's own words, "dll" included.
 
 **Section Record** — `S4-fitur.md` on the shared S1 skeleton, plus the feature list: each F-NN in the capture format, verbatim, as its own subsection before the exit criteria.
@@ -399,7 +406,7 @@ Purpose: competitor scan, stack candidates with reasons, cost table, regional av
 1. **Competitor scan** — ≥3 direct or adjacent products: what they do, pricing model, one lesson for this idea.
 2. **Stack options / S5b** — run [framework discovery](references/sections/S5b-framework.md) for a new stack or a compatible addition when needed. Shortlist comparable options for the confirmed profiles, apply hard checks, rank dated signals and document the trade-offs. A confirmed existing stack or a project without a framework choice can skip discovery with a recorded reason.
 3. **Recommended stack** — present one recommendation and its strongest downside with other eligible S5b options. Tie the reasons to S1–S4. Let the user choose, then record the selection and its recheck date.
-4. **Cost table** — build on the S2 fact-sheet; add regional payment-gateway availability for the user's market (S2 country + S3 payments answers) and every new recurring cost the recommended stack introduces.
+4. **Cost table** — build on the S2 fact-sheet; add regional payment-gateway availability for the user's market (S2 country + S3 payments answers) and every new recurring cost the recommended stack introduces. Apply the [usage-cost check](references/bundle/plan-quality.md#s2-and-s5--costs-at-different-usage-levels) to fixed fees, variable units and busy-month totals. Cover input and output tokens separately when applicable.
 
 **Tier chunking (conventions §7)** — T1: full queries per output. T2: split each output into sub-queries; append each sub-query's findings to the record before the next one starts. T3: one sub-topic per turn, append every step. Never hold the whole research in context — the file on disk is the memory (principle 13); `/lvr-continue` resumes from the last complete sub-query.
 
@@ -417,7 +424,7 @@ Purpose: competitor scan, stack candidates with reasons, cost table, regional av
 - [ ] Competitor scan covers ≥3 direct/adjacent products with what they do and a pricing model.
 - [ ] ≥2 eligible stack options with trade-offs and a recorded S5b choice, or a documented reason discovery was skipped.
 - [ ] One recommended stack with reasons tied to the S1–S4 answers and S2 resources.
-- [ ] Cost table present, built on the S2 fact-sheet, with regional payment-gateway availability for the user's market.
+- [ ] Cost table present, built on the S2 fact-sheet, with regional payment-gateway availability, dated rates, typical and busy usage, and per-user cost when measurable.
 - [ ] Every claim carries a cite group or a logged `[unverified: …]` marker; `LVR cite check --file .lvr/docs/sections/S5-research.md` is clean.
 
 **Section Record** — `PROJECT_DIR/.lvr/docs/sections/S5-research.md`:
@@ -463,7 +470,7 @@ Purpose: confront the S5 findings with the recorded answers; surface conflicts, 
 
 Every finding carries one line of evidence: the record row or answer id it comes from. `note` → recorded, done. `blocking` → the loop-back below is mandatory, never optional (conventions §5 hard rule).
 
-**First batch** — the classification walk over the S5 findings; no user turn is needed until a risk needs their call.
+**First batch** — start with the mandatory [regulated-domain screen](references/bundle/plan-quality.md#s6--regulated-domain) for finance, health, legal services and minors, then classify the other S5 findings. Record the supporting evidence for each. Use the same loop-back for material unknowns. No user turn is needed until a risk needs their call.
 
 **The loop-back (every blocking risk)**:
 
@@ -489,6 +496,7 @@ Every finding carries one line of evidence: the record row or answer id it comes
 **Exit criteria** (engine step 5; cite the risk line or decision id):
 
 - [ ] Every S5 finding classified `blocking` or `note` with one line of evidence.
+- [ ] Regulated-domain screen recorded for finance, health, legal services and minors. Open requirements have an owning section or role.
 - [ ] Zero open blocking risks — each closed via a loop-back (`resolved_at` set) or accepted as a `user_confirmed` decision.
 - [ ] The risks section is appended to `S5-research.md` with every outcome recorded.
 
@@ -577,6 +585,8 @@ Script: close S8 with `LVR journal append --type section_done --payload '{"secti
 
 **M0 — the walking skeleton (generic)** — the thinnest slice that runs end to end on the real stack: deployed to the S2 deploy target (the future HANDOVER target), real at every layer (real stack, real data store, nothing stubbed end to end), carrying exactly one real user task (the S1 day-one answer; F-01's happy path when that was skipped) from first tap to visible result, provable by one command or scripted check.
 
+**Quality and operations** — apply the [S8 checks](references/bundle/plan-quality.md#s8-and-s9--measurable-quality-and-operations). Assign every applicable quality or ops target to a milestone with a named owner and observable verification. Include time zones, support matrix, accessibility, error tracking, availability, owner alerts and a restore drill.
+
 **Work strategy** (templates and rules in the bank):
 
 1. Seed M0 from the walking-skeleton definition.
@@ -633,6 +643,8 @@ Purpose: compile the Section Records + `decisions[]` + `milestones[]` into the B
 
 **Profile files** — read the frozen `profile_files` from `LVR profile plan`. Draft each additional file from the relevant profile questions and records. Keep the previously closed bundle outputs and existing IDs. The blueprint generator copies the extra paths into `profile_files` when the list is nonempty. For a skill/plugin or agent, use [the personal workflow templates](references/bundle/workflow.md) for the draft skill, local profile schema, tools, evaluations and install plan. Carry each destination's exact data boundary into the plan.
 
+**Quality, operations and data sources** — use [the S9 checklist](references/bundle/plan-quality.md#s9--data-sources-and-integrations). Carry S4 failures into requirements and flows, S3 abuse controls and S6 conclusions into SECURITY.md, and S2/S5 cost evidence into RESEARCH.md and OVERVIEW.md. Place measurable ops and restore steps in MILESTONES.md, VERIFICATION.md and HANDOVER.md. Add the named data sources and integrations section to SPEC/architecture.md, with permissions, refresh cadence, stale-data handling and source evidence.
+
 **Stored data output** — when `stores_data` is true, compile the chosen storage and schema into SPEC/data-model.md and its access and privacy checks into SECURITY.md. Use [the data module](references/bundle/data-module.md). The schema's Mermaid ERD is the diagram exception.
 
 **Work material (engine step 2)** — at Section start load: every Section Record in `.lvr/docs/sections/` (S0–S8), `state.json` (for `decisions[]`, `milestones[]`, `boosters.core`), and `references/bundle/templates.md`. T3: never the transcript — each turn reloads only the templates plus the records that feed the one file being compiled.
@@ -684,6 +696,7 @@ Script: a confirmed display-name change is `LVR decision record --event doc_gene
 
 - [ ] Every base Markdown file and frozen profile addition exists and is non-empty. Apply the documented bundle format to each file.
 - [ ] The cross-check list above passes on every item.
+- [ ] Feature failure paths and abuse controls have verification steps. The bundle records its quality and operations targets, and a named data sources and integrations section.
 - [ ] blueprint.json matches `state.json` and follows the schema in `references/bundle/templates.md` §19.
 - [ ] CLAUDE.md + GEMINI.md stubs written; AGENTS.md follows the agents.md spec.
 - [ ] Every degraded booster and blocked-then-resolved Section appears in OVERVIEW.md → Limitations.

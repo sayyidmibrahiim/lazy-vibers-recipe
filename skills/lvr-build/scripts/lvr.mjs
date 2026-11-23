@@ -45,7 +45,7 @@ const TIERS = ["T1", "T2", "T3"];
 // v2 enums
 const PRODUCT_STATUS = ["unasked", "pending", "decided"];
 const PRODUCT_SOURCE = ["user", "ai_recommended"];
-const PRODUCT_FLAGS = ["stores_data", "has_ui", "has_llm", "regulated_domain"];
+const PRODUCT_FLAGS = ["stores_data", "has_ui", "has_llm", "regulated_domain", "public_form"];
 const PRODUCT_TYPE_RE = /^[a-z][a-z0-9-]{0,31}$/;
 const SESSION_END = ["done", "paused", "context_guard", "error", "cancelled"];
 const BOOSTER_KINDS = ["skill", "mcp", "agent"];

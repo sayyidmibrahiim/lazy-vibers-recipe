@@ -347,6 +347,7 @@
       "license_verified": "2026-11-23",
       "tier": "conditional",
       "sections": [
+        "S3",
         "S6",
         "S9"
       ],
@@ -360,6 +361,11 @@
           {
             "flags": {
               "regulated_domain": true
+            }
+          },
+          {
+            "flags": {
+              "public_form": true
             }
           }
         ]

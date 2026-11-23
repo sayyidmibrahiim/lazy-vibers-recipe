@@ -30,7 +30,7 @@ Everything else — accounts, secondary features, polish — is M1 and later.
 
 Every criterion is machine-checkable — a command with expected output (`curl -s https://<address>/health` prints `ok`), a scripted step, or a visual check phrased as an observable fact plus how to look ("after reload, the list shows the saved item"). Banned: "looks good", "works well", "is nice" (conventions §5 hard rule).
 
-Derive criteria from the F-NN happy paths: the "Done:" step of each script is a criterion waiting for its check. Every milestone's Verification section names exact commands, expected outputs, and what to look at — S9 compiles them into VERIFICATION.md.
+Assign each [quality and operations target](../bundle/plan-quality.md#s8-and-s9--measurable-quality-and-operations) to a milestone with its owner and proof. Derive criteria from the F-NN happy and unhappy paths: the "Done:" step of each script is a criterion waiting for its check. Every milestone's Verification section names exact commands, expected outputs, and what to look at — S9 compiles them into VERIFICATION.md.
 
 ## Sizing and splitting
 

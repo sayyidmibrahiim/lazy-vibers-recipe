@@ -38,6 +38,10 @@ After the scope is locked, `profile plan --write` saves the selected types and t
 
 [Personal workflow plans](09-workflows.md) define the draft skill, local profile schema, tools, evaluations and install plan for the skill and agent profiles.
 
+## Quality and integration evidence
+
+Compile the [quality checks](12-plan-quality.md) into the existing bundle. Requirements and flows preserve feature recovery paths. SECURITY.md records abuse controls and regulated-domain findings. SPEC/architecture.md carries data sources and integrations, permission and refresh details, and quality targets. MILESTONES.md and VERIFICATION.md carry measurable operations checks. HANDOVER.md records the owner alert and restore procedures. RESEARCH.md and OVERVIEW.md carry volume-based costs.
+
 ## Compilation order (S9)
 
 1. Draft each file from section records + `decisions[]` + `milestones[]`.

@@ -19,7 +19,11 @@ Every feature is captured in this exact shape, one per feature, ids `F-01, F-02,
   4. … continue until …
   5. Done: <what the person ends up with — a screen, a saved record, a sent message>.
 - **Priority:** must | should | could  (the user's call, confirmed aloud)
-- **When it goes wrong (what the user cares about):** <e.g. "no internet — don't lose the photo">
+- **Unhappy paths** — apply deliver-edge-cases, with a reason for each inapplicable case.
+  - Abandon/interruption — <trigger, visible recovery, saved state, check>
+  - Invalid input — <trigger, error, retry, check>
+  - Concurrency/retry — <race or duplicate action, winner/recovery, check>
+  - Expiry/hold — <when and whose clock, stale action, released state, check>
 ```
 
 The script standard: someone holding the phone could follow it without asking you anything. "Posting ke IG" style — every step is a tap, a field, or what appears next. If a step cannot be phrased that way, the feature is not understood yet; ask one more question.
@@ -85,8 +89,8 @@ The script standard: someone holding the phone could follow it without asking yo
 The user may say "cukup" / "that's enough" at any moment. The control never blocks; this is what running it means:
 
 1. Stop capturing immediately. Do not ask "are you sure?" — one acknowledgment, then the exit check.
-2. Scan every captured F-NN against two requirements: it has a complete click-by-click happy path, and it has a priority. Also scan the F-NN feature blocks (name, who, priority, happy path) for placeholder language: "and whatever else", "etc.", "…", "some kind of report". Verbatim answer quotes may keep the user's own words, "dll" included.
-3. Complete-or-drop, one final batch: for each failing feature — missing script or missing priority — offer exactly two options: fix the failure (finish its script in one last walk-through, or confirm the missing priority aloud: must/should/could), or drop it into a "named but not captured" list in the record (recorded, never deleted, never counted as a feature). No third "leave it vague" option.
+2. Scan every captured F-NN for a complete click-by-click happy path, a priority and the four unhappy paths. Draft routine recovery defaults for correction before the final batch. Also scan the F-NN feature blocks (name, who, priority, happy path) for placeholder language: "and whatever else", "etc.", "…", "some kind of report". Verbatim answer quotes may keep the user's own words, "dll" included.
+3. Complete-or-drop, one final batch: for each failing feature offer exactly two options: fix the missing script, missing priority or unresolved unhappy-path behavior, or drop it into a "named but not captured" list in the record (recorded, never deleted, never counted as a feature). No third "leave it vague" option.
 4. If the user refuses even that batch, the exit criterion "no placeholders, every feature has a happy path" is unmet → the Section is marked `blocked` per the engine's exit-criteria step, with the failing features named in the record. Never advance with a vague feature pretending to be done.
 5. Run the full exit-criteria check (the S4 procedure block) and report the results before closing.
 

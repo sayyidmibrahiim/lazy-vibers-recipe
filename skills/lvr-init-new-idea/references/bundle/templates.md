@@ -43,7 +43,7 @@ Headings, in order: `# Requirements` · one block per F-NN:
   - **Given** <state> **when** <action> **then** <result>
 ```
 
-Fill: one block per F-NN from the S4 record — every captured feature gets a block; parked features keep the same block with Status `parked` and a one-line behavior. Criteria in Gherkin where natural.
+Fill: one block per F-NN from the S4 record — every captured feature gets a block; parked features keep the same block with Status `parked` and a one-line behavior. Criteria in Gherkin where natural. Cover the applicable S4 unhappy paths and preserve reasons for inapplicable cases.
 
 ## 6. SPEC/data-model.md
 Headings, in order: `# Data model` · `## Entities` (one `### <Entity>` subsection per entity, each with a fields table: field · type · constraints · notes) · `## Relations` (one line per relation: A 1—N B + why) · `## Indexes` (one line per index: entity.field + why) · `## Validation rules` (one line per rule) · `## Sample JSON` (one realistic sample object for the main entity)
@@ -56,9 +56,9 @@ Headings, in order: `# API` · `## Conventions` · `## Endpoints` · `## Critica
 Fill: Conventions — base URL, auth, versioning, error envelope, one line each; auth matches the S3 decision id. Endpoints — table: method · path · purpose · auth, derived from the F-NN happy paths and the data model. Critical endpoints — per endpoint: request sample + `200` response sample. Status codes — which code is returned when. Error format — the envelope every endpoint reuses.
 
 ## 8. SPEC/architecture.md
-Headings, in order: `# Architecture` · `## Stack` · `## Components` · `## Data flow` · `## Folder structure` · `## Local run` · `## Failure points`
+Headings, in order: `# Architecture` · `## Stack` · `## Components` · `## Data flow` · `## Folder structure` · `## Local run` · `## Failure points` · `## Data sources and integrations` · `## Quality targets`
 
-Fill: Stack — primary stack + components; every reason cites its DECISIONS.md row. Components — one line per component. Data flow — ASCII diagram in a fenced `text` block: user → UI → API → data store → external services. Folder structure — the project tree (fenced `text` block). Local run — exact commands. Failure points — what breaks first and what it looks like. Stack names identical to DECISIONS.md and RESEARCH.md.
+Fill: Stack — primary stack + components; every reason cites its DECISIONS.md row. Components — one line per component. Data flow — ASCII diagram in a fenced `text` block: user → UI → API → data store → external services. Folder structure — the project tree (fenced `text` block). Local run — exact commands. Failure points — what breaks first and what it looks like. Stack names identical to DECISIONS.md and RESEARCH.md. Carry over the S8 quality targets and apply [the integration checklist](plan-quality.md#s9--data-sources-and-integrations) for provenance, terms and refresh behavior.
 
 ## 9. USER_FLOWS.md
 Headings, in order: `# User flows` · one section per F-NN:
@@ -79,14 +79,14 @@ Headings, in order: `# Code style` · `## Language and framework conventions` ·
 Fill: conventions, naming, and file layout for the chosen stack; how errors are raised, wrapped, and surfaced; what must have tests and how to run them; karpathy + ponytail distilled for this stack (minimal sufficient solution, no speculative abstraction). Adapted to the chosen stack, never generic advice.
 
 ## 11. SECURITY.md
-Headings, in order: `# Security` · `## Auth model` · `## PII inventory and protection` · `## Secrets handling` · `## Dependencies policy` · `## Compliance notes`
+Headings, in order: `# Security` · `## Auth model` · `## PII inventory and protection` · `## Secrets handling` · `## Dependencies policy` · `## Compliance notes` · `## Abuse and access`
 
-Fill: Auth model — from the S3 auth decision (method, sessions, password reset). PII — table: data · where it lives · protection; covers every S3 inventory entry (empty inventory → one row "none collected"). Secrets — where keys live, what never enters the repo. Dependencies — how they are chosen and updated. Compliance — region-appropriate notes from S3 (data location, erasure, privacy policy).
+Fill: Auth model — from the S3 auth decision (method, sessions, password reset). PII — table: data · where it lives · protection; covers every S3 inventory entry (empty inventory → one row "none collected"). Secrets — where keys live, what never enters the repo. Dependencies — how they are chosen and updated. Compliance — S3 data handling and the S6 regulated-domain screen. Abuse and access — evidence-bearing threats, public form controls, operator signals and verification.
 
 ## 12. RESEARCH.md
 Headings, in order: `# Research` · `## Competitor scan` · `## Comparable products` · `## Stack comparison and trade-offs` · `## Cost table` · `## Risks (from S6)`
 
-Fill: compiled from the S5 record plus the S6 risks appendix — claims keep their S5 cite tags and markers, copied verbatim. A tag past its freshness limit is researched again before compiling (the `cite check` I6 finding), never compiled stale. Competitor scan — product, pricing model, one lesson, source. Stack comparison — the trade-offs table; the chosen stack cites its decision id and the research it rests on. Cost table — item · price · type · source, built on the S2 `## Prices quoted` rows plus S5 additions; every row with a cite group, an `[unverified: …]` marker, or the answer id of a user-stated cost (conventions §10). Risks — one line each: R-n, finding, outcome (`resolved via L-NN | accepted → D-NNN | note`).
+Fill: compiled from the S5 record plus the S6 risks appendix — claims keep their S5 cite tags and markers, copied verbatim. A tag past its freshness limit is researched again before compiling (the `cite check` I6 finding), never compiled stale. Competitor scan — product, pricing model, one lesson, source. Stack comparison — the trade-offs table; the chosen stack cites its decision id and the research it rests on. Cost table — item · price · type · source, built on the S2 `## Prices quoted` rows plus S5 additions; every row with a cite group, an `[unverified: …]` marker, or the answer id of a user-stated cost (conventions §10). Carry typical and busy-month usage, variable rates, allowance, fixed fees and known per-user or token costs. Risks — one line each: R-n, finding, outcome (`resolved via L-NN | accepted → D-NNN | note`).
 
 ## 13. SCOPE.md
 Headings, in order: `# Scope` · `## In MVP` · `## Parking Lot (recorded, never deleted)`
@@ -104,7 +104,7 @@ Headings, in order: `# Milestones` · one block per milestone, M0 first:
 - **Estimate:** <rough cost/effort + basis>
 ```
 
-Fill: verbatim from the S8 record; every F-NN lands in exactly one milestone.
+Fill: verbatim from the S8 record; every F-NN lands in exactly one milestone. Link each applicable quality, abuse, or ops target to its milestone and proof.
 
 ## 15. VERIFICATION.md
 Headings, in order: `# Verification` · one `## M<n> — <name>` section per milestone · `## Global smoke test` · `## Definition of verified`. `/lvr-build` later appends `## Build log — <ts>` sections after these; they are allowed.
@@ -123,9 +123,9 @@ Headings, in order: `# Assumptions` · one block per non-confirmed decision:
 Fill: every `decisions[]` entry whose status is not `user_confirmed` gets a block; `user_confirmed` decisions never appear here.
 
 ## 17. HANDOVER.md — owner document
-Headings, in order: `# Handover (owner guide)` · `## How to run it` · `## How to deploy and update` · `## How to back up` · `## Where secrets and API keys live` · `## Who to ask what`
+Headings, in order: `# Handover (owner guide)` · `## How to run it` · `## How to deploy and update` · `## How to back up` · `## Where secrets and API keys live` · `## Who to ask what` · `## Alerts and recovery`
 
-Fill: written for the non-technical owner like OVERVIEW.md. Run — exact steps, no code knowledge assumed. Deploy/update — steps and rhythm from the S2 maintenance answer; deploy target = the S2 decision. Back up — what to copy, where, how often. Secrets — accounts, admin email, key locations from S2/S3. Who to ask what — who or what is responsible for each part.
+Fill: written for the non-technical owner like OVERVIEW.md. Run — exact steps, no code knowledge assumed. Deploy/update — steps and rhythm from the S2 maintenance answer; deploy target = the S2 decision. Back up — what to copy, where, how often. Secrets — accounts, admin email, key locations from S2/S3. Who to ask what — who or what is responsible for each part. Alerts and recovery — how to recognize a warning, who responds, and when to verify an isolated restore.
 
 ## 18. CAPABILITIES.md
 Headings, in order: `# Capabilities` · one table row per recommended booster:
