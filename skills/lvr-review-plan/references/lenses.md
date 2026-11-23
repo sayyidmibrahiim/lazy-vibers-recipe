@@ -23,7 +23,7 @@ Full review, one column per file. "Cells" lines below use these ids.
 
 Scope-only review (at the S7 lock, protocol §10): `S0`–`S5` = the Section Records named in `state.pipeline.sections.<S>.record` (`S5` also holds the S6 risks), `BRIEF`, `STATE`, and `PROPOSAL` = `.lvr/review/runs/run-<N>/scope-proposal.md` (the split shown to the user before the lock).
 
-Profile files (UI_SPEC, AI spec, data module, and others) become columns once the variable bundle exists (`blueprint.json` v2 `files[]`, tickets 28/08). Until then they are not cells.
+For a full review, each extra profile file declared in `blueprint.json` v2 becomes a column. L03 requires a cell for each declared file. Use it in L01, L05 and L11 where relevant, and in the corresponding data, security or usability lens. A missing declared file is a finding. A v1 index uses the base columns.
 
 `R` = required cell: it must end as findings, clean + quote, or na + reason. `o` = optional: read it when it helps, and validate it when it is filled. A column not listed is `-` for that lens. A finding may still point at a `-` file. Its cell is then created as `findings`.
 
@@ -96,7 +96,7 @@ Attack prompts: What kills this kind of product in its first month? What does th
 | L03.1 | | The type in state, PRD and architecture agree. A multi-type product (web + mobile) covers each type | | I3 | |
 | L03.2 | | Base pack: the release target is named (URL, store, registry or marketplace), the release proof is defined (how to show it is live or installable), the update path is defined, and the platform accounts are listed with their cost | | I3 | |
 
-Packs. The ids are provisional and must match the profile ids of tickets 08/09. A profile's exit criteria become pack checks when the profiles land.
+Use `LVR profile plan` to load the exit criteria of the confirmed product types. Check their evidence in L03 and cite the affected profile column. Use the existing named pack checks for constraints they cover.
 
 | Check | Pack | What must be true | Impact |
 |---|---|---|---|

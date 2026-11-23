@@ -70,3 +70,6 @@
 2026-11-23T06:51:49Z | codex/gpt-6 | task 32 | claimed and compared resume guide against current replay and release helpers | next: read-only resume state and durable unfinished-step recovery
 2026-11-23T06:55:26Z | codex/gpt-6 | task 32 | replay-only reconstruction, resume checkpoints and two focused tests implemented | next: same-context verify replay, owner-owned skills, stale facts and the shared suites
 2026-11-23T06:58:14Z | codex/gpt-6 | task 32 | resume recovery, 51 archive tests, 17 portable tests and all shared suites pass; closed | next: task 33 practical review alignment
+2026-11-23T06:58:31Z | codex/gpt-6 | task 33 | claimed remaining profile evidence, freshness and booster work after ticket 38 | next: register v2 evidence paths and complete practical review steps
+2026-11-23T07:02:02Z | codex/gpt-6 | task 33 | profile evidence and documented review operations implemented | next: same-context verify v2 coverage, confinement and old review regressions
+2026-11-23T07:04:52Z | codex/gpt-6 | task 33 | v2 profile evidence, 51 archive tests, 20 portable tests and all shared suites pass; closed | next: task 34 brand evidence and prose

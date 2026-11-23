@@ -4,7 +4,7 @@ How one review run works, from inventory to report, and how later runs stay hone
 
 ## 1. Files
 
-Everything the review writes lives under `PROJECT_DIR/.lvr/review/`. The review never writes a bundle file, except in `--apply` mode (section 8).
+Review artifacts live under `PROJECT_DIR/.lvr/review/`. The run also records journal checkpoints and can stage project-local aids under the lifecycle rules. Bundle changes require `--apply` approval (section 8).
 
 ```
 .lvr/review/
@@ -29,6 +29,8 @@ Run numbers are shared by full and scope-only runs: N = `state.review.runs` + 1.
 Run numbers and scores are not secret, but the blind rule (R1) decides when you may read them.
 
 ## 2. P0 Inventory
+
+Use [review inputs](review-inputs.md) to establish the profile checks, research dates and project-local aids for the current run.
 
 1. `LVR review snapshot --run N` hashes every column file (lenses.md, Columns). It records each file's sha256, its heading units and its line hashes, and the hashes of `lenses.json`, `learned-checks.md` and `freshness.json`.
 2. `LVR review claims --run N` extracts the claim register: money, numbers with units, dates, URLs, versions, F/M/D/RQ/U ids, absolutes ("always", "never", "all", "unlimited", "guaranteed") and hedges ("should", "probably", "TBD", "etc.", "appropriate"). Each claim gets an id `CL-<8 hex>`, its source kind (cite, answer, marker or none) and its evidence level.
@@ -138,7 +140,7 @@ Review mode never edits the plan. `--apply` is the one exception, and it applies
 
 ## 9. Optional fresh-context pass
 
-When the harness can start a subagent (T1/T2), offer one after P5. Journal `agent_delegated` (`started`; `task: "review fresh-context pass"`, `profile: "reviewer"`, `transport: "native"`). Give the subagent only the bundle path, `lenses.md`, `scale.md` and this file's sections 3–5. It does not get this run's findings, the ledger or earlier reports. Its drafts go to `fresh-findings.json`, and `LVR review ids --run N --in fresh-findings.json` computes their ids.
+When the harness can start a subagent (T1/T2), offer one after P5. Journal `agent_delegated` (`started`; `task: "review-fresh-context-pass"`, `profile: "reviewer"`, `transport: "native"`). Give the subagent only the bundle path, `lenses.md`, `scale.md` and this file's sections 3–5. It does not get this run's findings, the ledger or earlier reports. Its drafts go to `fresh-findings.json`, and `LVR review ids --run N --in fresh-findings.json` computes their ids.
 
 - Found by both → confirmed.
 - Found only by the subagent → verify each one: keep it (its evidence must pass coverage), or reject it with a reason that is logged.

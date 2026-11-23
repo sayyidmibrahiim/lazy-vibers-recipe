@@ -5264,8 +5264,16 @@ function reviewCtx(dir, flags, opt = {}) {
   }
   const reg = loadLenses(flags.lenses);
   const cols = [];
-  if (scope === "full") for (const c of reg.data.columns.full) cols.push({ col: c.col, path: c.path, key: c.path });
-  else {
+  if (scope === "full") {
+    for (const c of reg.data.columns.full) cols.push({ col: c.col, path: c.path, key: c.path });
+    const index = makeBundle(dir).blueprint().value;
+    const known = new Set([...BUNDLE_BASE_MANIFEST, ...cols.map((column) => column.path)]);
+    if (index?.schema_version === 2 && validBundlePaths(index.files)) {
+      for (const file of index.files.filter((entry) => !known.has(entry)).sort(cmpStr)) {
+        cols.push({ col: `PROFILE-${sha256(file).slice(0, 16)}`, path: file, key: file, profile: true });
+      }
+    }
+  } else {
     for (const c of reg.data.columns.scope_only) {
       if (c.record_of) {
         const rec = st.pipeline?.sections?.[c.record_of]?.record;
@@ -5274,6 +5282,7 @@ function reviewCtx(dir, flags, opt = {}) {
       } else cols.push({ col: c.col, path: c.path.replace("<N>", String(run)), key: c.path });
     }
   }
+  const realDir = fs.realpathSync(dir);
   if (scope === "scope-only") {
     const pc = cols.find((c) => c.col === "PROPOSAL");
     if (pc && !fs.existsSync(path.join(dir, pc.path))) throw fail("PROPOSAL_MISSING", `The scope proposal is missing: write ${pc.path} (the split exactly as shown to the user) first.`, { path: pc.path });
@@ -5295,7 +5304,10 @@ function reviewCtx(dir, flags, opt = {}) {
         const rel = path.relative(dir, abs);
         if (rel === ".." || rel.startsWith(".." + path.sep) || path.isAbsolute(rel)) r = { exists: false, text: "" };
         else {
-          try { r = fs.statSync(abs).isFile() ? { exists: true, text: normText(fs.readFileSync(abs, "utf8")) } : { exists: false, text: "" }; } catch { r = { exists: false, text: "" }; }
+          try {
+            const realFile = confine(realDir, fs.realpathSync(abs));
+            r = fs.statSync(realFile).isFile() ? { exists: true, text: normText(fs.readFileSync(realFile, "utf8")) } : { exists: false, text: "" };
+          } catch { r = { exists: false, text: "" }; }
         }
       }
       ctx._text.set(c.col, r);
@@ -5319,10 +5331,21 @@ function reviewCtx(dir, flags, opt = {}) {
   return ctx;
 }
 
+/** Which lenses use extra paths declared by the product manifest. */
+function profileEvidenceLens(file, id) {
+  if (["L01", "L03", "L05", "L11"].includes(id)) return true;
+  if (id === "L06") return /data|corpus|migration|schema|embedding|retrieval/i.test(file);
+  if (id === "L07") return /ai\.md|guardrails|tools|manifest|auth|permissions/i.test(file);
+  if (id === "L14") return /ui_spec|routes|flows|navigation|output_errors/i.test(file);
+  return false;
+}
+
 /** Cells (R and o) of a lens for the run's scope; null when the lens has none in this scope. */
 function lensCells(ctx, l) {
   const c = ctx.scope === "full" ? l.cells.full : l.cells.scope_only;
-  return c ? { R: c.R, o: c.o } : null;
+  if (!c) return null;
+  const relevant = ctx.cols.filter((entry) => entry.profile && profileEvidenceLens(entry.key, l.id)).map((entry) => entry.col);
+  return l.id === "L03" ? { R: [...c.R, ...relevant], o: c.o } : { R: c.R, o: [...c.o, ...relevant] };
 }
 function lensCore(ctx, l) { return (ctx.scope === "full" ? l.core.full : l.core.scope_only) ?? []; }
 
@@ -6023,6 +6046,7 @@ function naProblem(ctx, l, reason, col) {
   if (reason === "has-ui-false" && !(l.id === "L14" && fl.has_ui === false)) return bad("has-ui-false is allowed only for L14 when state.product.flags.has_ui is false");
   if (reason === "file-not-yet-built" && ctx.scope !== "scope-only") return bad("file-not-yet-built is allowed only in scope-only runs");
   if (reason === "file-absent-by-profile" && !blueprintV2(ctx.dir)) return bad("file-absent-by-profile needs blueprint.json v2 with files[]");
+  if (reason === "file-absent-by-profile" && ctx.col(col)?.profile) return bad("file-absent-by-profile cannot exempt a file declared in the bundle index");
   if ((reason === "file-not-yet-built" || reason === "file-absent-by-profile") && ctx.col(col) && ctx.file(ctx.col(col)).exists) return bad(`${reason} needs an absent file, but ${ctx.col(col).key} exists`);
   return null;
 }
@@ -6901,7 +6925,8 @@ function stabilityCompute(ctx, model, learned) {
   for (const l of ctx.lensesInScope()) {
     const lc = lensCells(ctx, l);
     if (!lc) continue;
-    const cols = uniq([...lc.R, ...lc.o, ...learned.items.filter((i) => i.lens === l.id).flatMap((i) => i.applies)]).filter((c) => ctx.col(c));
+    const removedProfileColumns = snapP.files.filter((entry) => entry.col?.startsWith("PROFILE-") && !ctx.col(entry.col) && profileEvidenceLens(entry.path, l.id)).map((entry) => entry.col);
+    const cols = uniq([...lc.R, ...lc.o, ...learned.items.filter((i) => i.lens === l.id).flatMap((i) => i.applies)].filter((c) => ctx.col(c)).concat(removedProfileColumns));
     const changedCols = cols.filter((c) => { const a = snapFile(snapP, c), b = snapFile(snapN, c); return !a || !b || a.sha256 !== b.sha256 || a.exists !== b.exists; });
     const strict = changedCols.length === 0 && sameInputs;
     const idsOf = (fold) => new Map(countedIn(fold).filter((f) => f.lens === l.id).map((f) => [f.id, f]));
@@ -7011,7 +7036,12 @@ function buildCore(ctx, model, sc, cellsLine) {
   P("## Limitations");
   P();
   const lim = [];
-  for (const arr of ["core", "enhancer"]) for (const b of ctx.st.boosters?.[arr] ?? []) if (isObj(b) && b.status && b.status !== "installed") lim.push(`Booster ${b.name} (${arr}) is ${b.status}.`);
+  const registry = loadRegistryFile(null);
+  const catalog = registry.data && !registry.errors?.length ? registry.data.boosters : [];
+  for (const arr of ["core", "enhancer"]) for (const b of ctx.st.boosters?.[arr] ?? []) if (isObj(b) && b.status && b.status !== "installed") {
+    const tier = catalog.find((entry) => entry.id === b.name || entry.name === b.name)?.tier ?? arr;
+    lim.push(`Booster ${b.name} (${tier}) is ${b.status}.`);
+  }
   for (const a of ctx.st.agents_delegated ?? []) if (isObj(a) && a.status === "failed") lim.push(`Delegation ${a.id} failed${a.reason ? `: ${oneLine(a.reason)}` : ""}.`);
   for (const [lid, c] of Object.entries(sc.lens_counts)) if (c.blocked) lim.push(`${lid} has ${c.blocked} blocked cell(s).`);
   for (const [lid, r] of Object.entries(sc.unscored)) lim.push(`${lid} is unscored: ${r}.`);
