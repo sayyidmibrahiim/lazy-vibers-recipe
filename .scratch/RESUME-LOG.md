@@ -67,3 +67,6 @@
 2026-11-23T03:35:06Z | codex/gpt-6 | task 30 | claimed after shared release plan closed | next: add build freshness, exact-command capture, journal checkpoints and scoped verification hooks
 2026-11-23T03:39:58Z | codex/gpt-6 | task 30 | build helper, documented verification hooks and 4 focused tests implemented | next: same-context verify packaged proof, freshness edges, recovery and shared regressions
 2026-11-23T06:51:26Z | codex/gpt-6 | task 30 | 51 archive tests, 15 public tests and all shared suites pass; closed after usage reset | next: task 32 continue recovery and progress
+2026-11-23T06:51:49Z | codex/gpt-6 | task 32 | claimed and compared resume guide against current replay and release helpers | next: read-only resume state and durable unfinished-step recovery
+2026-11-23T06:55:26Z | codex/gpt-6 | task 32 | replay-only reconstruction, resume checkpoints and two focused tests implemented | next: same-context verify replay, owner-owned skills, stale facts and the shared suites
+2026-11-23T06:58:14Z | codex/gpt-6 | task 32 | resume recovery, 51 archive tests, 17 portable tests and all shared suites pass; closed | next: task 33 practical review alignment

@@ -21,7 +21,7 @@ Before any check, question, or file write:
 1. **Locate** the project (path argument or cwd).
 2. **Load or rebuild** the state (journal replay when damaged).
 3. **Tier check** — cross-model resume rules.
-4. **Progress summary** — plain language, User Language.
+4. **Progress summary** — profiles, booster status, research freshness and unfinished work in User Language.
 4b. **Web research check** — before any Section or compile work; no web → explain how to enable it and stop.
 5. **Offer the right next action** and, on confirmation, resume into it (a missing or partial Domain Brief and the current Section's scan come first).
 
@@ -51,64 +51,11 @@ Script: when a write exited 3, or `LVR journal check` shows `state_sync` other t
 
 ### 2a. Healthy state
 
-Script: `LVR state validate`: `"valid":true` means healthy — list its `warnings` in the summary. A repair is `LVR state write --no-journal --in -` (full corrected document) riding this run's `resume` append.
+Run `LVR state validate` and `LVR replay --compare`. Keep the valid file when the comparison is empty. For a stale Section pointer, missing journal-backed answers or another proven replay repair, use `LVR replay --write` under the same loss rules above. Recorded skipped answers stay skipped. Derive scope lock from a `scope_locked` event and S7 done.
 
-`state.json` parses and matches the conventions §2 shape → load it, then run the consistency repairs:
+### 2b. Damaged or missing state, journal present
 
-- Section statuses win over `pipeline.current_section`. If they disagree, fix `current_section` (the first Section not `done`, in conventions §5 order — it stays S9 when S0–S9 are all done; S10 Build is tracked by `project.status`, never as a pointer) and say so in the summary.
-- An answer present in a Section Record file but missing from state is folded back in from the record (records are raw material — never re-ask what a record holds). Say so in the summary.
-- Scope lock has no v1 state field — derive it per the conventions §5 definition (a `scope_locked` event exists **and** S7 is `done`). Do this here and in Step 5; do not invent a schema field.
-
-The repair state-write rides the run's `resume` append (one checkpoint at resume) — conventions §3's "every state mutation emits at least one event" holds under this named interpretation.
-
-### 2b. Damaged or missing state, journal present → rebuild by journal replay
-
-Script: `LVR replay --write --journal-resume '{"position":"…"}'` — it rebuilds `state.json` (backing up a damaged one once), appends `resume`, and returns `report` (untranslatable events, `answers.text_missing`, `decisions`, `milestones`, `unrecoverable`) for the reconstruction report. Use `LVR replay --compare` for a dry run.
-
-Replay the whole journal in `seq` order onto a fresh state object (shape per conventions §2). Event effects:
-
-| Journal event | Effect on the rebuilt state |
-|---|---|
-| `session_start`, `folder_gate_passed`, `folder_gate_subfolder_created` | project confirmed here; keep payload details for the report |
-| `folder_gate_rejected` | informational — the gate refused a folder before this project existed |
-| `tier_declared`, `tier_changed` | `model_profile.tier` (+ `declared_at`); `probe` comes from the probe events (`capability_probe_passed`/`capability_probe_failed`) when present; a declared T1 with no probe events rebuilds as `skipped` (conventions §7: the probe is mandatory for T2/T3 and skipped for a declared T1) |
-| `capability_probe_passed`, `capability_probe_failed` | `model_profile.probe` |
-| `booster_check`, `booster_install_ok`, `booster_install_failed`, `booster_choice` | `boosters` statuses — the last journaled event per booster wins; a journaled `present` maps to `installed` (the only enum-legal mapping); bundle documents (`OVERVIEW.md` Limitations, `CAPABILITIES.md`) may add a loud context note to the reconstruction report but never override a journaled status; the `booster_check` sweep names the core list (bootstrap checks every core booster); `license`/`tier` are static per-booster facts — from `CAPABILITIES.md` when the bundle exists, else the core-booster table in the `lvr-init-new-idea` skill (Step 3; `scripts/lvr.mjs` embeds the same table); when neither is available keep `license` null and flag it in the report; a core booster never mentioned → `missing`, flagged in the report |
-| `section_start` | `sections[S] = { "status": "in_progress", "started_at": ... }`; `current_section` = S |
-| `answer_recorded` | `sections[S].answers[<id>] = { q, a, skipped }` — q/a verbatim from the payload when it carries the text; a legacy payload without q/a text folds q/a from the answer's own Section Record line; `project` metadata: `slug`, `idea_raw`, `user_language` come from the S0 section record (verbatim idea, confirmed language, confirmed slug); the display `name` is the bundle's `OVERVIEW.md` H1 when the bundle exists (compiled at S9, post-branding), stripped of the ` — plain-language overview` suffix of the templates heading (`# <Display name> — plain-language overview`, `lvr-init-new-idea/references/bundle/templates.md` §2); a bundle present without `OVERVIEW.md` falls back to the S0 record's display name, reported loudly (same as the no-bundle case); `created_at` = the ts of the `section_start` S0 event |
-| `section_done` | `sections[S] = { "status": "done", "record": ..., "completed_at": ... }`; `current_section` = the next Section in conventions §5 order; `section_done` S9 leaves it at S9 (no S10 pointer) |
-| `section_blocked` | `sections[S].status` = "blocked"; `current_section` = S; the payload's `unmet` criteria go into the reconstruction report (the Section Record holds them too) |
-| `section_start` S5, `section_start` S7, `section_done` S9, `build_started`, `build_done` | `project.status` transitions (conventions §2 enum): the fresh state starts at `interview`; S5 start → `researching`, S7 start → `review`, S9 done → `bundled`, `build_started` → `building` (builder active), `build_done` → `complete` |
-| `loop_back_opened` | append the entry to `pipeline.loop_backs` (`resolved_at: null`) |
-| `loop_back_closed` | set `resolved_at` on the matching entry |
-| `scope_locked` | scope-lock evidence (no v1 schema field — see below) |
-| `milestone_verified` | set `milestones[<id>].verified = true` + `verified_at` from the payload |
-| `deployment_verified` | `deployment = { "status": "live", "url", "verified_at" }` from the payload |
-| `build_started`, `milestone_started`, `milestone_failed`, `build_blocked`, `build_done` | informational apart from the status transitions in the row above — verified milestones come from `milestone_verified` |
-| `recheck_*` (legacy, from /lvr-recheck-plan before its rename to /lvr-review-plan), `feature_*` (including `impact_analysis`), `brand_*` | informational — the report and bundle files on disk own the detail; a payload's `decisions[]` / `milestones[]` are still folded in (conventions §3) |
-| `doc_generated` | bundle-file progress (compare against the conventions §8 list); a 0-byte file counts as missing required structure and is reported wherever it is found (rebuild report, progress summary, Step 5c offer), never as existing-and-skipped |
-| `handoff_started`, `gap_found`, `handoff_done` | handoff progress; `handoff_done` fills `handoff` = { "status": "done", "completed_at" } |
-| `error` | `project.status` = "error" and `project.error` = `{seq, ts, skill, step, message, previous_status}` (a second `error` keeps the first `previous_status`); the next restoring event clears it and, when it is a `session_start`, stores the detail in that session's `recovered_error` |
-| `resume`, and the opening events `session_start`, `handoff_started`, `review_started` (legacy `recheck_started`), `feature_started`, `brand_started` | restore the status remembered at the last `error` (conventions §2); otherwise no state effect (`section_start`, `section_done`, `section_blocked`, `answer_recorded` restore it too, before their own effect) |
-| `context_guard_triggered`, `truncation_recovered` | informational — no state effect |
-| `session_start`, `session_end` | `sessions[]`: `session_start` appends an entry (skill, harness, `session_id` or its reason, model, tier, cwd, `started_at`); `session_end` closes the open one (`ended_at`, `end_reason`, `end_note`). The current session is the last entry with `ended_at` null; the Sections, delegations and boosters of later events are attributed to it (conventions §2) |
-| `booster_installed`, `booster_uninstalled`, `agent_delegated`, `framework_selected`, `review_started`, `review_done`, `release_checked`, `schema_migrated` | the v2 fields `boosters.installed[]`, `agents_delegated[]`, `framework_decision`, `review`, `release_check`; `schema_migrated` has no state effect (conventions §2 and §3 list each payload) |
-| a payload's `product` / `coverage` | `product` (types, flags, status, source, rationale, confirmed) and `pipeline.sections.<S>.coverage` are folded in like `decisions[]` |
-| `research_logged`, `context_research` | `pipeline.research` index only: `web_check` (the last `purpose: "web_check"` entry), `brief`/`scans` (RQ ids and U-ids), `log` (count, failed ids, last id/time); the Domain Brief file and the Section Records hold the findings (a `context_research` with scope `scan` marks that Section's scan as done) |
-
-Three things the journal cannot supply directly:
-
-- **Scope lock** — the v1 schema has no scope field. Scope is locked per the conventions §5 definition: a `scope_locked` event exists in the journal **and** S7 is done. Derive it; do not invent a schema field.
-- **Milestones** — no event type is dedicated to them; payload `milestones[]` (S8 `section_done`, `feature_applied`) are folded in when present. Milestones the events did not carry: from `MILESTONES.md` when the bundle exists (it also holds the milestones `/lvr-add-feature` appended after the lock, which no record holds), else — S8 done — from the Section Record `.lvr/docs/sections/S8-milestones.md`. Apply `milestone_verified` after this rebuild. If S8 is done and neither source holds a milestone, milestones are reported as unrecoverable.
-- **Decisions** — no event type is dedicated to them either; payload `decisions[]` are folded in when present. The rest: from `DECISIONS.md` when the bundle exists — the mirror is compiled at S9 from the post-loop-back records, so its wording is the freshest; rows are never rewritten after S9 (conventions §8) — else from the decision lines in the Section Records; ids and statuses are the same in both sources. Then add the decision lines in `.lvr/docs/sections/S4-additions.md` (post-lock decisions from `/lvr-add-feature`, section `S4`) that neither source holds yet. A decision missing from every source is reported as unrecoverable (loudly).
-
-An `answer_recorded` whose payload text is absent or unreadable, and whose Section Record does not hold it either, is reported as unrecoverable — ask the user to re-state only that one, saying plainly why (loud degradation, not a silent re-ask).
-
-Then:
-
-1. Write the rebuilt `state.json` (one checkpoint). Before writing it, the corrupt file MAY be preserved once as `.lvr/state.corrupt-<date>.json`; when present, name it in the reconstruction report. The backup is not part of the canonical write set. Never touch existing journal lines.
-2. Report plainly (User Language): what was reconstructed (Sections and statuses, answer counts, decisions, loop-backs, milestones, tier), everything derived indirectly (scope from the journal event, milestones from MILESTONES.md or the S8 record; decisions from DECISIONS.md or the Section Records, plus S4-additions.md), and every event that could not be translated, by `seq`.
-3. Journal `resume` (payload: `state_rebuilt: true` + the untranslatable count).
+Run `LVR replay --write --journal-resume '{"position":"…"}'` to rebuild from the journal. Use its `report` for the recovered Sections, answers, decisions, milestones and warnings. Name the backup when it created one. Report unrecoverable entries with the original sequence number, and ask again only when neither the journal nor Section Record holds a needed answer. Replay is the reconstruction path. Without Node, use disk for read-only status and enable the helper before rebuilding the state.
 
 ## Step 3 — Tier check (cross-model resume)
 
@@ -129,7 +76,7 @@ Compare `model_profile.tier` in state with the model actually running now:
 
 ## Step 4 — Progress summary
 
-Script: read the numbers with `LVR state get --pointer /pipeline/sections` and `LVR journal tail --n 5`.
+Script: `LVR resume status --harness NAME` (omit `--harness` if unknown), `LVR state get --pointer /pipeline/sections` and `LVR journal tail --n 5`. Read [resume checkpoints](references/resume-checkpoints.md). The status command does not write or install anything.
 
 Print it in the user's language, plain and non-technical — the owner must understand it without pipeline vocabulary:
 
@@ -137,7 +84,9 @@ Print it in the user's language, plain and non-technical — the owner must unde
 - **Position**: which Sections are done (compact: "S0–S3 finished"), the current Section, and its purpose in one plain line (conventions §5 purpose column, translated).
 - **Answers**: N recorded, M skipped in total (plus the current Section's count). Skipped answers are named as consciously skipped, never as missing.
 - **Open loop-backs**: each `L-NN` with its target Section and reason, or "none".
-- **Boosters**: count installed; name every core booster whose status is `degraded`, `failed`, or `missing` — loudly, with its consequence (output quality drops; S9 will surface it in OVERVIEW.md).
+- **Profiles and output**: show confirmed types and relevant flags, or say the type still needs confirmation. Count ready files and name missing or empty planned files from the bundle list.
+- **Boosters**: distinguish core, conditional and reference aids. Name degraded or missing core aids and their consequences. Show applicable absent conditional aids and any unfinished staging.
+- **Research**: show the Domain Brief status, last relevant scan, expired claim count and due framework slots. Point to the source files that need a fresh check.
 - **Last activity**: the journal's last line timestamp, phrased plainly.
 - **Model tier**: the stored tier, the current tier, and any change Step 3 just applied.
 - **Degraded-mode line** (only when Step 5b's fallback applies): "The lvr-init-new-idea skill is not installed here, so interview questions come from a simpler fallback. Install it for full interview support."
@@ -170,13 +119,14 @@ Order of offers:
 2. **Research first** (principle 14), before composing any batch:
    - S0 is `done` and `.lvr/docs/research/domain-brief.md` is missing (a project started before the brief existed, or a session that died) or says `Status: in progress` → build or finish it now: the init skill's Step 4 step 8 and `references/sections/S0-domain-brief.md` §1 and §4 — continue at the first heading with no rows; never redo a logged step.
    - The current Section (S1–S8) has no `context_research` event with scope `scan` for it → run the init engine's step 1b (brief freshness gate first in S1–S5, then the scan, then "Things you may not know") before the next batch. Items already shown keep their `Became` cells.
-   - Init skill not installed → do both from conventions §10 directly (it holds the brief's columns, the scan rules, and the cite syntax).
-3. **Otherwise resume the current Section** at the exact micro-batch boundary:
+   - Init skill not installed → use the packaged [Domain Brief procedure](references/sections/S0-domain-brief.md) and conventions §10. Before continuing the Section, refresh expired cited facts and due stack/library evidence. Recover the exact checkpoint from [resume checkpoints](references/resume-checkpoints.md).
+3. **Confirm the profile** when S1 or later has no confirmed product type. Use recorded decisions and `LVR profile plan`; ask for confirmation of the inferred type or offer the documented choices. Then resume the current Section at the exact micro-batch boundary:
    - **Load the Section's procedure** per the tier's reload discipline (conventions §7). Find it in this order: (1) the installed `lvr-init-new-idea` skill — check the harness skill list, then known skills directories (`~/.claude/skills/`, `<cwd>/.claude/skills/`, `~/.agents/skills/`), then an `lvr-init-new-idea/` folder beside this skill — and use its `### S<NN>` procedure block plus its `references/sections/` bank files; (2) not found, or the procedure block is missing → **degraded fallback, loudly**:
      - Reload `state.json` + the current Section Record.
      - Re-derive the next micro-batch from the Section's **exit criteria** (conventions §5): every not-yet-satisfied criterion becomes one targeted question, composed from the recorded answers, phrased in User Language with a one-line reason it matters. Use bank files if present; otherwise the model's own interview judgment.
      - Say plainly (English source): "The lvr-init-new-idea skill is not installed here, so my questions for this part come from a simpler fallback. Install it for full interview support." Write `Booster: init skill procedures (degraded — fallback questions used)` into the Section Record so S9 surfaces it in OVERVIEW.md.
      - Always still available without it: answering pending loop-backs, handoff guidance (5c–5e), status reporting.
+   - **Finish any relevant open checkpoint** in the shared resume guide. Reuse finished S5b research, pending delegation results and installed boosters. Stage missing applicable boosters just in time.
    - **Compose the batch from recorded answers**: check `sections.<S>.answers` (and the record) before composing every batch. NEVER re-ask anything recorded or skipped. Batch size per the current tier (T1 up to 3, T2 up to 2, T3 exactly 1). Keep both controls visible: **skip** (recorded, never blocks) and **"cukup" / that's enough for this Section** (jump to the exit-criteria check).
    - **All exit criteria already satisfied but the Section is not done** (the session died between the check and the `section_done` write) → ask nothing: write the record, close the Section (`section_done`), continue to the next Section.
    - From the first new answer onward, follow the init skill's Section loop engine (its "Section loop engine" section): one checkpoint per answer, the same record shape, decisions `D-NNN` with statuses per principle 12.
@@ -184,7 +134,7 @@ Order of offers:
 
 ### c. Scope locked, S9 not `done` (bundle absent, partial, or fully written but S9 unclosed)
 
-Offer to finish generation (S9). First the freshness re-check: `LVR cite check --all`; research every expired fact again and update the records that hold it, so nothing is compiled stale. Then the remaining files per the conventions §8 list, one file per turn (T3: one file section per turn, append-chunks), `doc_generated` + one checkpoint per file. Existing bundle files are skipped; a 0-byte file, or a file missing the structure conventions §8 requires, counts as *missing required structure* — it is offered as remaining work (the same class as truncation recovery, conventions §7), never as existing-and-skipped. Regenerating one happens only on an explicit per-file user request. When no file is missing, the remaining work is closing S9 (`section_done` + one checkpoint).
+Offer to finish generation (S9). First run the freshness check in the resume guide, including S5b deadlines. Then generate the remaining paths from `resume status` and the frozen profile plan, one file per turn (T3: one file section per turn, append-chunks), `doc_generated` + one checkpoint per file. Existing bundle files are skipped; a 0-byte file, or a file missing the structure conventions §8 requires, counts as *missing required structure* — it is offered as remaining work (the same class as truncation recovery, conventions §7), never as existing-and-skipped. Regenerating one happens only on an explicit per-file user request. When no file is missing, the remaining work is closing S9 (`section_done` + one checkpoint).
 
 ### d. Bundled (S9 done, `handoff` open)
 
@@ -192,7 +142,7 @@ Offer `/lvr-handoff` — its precondition (S1–S8 done + scope locked) is met. 
 
 ### e. Bundled (`handoff` done), building, or complete
 
-Offer the next skill: `/lvr-build` (execute the next unverified milestone), `/lvr-add-feature` (a new feature through a mini-pipeline), or `/lvr-review-plan` (a critical review of the plan: 15 lenses, a score and a verdict). They are separate skills — point at them; do not improvise them here. When every milestone is verified and `state.deployment.status` = "live", also point at `/lvr-personal-brand`.
+Offer the next skill: `/lvr-build` (execute the next unverified milestone), `/lvr-add-feature` (a new feature through a mini-pipeline), or `/lvr-review-plan` (a critical review of the plan: 15 lenses, a score and a verdict). They are separate skills — point at them; do not improvise them here. When every milestone is verified, use `LVR release plan` to identify the recorded per-type checks. Offer `/lvr-personal-brand` after passing checks are on file. It repeats the appropriate release tests before drafting.
 
 ## Idempotency
 

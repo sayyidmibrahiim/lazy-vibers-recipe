@@ -8339,6 +8339,69 @@ async function cmdNextBundleIds({ dir, flags }) {
   });
 }
 
+function expiredFramework(state, day) {
+  const stack = state.framework_decision;
+  if (!stack) return [];
+  return [stack, ...(stack.libraries ?? [])].filter((entry) => entry.recheck_by < day).map(({ slot, decision_id, chosen, recheck_by }) => ({ slot, decision_id, chosen, recheck_by }));
+}
+
+function resumeStatus({ dir, flags }) {
+  const bundle = makeBundle(dir);
+  const { st, j } = bundle;
+  if (!j.exists) throw fail("NO_JOURNAL", "Restore the project journal before choosing a resume checkpoint.");
+  if (!j.healthy) throw fail("JOURNAL_INVALID", "Recover the project journal before resuming.");
+  guardJournalBehind(dir, j);
+  const sync = syncOf(dir, ".lvr", j);
+  if (sync === "lagging" || sync === "unknown") {
+    throw stateFailure(sync === "lagging" ? "STATE_LAGS" : "STATE_SEQ_UNKNOWN", null, { journal_max_seq: j.max_seq });
+  }
+  const current = st.pipeline.current_section;
+  const section = st.pipeline.sections[current];
+  const date = todayInfo();
+  const cited = cmdCiteCheck({ dir, flags: { all: true } });
+  const expired = cited.findings.filter((entry) => ["I6", "I10"].includes(entry.id));
+  const brief = bundle.text(BRIEF_FILE);
+  const scan = j.events.findLast((event) => event.type === "context_research" && event.payload.scope === "scan" && event.payload.section === current);
+  const lastCheck = st.pipeline.research?.web_check ?? null;
+  const lvr = boosterDir(dir, ".lvr");
+  const items = fs.readdirSync(lvr, { withFileTypes: true });
+  const snapshots = items.filter((entry) => entry.isFile() && /^signals-\d{4}-\d{2}-\d{2}\.json$/.test(entry.name)).map((entry) => `.lvr/${entry.name}`).sort();
+  const latestSignals = snapshots.findLast((file) => {
+    let data;
+    try { data = JSON.parse(bundle.text(file)); } catch { return false; }
+    if (data?.schema_version !== 1 || !isCalendarDate(data.as_of) || !Array.isArray(data.candidates) || data.candidates.length === 0) return false;
+    const age = date.day - parseDay(data.as_of).day;
+    return age >= 0 && age < FRAMEWORK_TTL;
+  });
+  const stages = items.filter((entry) => entry.isDirectory() && /^booster-(?:stage|remove)\.[a-zA-Z0-9_-]+$/.test(entry.name)).map((entry) => `.lvr/${entry.name}`).sort();
+  const plan = boosterPlan(dir, { section: current, harness: flags.harness });
+  const registry = boosterRegistry(dir, null, true).data;
+  const core = detectBoosters(dir, registry.boosters.filter((entry) => entry.tier === "core"));
+  const boosterStatus = (entry) => ({
+    id: entry.id, status: findBooster(st, entry.id)?.b.status ?? findBooster(st, entry.name)?.b.status ?? null,
+    present: entry.present,
+  });
+  const profile = productProfilePlan(dir, {});
+  const files = bundleManifest(dir, bundle.blueprint().value);
+  return {
+    section: { current, status: section?.status ?? "pending", completed: SECTIONS.slice(0, 10).filter((id) => st.pipeline.sections[id]?.status === "done"), record: section?.record ?? null },
+    product: { status: profile.status, types: profile.types, flags: profile.flags },
+    research: {
+      brief: brief === null ? "missing" : /(?:^|\n)\s*-?\s*Status:\s*complete\s*(?:\n|$)/i.test(brief) ? "complete" : "in_progress",
+      scan: scan ? { id: scan.payload.id, outcome: scan.payload.outcome, findings: scan.payload.findings } : null,
+      last_web_check: lastCheck, expired, checked_on: date.iso,
+    },
+    framework: { decision_id: st.framework_decision?.decision_id ?? null, signals: latestSignals ?? null, expired: expiredFramework(st, date.iso) },
+    delegations: (st.agents_delegated ?? []).filter((entry) => entry.status === "started"),
+    boosters: {
+      core: core.map(boosterStatus), conditional: plan.boosters.filter((entry) => entry.tier === "conditional").map(boosterStatus),
+      references: plan.boosters.filter((entry) => entry.tier === "reference").map((entry) => entry.id),
+      pending: plan.pending.map((entry) => entry.id), interrupted_paths: stages,
+    },
+    bundle: { total: files.length, missing: files.filter((file) => !bundle.present(file)) },
+  };
+}
+
 function verifyFreshness({ dir }) {
   const loaded = loadState(dir);
   if (loaded.kind !== "valid") throw fail("STATE_INVALID", "Build freshness checks require readable project state.");
@@ -8348,10 +8411,8 @@ function verifyFreshness({ dir }) {
     dir, files: citeAllFiles(dir), all: true, state: loaded.state, journal: readJournal(dir), F: loadFreshness(), today, freshnessCategories,
   });
   const facts = report.findings.filter((finding) => ["I6", "I10"].includes(finding.id));
-  const stack = loaded.state.framework_decision;
-  const selections = stack ? [stack, ...(stack.libraries ?? [])] : [];
-  const dependencies = selections.filter((entry) => entry.recheck_by < today.iso).map(({ slot, decision_id, chosen, recheck_by }) => ({ slot, decision_id, chosen, recheck_by }));
-  return { clean: facts.length === 0 && dependencies.length === 0, today: today.iso, facts, dependencies, stack_recorded: !!stack };
+  const dependencies = expiredFramework(loaded.state, today.iso);
+  return { clean: facts.length === 0 && dependencies.length === 0, today: today.iso, facts, dependencies, stack_recorded: !!loaded.state.framework_decision };
 }
 
 async function cmdVerifyRun({ dir, flags }) {
@@ -8412,6 +8473,9 @@ async function cmdMilestoneSet({ dir, flags, args }) {
 }
 
 const COMMANDS = {
+  "resume status": {
+    help: "Read durable resume checkpoints, selected profiles, applicable boosters and expired evidence. [--harness NAME]", flags: ["harness"], run: resumeStatus,
+  },
   "verify freshness": {
     help: "Find expired price, quota, version and framework evidence before a build milestone.", flags: [], run: verifyFreshness,
   },
