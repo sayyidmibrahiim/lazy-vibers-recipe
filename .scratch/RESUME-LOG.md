@@ -94,3 +94,4 @@
 2026-11-23T21:57:44Z | codex/gpt-6 | task 17 | published recovery drafts and notes for 17, 19, and 20 on the handoff branches | next: reconcile ticket 17 with current master and obtain native Claude Code and OpenCode evidence
 2026-11-24T00:30:06Z | codex/gpt-6 | task 17 | reconciled specialist draft with current helper and placed tests in public suite | next: test actual harness registrations and run shared regressions
 2026-11-24T00:32:28Z | codex/gpt-6 | task 19 | found Windows byte-sync failure in public matrix and aligned checkout rules | next: verify repaired Windows jobs and test native harnesses
+2026-11-24T00:37:53Z | codex/gpt-6 | task 17 | real native tools and inline fallback returned six valid records with zero replay drift | next: publish contributor docs for task 23

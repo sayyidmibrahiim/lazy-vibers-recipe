@@ -1,5 +1,5 @@
 # 17: Specialist agent auto-delegation
-Status: needs-info (2026-11-23) · Blocked by: 02, 05 · Type: task · Agent: Opus (design) → Sonnet
+Status: done (2026-11-24) · Blocked by: 02, 05 · Type: task · Agent: Opus (design) → Sonnet
 Source: research/F.
 
 - [x] `references/agents.json` routing table:
@@ -33,3 +33,5 @@ Each one is picked by rubric score. No coding/builder agents in 1.0.
 ## Comments
 
 Planning routes, project-local ownership checks, and native wrapper installation passed the scripted Linux checks. Commit `da9b0d0` on `handoff/ticket-17` preserves the complete draft and both run notes. Reapply it to the current helper before running the actual database and threat-model delegations in Claude Code and OpenCode. [Repository handoff](../../../docs/agents/continuation.md)
+
+The draft landed in `10d4bd9`. The real Claude Code and OpenCode binaries invoked each native subagent against a deterministic local model fixture. In all four invocations the child received only Read, Glob, and Grep, and the parent received its record. The inline Codex route produced the same record shape for both roles. Six validations and replay passed. [Verification](../runs/17-verify.md)

@@ -15,14 +15,13 @@ The verified language update passed the production build, browser walkthroughs, 
 
 ## Continue the release roadmap
 
-**34 of 40 tickets are closed.** Check `git status --short` and `git log --oneline -12` before changing files. The published handoff branches contain the pending implementation and run notes for tickets 17, 19, and 20.
+**35 of 40 tickets are closed.** Check `git status --short` and `git log --oneline -12` before changing files. The published handoff branches preserve earlier implementation and run notes.
 
 | Ticket | Next step |
 | --- | --- |
-| [17 · Specialist routing](../../.scratch/public-release/issues/17-agent-routing.md) | The scripted Linux rehearsal passed. Reapply the saved draft to the current code and run native planning delegation on Claude Code and OpenCode before closing the ticket. |
 | [19 · Platform matrix](../../.scratch/public-release/issues/19-os-harness-matrix.md) | The saved workflow and tests passed the scripted Linux checks. Collect native harness and Windows/macOS evidence. |
 | [20 · Repository hygiene](../../.scratch/public-release/issues/20-repo-hygiene.md) | The owner approved publishing the author email in the existing history. Start from the saved sanitized Futsal example. Finish archive separation and verify the public checkout. |
-| [23 · Public docs](../../.scratch/public-release/issues/23-public-docs.md) | The README and install guide are available. The remaining contributor and release docs depend on ticket 17. |
+| [23 · Public docs](../../.scratch/public-release/issues/23-public-docs.md) | The README and install guide are available. Finish the contributor and release documentation. |
 | [24 · Real project trials](../../.scratch/public-release/issues/24-dogfood-proof.md) | The owner runs two projects after tickets 17 and 19. The synthetic demo and screenshot walkthrough are separate evidence. |
 | [25 · v1.0.0 release](../../.scratch/public-release/issues/25-release.md) | The repo URL and visibility already match the target. The release depends on the remaining tickets. The GitHub About description update is pending because cloud API access returned 403. |
 
@@ -32,7 +31,7 @@ The verified language update passed the production build, browser walkthroughs, 
 git fetch origin 'refs/heads/handoff/*:refs/remotes/origin/handoff/*'
 ```
 
-- [handoff/ticket-17](https://github.com/sayyidmibrahiim/lazy-vibers-recipe/tree/handoff/ticket-17) at `da9b0d0` saves all 23 files from the original stash and both run notes. Its base is `cd4ffba`. Review the draft against current `master`, reconcile the canonical `scripts/lvr.mjs` and sync configuration, then regenerate the shipped copies before testing native delegation.
+- [handoff/ticket-17](https://github.com/sayyidmibrahiim/lazy-vibers-recipe/tree/handoff/ticket-17) preserves the earlier draft. The integrated specialist routing and its verification are on `master`.
 - [handoff/tickets-19-20](https://github.com/sayyidmibrahiim/lazy-vibers-recipe/tree/handoff/tickets-19-20) saves the platform matrix in `5cc63ba` and the Futsal example in `d8915a3`, each with its run notes. Use the commit for the ticket you are resuming.
 
 Use the live trackers and Git evidence for completion status. The earlier [release verification snapshot](../../.scratch/public-release/runs/FINAL.md) and the saved run notes record the state at their original checkpoints.
