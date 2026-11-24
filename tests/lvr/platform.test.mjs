@@ -11,20 +11,22 @@ const cli = path.join(root, "scripts/lvr.mjs");
 const env = { ...process.env, LVR_NOW: "2026-11-23T10:00:00Z" };
 
 function exec(helper, dir, ...args) {
-  const result = spawnSync(process.execPath, [helper, "--dir", dir, ...args], { encoding: "utf8", env });
+  const result = spawnSync(process.execPath, [helper, "--dir", dir, ...args], { cwd: dir, encoding: "utf8", env });
   assert.equal(result.status, 0, result.stderr || result.error);
   return JSON.parse(result.stdout);
 }
 
 function project(t, useInstalledCopy = false) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lvr 19 üji "));
+  const tempDir = fs.realpathSync.native(os.tmpdir());
+  const dir = fs.mkdtempSync(path.join(tempDir, "lvr 19 üji "));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const lvr = path.join(dir, ".lvr");
   let helper = cli;
   if (useInstalledCopy) {
-    const destination = path.join(dir, ".agents", "skills", "lvr-init-new-idea");
+    const installed = path.join(".agents", "skills", "lvr-init-new-idea");
+    const destination = path.join(dir, installed);
     fs.cpSync(path.join(root, "skills", "lvr-init-new-idea"), destination, { recursive: true });
-    helper = path.join(destination, "scripts", "lvr.mjs");
+    helper = path.join(installed, "scripts", "lvr.mjs");
   }
   const run = (...args) => exec(helper, dir, ...args);
   const append = (type, payload) => run("journal", "append", "--type", type, "--payload", JSON.stringify(payload));
