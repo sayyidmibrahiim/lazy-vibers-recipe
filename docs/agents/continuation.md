@@ -2,7 +2,7 @@
 
 Use the [repository rules](../../AGENTS.md) and [spec overview](../spec/00-overview.md) when changing Lazy Vibers Recipe. Open the latest `master` and check `git status --short` and `git log --oneline -12` before continuing the release roadmap. Read the ticket and its evidence before changing its status.
 
-**Release roadmap: 37 of 40 tickets complete.**
+**Release roadmap: 38 of 40 tickets complete.**
 
 ## Verified work
 
@@ -13,6 +13,7 @@ Use the [repository rules](../../AGENTS.md) and [spec overview](../spec/00-overv
 | `f97820d` and `32e34d8` | Public quickstarts, demo plan, English UI and documents, and screenshots. |
 | `705d0a8` | Sanitized Mermaid diagram rendering and updated the affected `minimatch` dependency. |
 | `10d4bd9` and `ee0aef4` | Planning specialists on master. Real Claude Code and OpenCode processes dispatched both roles with a local scripted provider. The native and inline records passed validation and replay. |
+| `e5c8197` and `92787bf` | Portable tests and byte-for-byte skill checks passed on Linux, macOS, and Windows with Node 22 and 24. The scripted installed-copy test reached S2 and replayed without drift on all six runners. Separate runs installed the Recipe and exercised pinned booster installation and cleanup in the Claude Code, Codex, Gemini CLI, and OpenCode layouts. [CI evidence](https://github.com/sayyidmibrahiim/lazy-vibers-recipe/actions/runs/45310745312) |
 | `e1e11ae` | Contributor guide, security policy, changelog, issue templates, and the booster review rubric. |
 | `d583182` and `9e04e04` | Restored the sanitized Futsal example. The public checkout omits the working archive. Gitleaks found zero leaks in the scanned history and the public checkout. The example opened in the production dashboard and its journal replayed with zero differences. |
 
@@ -22,11 +23,10 @@ A clean public snapshot passed 46 tests, lint, type checking, the production bui
 
 | Ticket | Status and next check |
 | --- | --- |
-| 19 · Platform matrix | All six standard matrix jobs passed after pinning LF at the canonical sources. Recipe installation, S0–S2, pinned booster deployment, and cleanup passed with the installed helper on four harness layouts. The added installed-copy test still fails on Windows Node 22 with `MODULE_NOT_FOUND` before the helper starts. Windows Node 24 and both versions on Linux and macOS passed. [Runner evidence](https://github.com/sayyidmibrahiim/lazy-vibers-recipe/actions/runs/45299998957) |
-| 24 · Real project trials | Capture real owner decisions for a KPR house-hunter workflow and a Supabase-backed web project. Give each bundle to a separate builder with no Recipe skill context and record M0 questions, guesses, and scores. The published scripted examples do not supply this evidence. |
-| 25 · v1.0.0 release | Finish the real project trials and release verification before tagging. The GitHub About description, topics, branch protection, and Release require repository API or settings access. The cloud API route returned HTTP 403. |
+| 24 · Real project trials | Confirm the first usable KPR house-hunter workflow and which real Supabase-backed app to plan. Run the Recipe interview with the owner. A fresh Codex builder session from the sandbox could not reach its model endpoint and received HTTP 403. The trial needs a reachable builder session after the plans are approved. |
+| 25 · v1.0.0 release | Finish ticket 24, then publish and verify the release. Installation from clean `master` passed. The tag, release installation, GitHub About description, topics, and branch protection remain pending. Git push works. The sandbox blocks the GitHub REST API host with HTTP 403. |
 
-For ticket 24, use a fresh folder per project and the [Recipe quickstart](../../README.md#start-a-new-idea). Save the reviewed bundles and give each `HANDOFF-PROMPT.md` to a fresh builder with Recipe skills absent. Record the M0 verification results, every question and assumption, and the scorecard for each bundle. The ticket requires scores of at least 4 on every artifact and at most two builder guesses per milestone.
+For ticket 24, use a fresh folder per project and the [Recipe quickstart](../../README.md#start-a-new-idea). Save the reviewed bundles. Export each bundle to a separate folder that contains no installed Recipe skills and start a fresh builder there with `HANDOFF-PROMPT.md`. Ask it to implement only M0 and run the checks in `VERIFICATION.md`. Record the results, every question and guess, and the scorecard for each bundle. The ticket requires scores of at least 4 on every artifact and at most two builder guesses per milestone. Remove private values before adding approved evidence to `examples/`.
 
 ## Recover the working archive
 
