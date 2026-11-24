@@ -48,3 +48,5 @@ The published registry pins these upstream files and selected skills. The links 
 Recipe includes the anti-slop reference text from Matt Silverlock's `elithrar/dotfiles` under its MIT license. The upstream text and copyright notice are under `skills/lvr-init-new-idea/references/third-party/anti-slop/`.
 
 The UI specification adapts the Impeccable PRODUCT and DESIGN schemas and credits the pinned motion and interface rules in its source notes. The bundled `contrast-check.py` is the unmodified antislop-human helper from its pinned commit and travels with its MIT license.
+
+The planning role cards summarize selected methods. The specialist catalogue records each full profile digest and pinned file. [Agency Agents](https://github.com/msitarzewski/agency-agents/tree/8ae6164602c95ca78828b148b9052460ee426885) · [wshobson/agents](https://github.com/wshobson/agents/tree/42203085cfc5736204bf0f6d436dff7e1da0bf3f)

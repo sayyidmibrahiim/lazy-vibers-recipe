@@ -41,6 +41,7 @@ Each skill ships `scripts/lvr.mjs` for the deterministic bookkeeping (journal, s
 13. [UI specification](13-ui-spec.md) — screen and interaction contracts, accessibility, and verification
 14. [AI features](14-ai-feature.md) — models, data, safeguards, and evaluations
 15. [Adaptive interview](15-adaptive-interview.md) — fact coverage, question depth, and confirmation
+16. [Planning specialists](16-planning-specialists.md) — pinned roles, read-only delegation, and advisory records
 
 ## Ground rules (from ADRs — summarized)
 

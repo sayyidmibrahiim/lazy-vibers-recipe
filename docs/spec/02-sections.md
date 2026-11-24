@@ -2,7 +2,7 @@
 
 Each Section has: **purpose**, **question strategy**, **booster routing**, **output** (section record + state effects), **exit criteria**. Sections run strictly in order, except loop-backs (S6).
 
-See [the section booster map](05-boosters.md) for the installed sources and use modes. Journal actual use as `booster_loaded`.
+See [the section booster map](05-boosters.md) for the installed sources and use modes. Journal actual use as `booster_loaded`. Use [the planning specialist procedure](16-planning-specialists.md) for advisory work with explicit evidence and checked records.
 
 ## Interview mechanics (all question Sections)
 
