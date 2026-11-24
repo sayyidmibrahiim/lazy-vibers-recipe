@@ -1,9 +1,0 @@
-{
- "lint": [
-  [
-   "G3",
-   "AGENTS.md \"## What this is\" is empty or too short; it must say concretely what the product is."
-  ]
- ],
- "crosscheck": []
-}

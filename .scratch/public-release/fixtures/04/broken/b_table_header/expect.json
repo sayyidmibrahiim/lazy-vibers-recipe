@@ -1,9 +1,0 @@
-{
- "lint": [
-  [
-   "B3",
-   "File DECISIONS.md is missing the decision table header row \"| ID | Decision | Rationale | Alternatives considered | Date | Status |\"."
-  ]
- ],
- "crosscheck": []
-}

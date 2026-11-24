@@ -1,9 +1,0 @@
-{
- "lint": [
-  [
-   "H3",
-   "blueprint.json does not follow schema v1: pointers: missing."
-  ]
- ],
- "crosscheck": []
-}

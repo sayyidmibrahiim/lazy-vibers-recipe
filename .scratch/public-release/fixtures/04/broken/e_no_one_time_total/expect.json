@@ -1,9 +1,0 @@
-{
- "lint": [
-  [
-   "E1",
-   "OVERVIEW.md \"## What it costs\" has no one-time total."
-  ]
- ],
- "crosscheck": []
-}

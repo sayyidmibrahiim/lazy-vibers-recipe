@@ -1,7 +1,0 @@
-# Ticket 30 same-context verify
-
-- PASS. The installed build script accepts price, quota, and version facts on the 30-day boundary, reports all three on day 31, and identifies the expired library even when the stack remains current. An unrelated market fact cannot trigger the build-specific freshness check.
-- PASS. The runner preserves an argument containing whitespace and shell metacharacters, captures both streams and exit status, refuses an out-of-project working directory, and records a timeout as unsuccessful. An observed zero-exit command returns its output.
-- PASS. The checkpoint rejects a later milestone and a repeated attempt with a conflicting result, learns the next attempt from the journal, detects a lagging duplicate, and resumes exactly from the next unverified milestone after replay. Journal replay has no drift.
-- PASS. Builder plans include installed interface/MCP/n8n aids and pinned references where applicable, using project-local copies. The packaged UI, AI, data and workflow procedures state the actual verification evidence and preserve the per-type release gate. B11 appears in the installed and canonical build instructions. The AI and UI regressions cover the helper contracts with fixture evidence; no production model was called.
-- PASS. All 51 archive tests, 15 public-path tests, and suites 03, 04, 26, 27, 38 and 40 passed. Skill metadata, sync, lint, typecheck and diff checks passed. Lint reported the existing unused variable in the archived signal probe.

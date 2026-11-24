@@ -1,37 +1,38 @@
 # Repository handoff
 
-This guide records the verified baseline and remaining work for Lazy Vibers Recipe. The [repository rules](../../AGENTS.md) and [spec overview](../spec/00-overview.md) define how to work on the source repository. Use the [resume protocol](../../.scratch/RESUME-PROMPT.md) when taking over the release roadmap.
+Use the [repository rules](../../AGENTS.md) and [spec overview](../spec/00-overview.md) when changing Lazy Vibers Recipe. Open the latest `master` and check `git status --short` and `git log --oneline -12` before continuing the release roadmap. Read the ticket and its evidence before changing its status.
 
-## Verified baseline
+**Release roadmap: 37 of 40 tickets complete.**
+
+## Verified work
 
 | Commit | Delivered |
 | --- | --- |
-| `2457d6a` | Verified critical review redesign with all 225 ticket checks passing. |
+| `2457d6a` | Critical review redesign with 225 passing ticket checks. |
 | `db441e1` | Read-only dashboard with plans, diagrams, decisions, reviews, and session history. |
-| `f97820d` | README quickstarts and the fictional Meeting Room Booker sample. |
-| `32e34d8` | English UI and CLI messages, English checks for generated documents, conversation in the user's language, a repository language audit, and English README screenshots. |
+| `f97820d` and `32e34d8` | Public quickstarts, demo plan, English UI and documents, and screenshots. |
+| `705d0a8` | Sanitized Mermaid diagram rendering and updated the affected `minimatch` dependency. |
+| `10d4bd9` and `ee0aef4` | Planning specialists on master. Real Claude Code and OpenCode processes dispatched both roles with a local scripted provider. The native and inline records passed validation and replay. |
+| `e1e11ae` | Contributor guide, security policy, changelog, issue templates, and the booster review rubric. |
+| `d583182` | Restored the sanitized Futsal example. The public checkout omits the working archive. Gitleaks found zero leaks in the scanned history and the public checkout. The example opened in the production dashboard and its journal replayed with zero differences. |
 
-The verified language update passed the production build, browser walkthroughs, 52 archived tests, and 41 working-tree tests. Three working-tree tests come from the pending platform matrix. The cloud could execute the local CLI helpers for the README, and the live Codex model connection was unavailable. The [README](../../README.md) links the exact screenshots and quickstart. The [language decision](../adr/0002-global-first-english-source-of-truth.md) explains how to preserve raw input and replay while writing new documents in English.
+## Remaining work
 
-## Continue the release roadmap
-
-**35 of 40 tickets are closed.** Check `git status --short` and `git log --oneline -12` before changing files. The published handoff branches preserve earlier implementation and run notes.
-
-| Ticket | Next step |
+| Ticket | Status and next check |
 | --- | --- |
-| [19 · Platform matrix](../../.scratch/public-release/issues/19-os-harness-matrix.md) | The saved workflow and tests passed the scripted Linux checks. Collect native harness and Windows/macOS evidence. |
-| [20 · Repository hygiene](../../.scratch/public-release/issues/20-repo-hygiene.md) | The owner approved publishing the author email in the existing history. Start from the saved sanitized Futsal example. Finish archive separation and verify the public checkout. |
-| [23 · Public docs](../../.scratch/public-release/issues/23-public-docs.md) | The README and install guide are available. Finish the contributor and release documentation. |
-| [24 · Real project trials](../../.scratch/public-release/issues/24-dogfood-proof.md) | The owner runs two projects after tickets 17 and 19. The synthetic demo and screenshot walkthrough are separate evidence. |
-| [25 · v1.0.0 release](../../.scratch/public-release/issues/25-release.md) | The repo URL and visibility already match the target. The release depends on the remaining tickets. The GitHub About description update is pending because cloud API access returned 403. |
+| 19 · Platform matrix | All six standard matrix jobs passed after pinning LF at the canonical sources. Recipe installation, S0–S2, pinned booster deployment, and cleanup passed with the installed helper on four harness layouts. The added installed-copy test still needs a confirmed green Windows Node 22 result. [Runner evidence](https://github.com/sayyidmibrahiim/lazy-vibers-recipe/actions/runs/45299244598) |
+| 24 · Real project trials | Capture real owner decisions for a KPR house-hunter workflow and a Supabase-backed web project. Give each bundle to a separate builder with no Recipe skill context and record M0 questions, guesses, and scores. The published scripted examples do not supply this evidence. |
+| 25 · v1.0.0 release | Finish the real project trials and release verification before tagging. The GitHub About description, topics, branch protection, and Release require repository API or settings access. The cloud API route returned HTTP 403. |
 
-## Retrieve pending work
+## Recover the working archive
+
+The working archive is ignored in the current checkout. Commit `d583182ef0cbfab510bd5f8b098cfc743520074f` retains its exact files, including the original resume prompt, issue trackers, verification notes, and fixtures. Open the [archive snapshot on GitHub](https://github.com/sayyidmibrahiim/lazy-vibers-recipe/tree/d583182ef0cbfab510bd5f8b098cfc743520074f/.scratch). The table above records current work after that snapshot.
+
+To inspect the archive in a separate temporary folder, run from the checkout.
 
 ```bash
-git fetch origin 'refs/heads/handoff/*:refs/remotes/origin/handoff/*'
+archive_dir=$(mktemp -d)
+git archive d583182ef0cbfab510bd5f8b098cfc743520074f .scratch | tar -x -C "$archive_dir"
 ```
 
-- [handoff/ticket-17](https://github.com/sayyidmibrahiim/lazy-vibers-recipe/tree/handoff/ticket-17) preserves the earlier draft. The integrated specialist routing and its verification are on `master`.
-- [handoff/tickets-19-20](https://github.com/sayyidmibrahiim/lazy-vibers-recipe/tree/handoff/tickets-19-20) saves the platform matrix in `5cc63ba` and the Futsal example in `d8915a3`, each with its run notes. Use the commit for the ticket you are resuming.
-
-Use the live trackers and Git evidence for completion status. The earlier [release verification snapshot](../../.scratch/public-release/runs/FINAL.md) and the saved run notes record the state at their original checkpoints.
+The earlier recovery branches are `handoff/ticket-17` and `handoff/tickets-19-20`. Their published progress is integrated on `master`. Use the tagged evidence revisions and current handoff when reviewing historical results.

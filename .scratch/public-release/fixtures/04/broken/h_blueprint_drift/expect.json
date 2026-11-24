@@ -1,9 +1,0 @@
-{
- "lint": [
-  [
-   "H2",
-   "blueprint.json is out of date: milestones[1].acceptance_count, costs.monthly_usd differ from state.json and the bundle; blueprint emit rewrites it."
-  ]
- ],
- "crosscheck": []
-}

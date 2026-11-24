@@ -1,9 +1,0 @@
-{
- "lint": [
-  [
-   "B19",
-   "File SPEC/architecture.md has a Mermaid fence at line 112; use an ASCII diagram in a text block."
-  ]
- ],
- "crosscheck": []
-}

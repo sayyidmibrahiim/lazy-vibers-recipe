@@ -20,6 +20,8 @@ Recipe's **agent skills** interview you about what you want to build, research o
 
 *Meeting Room Booker is a fictional plan. Its first release covers availability, reservations, and cancellations. Calendar sync stays parked.*
 
+The sanitized [Futsal booking plan](examples/futsal-booking/README.md) provides a second example with a saved interview journal.
+
 ## Try the dashboard
 
 You need **Node.js 24+**. The viewer runs on your machine and opens sample plans without an AI account or API key.

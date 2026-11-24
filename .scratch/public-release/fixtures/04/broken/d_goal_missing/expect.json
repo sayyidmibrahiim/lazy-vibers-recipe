@@ -1,9 +1,0 @@
-{
- "lint": [
-  [
-   "D2",
-   "Milestone M1 in MILESTONES.md has no \"**Goal:**\" line with content."
-  ]
- ],
- "crosscheck": []
-}

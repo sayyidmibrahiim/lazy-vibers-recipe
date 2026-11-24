@@ -1,3 +1,0 @@
-# Ticket 39 implementation
-
-The project viewer uses typed, read-only filesystem readers for v2, partial and legacy .lvp projects. It shows profile files from the index, planning and build progress, research age, recorded sessions and delegations, conditional next commands, the review ledger and decision filters. The source-linked mindmap and offline Mermaid panels use only recorded files. Mermaid 12.3.0 is pinned to the existing lockfile artifact and its npm registry integrity was verified. The harness matrix is shared by the viewer and shipped skills. Only help-verified command structures can be copied and a real recorded ID is required. Cursor remains marked unverified and uses the generic continue instruction.

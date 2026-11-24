@@ -1,9 +1,0 @@
-{
- "lint": [
-  [
-   "D3",
-   "Milestone M0 acceptance criterion 3 is vague (\"looks good\"): state a command with expected output, a scripted step, or an observable fact."
-  ]
- ],
- "crosscheck": []
-}

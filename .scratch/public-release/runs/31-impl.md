@@ -1,3 +1,0 @@
-# Ticket 31 implementation
-
-Each of the ten packaged profiles defines an observable release proof and a clean environment. `release plan` returns the checks for every confirmed type and any matching recorded result. `release record` checkpoints captured evidence and requires a clean environment for a pass. The web check also validates the recorded HTTP status, expected product fact and deployment URL. The build uses these checks for released milestones and final completion. The brand skill checks the same released artifacts again before drafting. Older web projects with a recorded deployment retain their web gate.

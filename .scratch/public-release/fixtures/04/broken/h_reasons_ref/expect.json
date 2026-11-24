@@ -1,9 +1,0 @@
-{
- "lint": [
-  [
-   "H4",
-   "blueprint.json stack.reasons_ref \"DECISIONS.md#D-099\" does not point to a decision in state.json."
-  ]
- ],
- "crosscheck": []
-}

@@ -1,6 +1,0 @@
-# Ticket 37 same-context verify
-
-- PASS. An installed helper on a disposable v2 bundle refuses a missing or adverse review, rejects an unrelated confirmed decision, accepts the owner's synthetic recorded approval for this exact review, and rejects it once a new review starts. A completed `FIX-THEN-BUILD` review meets the gate.
-- PASS. A planted expired citation in a declared profile file prevents writing the prompt. After the fixture replaces that evidence, the emitted prompt lists all declared profile paths and the web release procedure. A repeat is byte-stable. Pinned builder arguments and reference-only entries come from the actual registry.
-- PASS. A new Qwen adapter points to AGENTS.md and an existing owner file is preserved. Qwen's current official context settings confirm the filename. Cursor and GitHub Copilot official doc endpoints were inaccessible in this cloud; Kimi's archived implementation identifies the replacement CLI. For these tools the installed handoff uses the existing portable entry prompt and AGENTS.md. No native session for these additional tools was assumed.
-- PASS. All 52 archive tests, 22 public-path tests, and suites 03, 04, 26, 27, 38 and 40 passed. The original v1 handoff fixture remains byte-stable. Check skills, sync, typecheck and whitespace checks passed. Lint reported the existing archived signal-probe warning.

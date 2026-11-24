@@ -1,6 +1,6 @@
 # Issue tracker: Local Markdown
 
-Issues and specs for this repo live as markdown files in `.scratch/`.
+Local working issues and specs live in the ignored `.scratch/` directory. The published release timeline and pending tasks are recorded in the [repository handoff](continuation.md).
 
 ## Conventions
 

@@ -1,9 +1,0 @@
-{
- "lint": [
-  [
-   "H1",
-   "blueprint.json is missing; blueprint emit writes it."
-  ]
- ],
- "crosscheck": []
-}
