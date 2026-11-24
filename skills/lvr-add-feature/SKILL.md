@@ -129,7 +129,7 @@ Script: `LVR journal append --type feature_done --payload '{…}'`
    - what the product now does (or what was parked),
    - which milestone covers it,
    - that the bundle changed and handoff artifacts may be stale.
-4. Run `/lvr-review-plan` next, then `/lvr-handoff` again if it had already run. Do not tell the user the bundle is build-ready before the review.
+4. Tell the user the updated bundle is awaiting review. Run `/lvr-review-plan`, share the readiness verdict, and refresh the handoff with `/lvr-handoff` if one already exists.
 
 ## Journal events added by this skill
 

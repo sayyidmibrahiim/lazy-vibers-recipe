@@ -1,44 +1,59 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import DOMPurify from "dompurify";
+import { useCallback, useEffect, useId, useState } from "react";
 
-type State = { status: "loading" } | { status: "ok"; svg: string } | { status: "error" };
+type Result = { code: string; status: "ok"; svg: Element } | { code: string; status: "error" };
 
-/**
- * Offline guarantee: the rendered SVG must never trigger a network request.
- * Parse it, drop active/external elements and any non-local reference.
- */
-function sanitizeSvg(svg: string): string {
-  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
-  if (doc.querySelector("parsererror")) throw new Error("svg");
-  const local = (value: string) => /^\s*(#|data:image\/(png|jpeg|gif|webp);)/i.test(value);
-  const badCss = (value: string) => /url\(\s*(?!['"]?#)|@import|image\(|image-set\(|src\s*:/i.test(value);
-  doc.querySelectorAll("script,img,image,iframe,object,embed,link,audio,video,source,use[href^='http'],style").forEach((el) => {
-    if (el.tagName.toLowerCase() === "style") {
-      if (badCss(el.textContent ?? "")) el.textContent = (el.textContent ?? "").replace(/@import[^;]*;?/gi, "").replace(/url\(\s*(?!['"]?#)[^)]*\)/gi, "none");
-      return;
-    }
-    el.remove();
+const svgNamespace = "http://www.w3.org/2000/svg";
+const localReference = /^#[\w:.-]+$/;
+const localCssUrl = /url\(\s*(?:"#[\w:.-]+"|'#[\w:.-]+'|#[\w:.-]+)\s*\)/gi;
+const cssAttributes = new Set([
+  "style", "fill", "stroke", "filter", "mask", "clip-path", "cursor",
+  "marker", "marker-start", "marker-mid", "marker-end",
+]);
+
+function hasExternalCss(css: string): boolean {
+  const value = css.replace(/\/\*[\s\S]*?\*\//g, "").replace(localCssUrl, "");
+  return /\\|@import\b|(?:url|image|image-set)\s*\(|\bsrc\s*:/i.test(value);
+}
+
+/** Sanitize the markup and keep references local before attaching the SVG node. */
+function sanitizeSvg(svg: string): Element {
+  const fragment = DOMPurify.sanitize(svg, {
+    USE_PROFILES: { svg: true, svgFilters: true },
+    RETURN_DOM_FRAGMENT: true,
+    FORBID_TAGS: ["image", "feImage", "foreignObject"],
+    FORBID_ATTR: ["src", "srcset", "xml:base"],
   });
-  doc.querySelectorAll("*").forEach((el) => {
-    for (const attr of Array.from(el.attributes)) {
-      const name = attr.name.toLowerCase();
-      const value = attr.value;
-      if (name.startsWith("on")) el.removeAttribute(attr.name);
-      else if (name === "href" || name === "xlink:href" || name === "src" || name === "action" || name === "poster") {
-        if (!local(value) || /^\s*javascript:/i.test(value)) el.removeAttribute(attr.name);
-      } else if (name === "style" || name === "fill" || name === "stroke" || name === "filter" || name === "mask" || name === "clip-path" || name === "marker-start" || name === "marker-mid" || name === "marker-end") {
-        if (badCss(value)) el.removeAttribute(attr.name);
+  const root = fragment.firstElementChild;
+  if (root?.localName !== "svg" || root.namespaceURI !== svgNamespace) throw new Error("Invalid diagram SVG");
+
+  for (const element of [root, ...root.querySelectorAll("*")]) {
+    if (element.localName === "style" && hasExternalCss(element.textContent ?? "")) {
+      element.remove();
+      continue;
+    }
+    for (const attribute of Array.from(element.attributes)) {
+      const name = attribute.name.toLowerCase();
+      const nonlocalReference = attribute.localName === "href" && !localReference.test(attribute.value.trim());
+      if (nonlocalReference || (cssAttributes.has(name) && hasExternalCss(attribute.value))) {
+        element.removeAttributeNode(attribute);
       }
     }
-  });
-  return new XMLSerializer().serializeToString(doc.documentElement);
+  }
+  return root;
 }
 
 /** Renders a ```mermaid block offline (bundled package). Falls back to raw code on error. */
 export function MermaidBlock({ code }: { code: string }) {
   const id = useId().replace(/[^a-zA-Z0-9]/g, "");
-  const [state, setState] = useState<State>({ status: "loading" });
+  const [result, setResult] = useState<Result | null>(null);
+  const current = result?.code === code ? result : null;
+  const node = current?.status === "ok" ? current.svg : null;
+  const attachDiagram = useCallback((figure: HTMLElement | null) => {
+    if (node) figure?.replaceChildren(node);
+  }, [node]);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,12 +62,13 @@ export function MermaidBlock({ code }: { code: string }) {
         // Mermaid can insert transient markup before the SVG has been sanitized.
         if (/\b(?:https?|ftp|file):\/\/|(?:^|[\s="'(])\/\/[a-z0-9.-]+\//i.test(code)) throw new Error("external diagram reference");
         const mermaid = (await import("mermaid")).default;
-        mermaid.initialize({ startOnLoad: false, securityLevel: "strict", htmlLabels: false, flowchart: { htmlLabels: false }, theme: "neutral" });
+        if (cancelled) return;
+        mermaid.initialize({ startOnLoad: false, securityLevel: "strict", htmlLabels: false, flowchart: { htmlLabels: false }, theme: "neutral", suppressErrorRendering: true });
         const { svg } = await mermaid.render(`mmd-${id}`, code);
-        if (!cancelled) setState({ status: "ok", svg: sanitizeSvg(svg) });
+        if (!cancelled) setResult({ code, status: "ok", svg: sanitizeSvg(svg) });
       } catch {
         document.getElementById(`dmmd-${id}`)?.remove();
-        if (!cancelled) setState({ status: "error" });
+        if (!cancelled) setResult({ code, status: "error" });
       }
     })();
     return () => {
@@ -60,19 +76,13 @@ export function MermaidBlock({ code }: { code: string }) {
     };
   }, [code, id]);
 
-  if (state.status === "ok") {
-    return (
-      <figure
-        className="mermaid-figure"
-        aria-label="Diagram"
-        dangerouslySetInnerHTML={{ __html: state.svg }}
-      />
-    );
+  if (current?.status === "ok") {
+    return <figure ref={attachDiagram} className="mermaid-figure" aria-label="Diagram" />;
   }
 
   return (
     <div>
-      {state.status === "error" ? (
+      {current?.status === "error" ? (
         <p className="label text-rust">Could not render the diagram. Showing its source.</p>
       ) : null}
       <pre>

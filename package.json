@@ -17,6 +17,7 @@
     "test": "node --test tests/lvr/*.test.mjs"
   },
   "dependencies": {
+    "dompurify": "3.4.18",
     "mermaid": "12.3.0",
     "next": "16.4.5",
     "react": "19.3.0",
