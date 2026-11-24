@@ -39,6 +39,7 @@ const dashboardTabs = "src/app/p/[id]/lvr-client.tsx";
 const internalTabKey = /(?<=\[|useState<Tab>\(|tab === )"(?:ringkasan|sesi|peta)"(?=,|\)| &&)/gu;
 
 function categoryFor(file) {
+  if (file === "examples/futsal-booking/README.md") return "active";
   if (file.startsWith(".scratch/") || file.startsWith("examples/futsal-booking/")) return "archive";
   if (file.startsWith("tests/")) return "fixture";
   if (file === "scripts/check-language.mjs") return "dictionary";
