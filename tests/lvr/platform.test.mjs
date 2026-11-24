@@ -24,9 +24,17 @@ function project(t, useInstalledCopy = false) {
   let helper = cli;
   if (useInstalledCopy) {
     const installed = path.join(".agents", "skills", "lvr-init-new-idea");
+    const source = path.join(root, "skills", "lvr-init-new-idea");
     const destination = path.join(dir, installed);
-    fs.cpSync(path.join(root, "skills", "lvr-init-new-idea"), destination, { recursive: true });
+    for (const entry of fs.readdirSync(source, { recursive: true, withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      const sourceFile = path.join(entry.parentPath, entry.name);
+      const targetFile = path.join(destination, path.relative(source, sourceFile));
+      fs.mkdirSync(path.dirname(targetFile), { recursive: true });
+      fs.writeFileSync(targetFile, fs.readFileSync(sourceFile));
+    }
     helper = path.join(installed, "scripts", "lvr.mjs");
+    assert.ok(fs.statSync(path.join(dir, helper)).isFile(), "The copied skill must contain its CLI entry point");
   }
   const run = (...args) => exec(helper, dir, ...args);
   const append = (type, payload) => run("journal", "append", "--type", type, "--payload", JSON.stringify(payload));
