@@ -15,3 +15,5 @@ Verify: a PASS/FAIL table in Comments.
 | macOS and Windows runner evidence | PENDING owner |
 
 Commit `5cc63ba` on `handoff/tickets-19-20` saves the matrix workflow, platform tests, `19-impl.md`, and `19-verify.md`. The remote runners still need evidence. [Repository handoff](../../../docs/agents/continuation.md)
+
+The recovery-branch workflow ran on all six platform and Node combinations. All CLI tests passed. Both Windows jobs failed skill byte comparison, which the canonical-source LF attributes now address. Native harness trials and the updated matrix result remain open. [Runner evidence](../runs/19-verify.md)

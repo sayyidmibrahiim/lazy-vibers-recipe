@@ -1,2 +1,6 @@
 *.mjs text eol=lf
+docs/spec/*.md text eol=lf
+skills/lvr-*.md text eol=lf
+skills/lvr-*.json text eol=lf
+skills/lvr-profiles/*.json text eol=lf
 skills/**/references/** text eol=lf
