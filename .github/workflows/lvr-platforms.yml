@@ -23,5 +23,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      - run: node --test tests/lvr/platform.test.mjs
+      - name: Run portable CLI tests
+        shell: bash
+        run: |
+          if node --test tests/lvr/platform.test.mjs > platform-test.log 2>&1; then
+            cat platform-test.log
+          else
+            cat platform-test.log
+            node -e 'const log = require("node:fs").readFileSync("platform-test.log", "utf8"); const tail = log.slice(-4500).replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A"); console.log(`::error title=Portable CLI tests::${tail}`)'
+            exit 1
+          fi
       - run: node scripts/sync-skills.mjs --check
