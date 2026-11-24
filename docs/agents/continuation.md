@@ -23,10 +23,19 @@ A clean public snapshot passed 46 tests, lint, type checking, the production bui
 
 | Ticket | Status and next check |
 | --- | --- |
-| 24 · Real project trials | Confirm the first usable KPR house-hunter workflow and which real Supabase-backed app to plan. Run the Recipe interview with the owner. A fresh Codex builder session from the sandbox could not reach its model endpoint and received HTTP 403. The trial needs a reachable builder session after the plans are approved. |
-| 25 · v1.0.0 release | Finish ticket 24, then publish and verify the release. Installation from clean `master` passed. The tag, release installation, GitHub About description, topics, and branch protection remain pending. Git push works. The sandbox blocks the GitHub REST API host with HTTP 403. |
+| 24 · Real project trials | The owner approved the two trial scopes below. Both fresh folders passed the folder check. The fresh Codex session with live search could not reach its model endpoint because the sandbox proxy returned HTTP 403. Resume from the interview preflight when model access works. |
+| 25 · v1.0.0 release | Finish ticket 24, then publish and verify the release. Installation from clean `master` passed. The tag, release installation, GitHub About description, topics, and branch protection remain pending. Git push works. The sandbox proxy returned HTTP 403 for the GitHub REST API. |
+
+### Approved trial scopes
+
+| Project | First workflow |
+| --- | --- |
+| KPR House Hunter | Filter a user-provided local listings file into a shortlist. Keep the personal profile and financial inputs local. |
+| Futsal Court Booking | Let a player see an open court slot and reserve it. Store the reservation in Supabase and verify that only one request wins when two players try to reserve the same slot. Use the [recorded Futsal example](../../examples/futsal-booking/README.md) for context during the new interview. |
 
 For ticket 24, use a fresh folder per project and the [Recipe quickstart](../../README.md#start-a-new-idea). Save the reviewed bundles. Export each bundle to a separate folder that contains no installed Recipe skills and start a fresh builder there with `HANDOFF-PROMPT.md`. Ask it to implement only M0 and run the checks in `VERIFICATION.md`. Record the results, every question and guess, and the scorecard for each bundle. The ticket requires scores of at least 4 on every artifact and at most two builder guesses per milestone. Remove private values before adding approved evidence to `examples/`.
+
+The cloud environment draft retains the current restricted network policy and proposes access to the Codex model endpoint, the GitHub REST API, and official sources for both trials. After the owner saves and publishes the draft, retry a fresh Codex session with live search and run `gh api repos/sayyidmibrahiim/lazy-vibers-recipe` before changing GitHub settings. Verify repository permissions separately if the API host becomes reachable.
 
 ## Recover the working archive
 
