@@ -10,17 +10,23 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 const cli = path.join(root, "scripts/lvr.mjs");
 const env = { ...process.env, LVR_NOW: "2026-11-23T10:00:00Z" };
 
-function exec(dir, ...args) {
-  const result = spawnSync(process.execPath, [cli, "--dir", dir, ...args], { encoding: "utf8", env });
+function exec(helper, dir, ...args) {
+  const result = spawnSync(process.execPath, [helper, "--dir", dir, ...args], { encoding: "utf8", env });
   assert.equal(result.status, 0, result.stderr || result.error);
   return JSON.parse(result.stdout);
 }
 
-function project(t) {
+function project(t, useInstalledCopy = false) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lvr 19 üji "));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   const lvr = path.join(dir, ".lvr");
-  const run = (...args) => exec(dir, ...args);
+  let helper = cli;
+  if (useInstalledCopy) {
+    const destination = path.join(dir, ".agents", "skills", "lvr-init-new-idea");
+    fs.cpSync(path.join(root, "skills", "lvr-init-new-idea"), destination, { recursive: true });
+    helper = path.join(destination, "scripts", "lvr.mjs");
+  }
+  const run = (...args) => exec(helper, dir, ...args);
   const append = (type, payload) => run("journal", "append", "--type", type, "--payload", JSON.stringify(payload));
   append("session_start", { skill: "lvr-init-new-idea", session_id: null, session_id_reason: "OS matrix test", cwd: dir });
   append("tier_declared", { tier: "T1" });
@@ -42,6 +48,18 @@ test("native paths with spaces and Unicode round-trip through state and replay",
   const replay = run("replay", "--compare", "--print-state", "--out", out);
   assert.deepEqual(replay.diff, []);
   assert.deepEqual(JSON.parse(fs.readFileSync(out, "utf8")), replay.state);
+});
+
+test("a project-local copy of the shipped init skill records and replays S0 through S2", (t) => {
+  const { run, append } = project(t, true);
+  for (const section of ["S0", "S1", "S2"]) {
+    if (section !== "S0") append("section_start", { section });
+    run("answer", "record", "--section", section, "--q", "What will it do?", "--a", "Show the available rooms.");
+    append("section_done", { section });
+  }
+  const replay = run("replay", "--compare", "--print-state");
+  assert.deepEqual(replay.diff, []);
+  for (const section of ["S0", "S1", "S2"]) assert.equal(replay.state.pipeline.sections[section].status, "done");
 });
 
 test("the reader accepts Windows line endings and a UTF-8 BOM", (t) => {
