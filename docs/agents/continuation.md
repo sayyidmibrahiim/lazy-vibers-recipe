@@ -23,8 +23,8 @@ A clean public snapshot passed 46 tests, lint, type checking, the production bui
 
 | Ticket | Status and next check |
 | --- | --- |
-| 24 · Real project trials | The owner approved the two trial scopes below. Both fresh folders passed the folder check. The fresh Codex session with live search could not reach its model endpoint because the sandbox proxy returned HTTP 403. Resume from the interview preflight when model access works. |
-| 25 · v1.0.0 release | Finish ticket 24, then publish and verify the release. Installation from clean `master` passed. The tag, release installation, GitHub About description, topics, and branch protection remain pending. Git push works. The sandbox proxy returned HTTP 403 for the GitHub REST API. |
+| 24 · Real project trials | The owner approved the two trial scopes below. Both fresh folders passed the folder check and the published network policy reaches the Codex model endpoint. Codex rejected its saved login with HTTP 401 and requested sign-in. Resume from the live-search interview preflight after reauthentication. |
+| 25 · v1.0.0 release | Finish ticket 24, then publish and verify the release. Installation from clean `master` passed. Git push and the repository API read succeed. The GitHub integration returns HTTP 403 when updating About or reading branch protection. The tag, release installation, About, topics, and branch protection remain pending. |
 
 ### Approved trial scopes
 
@@ -33,11 +33,13 @@ A clean public snapshot passed 46 tests, lint, type checking, the production bui
 | KPR House Hunter | Filter a user-provided local listings file into a shortlist. Keep the personal profile and financial inputs local. |
 | Futsal Court Booking | Let a player see an open court slot and reserve it. Store the reservation in Supabase and verify that only one request wins when two players try to reserve the same slot. Use the [recorded Futsal example](../../examples/futsal-booking/README.md) for context during the new interview. |
 
-The database portion of the Futsal booking check passed in a disposable PostgreSQL 17.12 container. With the documented `UNIQUE (court_id, booking_date, slot)` constraint, two overlapping transactions showed that the second insert waited for the first and then failed with SQLSTATE `23505`. Exactly one row persisted. Changing the court, date, or slot allowed a new booking. The application-level HTTP `409` check and the Supabase integration are pending. [Data model](../../examples/futsal-booking/SPEC/data-model.md)
+The database portion of the Futsal booking check passed in a disposable PostgreSQL 17.12 container. With the documented `UNIQUE (court_id, booking_date, slot)` constraint, two overlapping transactions showed that the second insert waited for the first and then failed with SQLSTATE `23505`. Exactly one row persisted. Changing the court, date, or slot allowed a new booking. [Data model](../../examples/futsal-booking/SPEC/data-model.md)
+
+The direct local REST check also passed using the Supabase PostgreSQL `17.12.0.002` and PostgREST `v16.6` images. Two concurrent requests returned HTTP `201` and `409` with one matching row. Booking a different time succeeded and a request without credentials could not read bookings. The full Supabase CLI stack stopped when its local Auth service failed a health check, so the REST check used a disposable role and locally signed token. The Futsal app and independent M0 builder trial remain pending.
 
 For ticket 24, use a fresh folder per project and the [Recipe quickstart](../../README.md#start-a-new-idea). Save the reviewed bundles. Export each bundle to a separate folder that contains no installed Recipe skills and start a fresh builder there with `HANDOFF-PROMPT.md`. Ask it to implement only M0 and run the checks in `VERIFICATION.md`. Record the results, every question and guess, and the scorecard for each bundle. The ticket requires scores of at least 4 on every artifact and at most two builder guesses per milestone. Remove private values before adding approved evidence to `examples/`.
 
-The owner approved the cloud environment draft in chat. It retains restricted networking and adds access to the Codex model endpoint, the GitHub REST API, and official sources for both trials. The running sandbox still enforces the previously published policy. After the draft is published from Environment Settings, confirm the allowed hosts are active. Retry a fresh Codex session with live search and run `gh api repos/sayyidmibrahiim/lazy-vibers-recipe` before changing GitHub settings. Verify repository permissions separately if the API host becomes reachable.
+The published cloud network policy reaches the Codex model endpoint, GitHub REST API, and official sources for both trials. A follow-up environment draft adds `auth.openai.com` for `codex login --device-auth` and a personal `LVR_GITHUB_ADMIN_TOKEN` binding scoped to `api.github.com`. After that draft is published, sign in to Codex again and retry a fresh session with live search. For the GitHub settings, bind a fine-grained token restricted to this repository with `Administration` read and write access. The eventual GitHub Release also requires `Contents` write access. Use the bound token for `gh` without printing it, and verify repository permissions before making changes.
 
 ## Recover the working archive
 
