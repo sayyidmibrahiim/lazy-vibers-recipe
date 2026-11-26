@@ -41,17 +41,18 @@ For ticket 24, use a fresh folder per project and the [Recipe quickstart](../../
 
 The published cloud network policy reaches the Codex model endpoint, GitHub REST API, and official sources for both trials. A follow-up environment draft adds `auth.openai.com` for `codex login --device-auth` and a personal `LVR_GITHUB_ADMIN_TOKEN` binding scoped to `api.github.com`. After that draft is published, sign in to Codex again and retry a fresh session with live search. For the GitHub settings, bind a fine-grained token restricted to this repository with `Administration` read and write access. The eventual GitHub Release also requires `Contents` write access. Use the bound token for `gh` without printing it, and verify repository permissions before making changes.
 
-## Next session (local Claude Code, 2026-11-26)
+## Next session (local Claude Code, 2026-11-26 evening)
 
-A local review of `d4ea316` on Node 24 passed skill sync, language, lint, type checking, and the production build. One test, `tests/lvr/booster-cleanup.test.mjs`, failed only because booster detection read the host home folder, where `grilling` and `simple-english` were already installed. The test now runs with an isolated `HOME`, and all 46 tests pass.
+Ticket 25: About, topics, and branch protection (required check `build-and-test`, linear history) are already set on GitHub. Only the tag and the GitHub Release remain, after ticket 24.
 
-The local checkout has no `.scratch/` folder. Recover it from `d583182` as described below when a ticket file is needed.
+Ticket 24 is in progress in `~/projects/lvr-trials/` (outside the repo). The owner delegated all remaining interview answers to the testing agent acting for the owner; each answer says so. Both planning runs are headless `claude -p --resume` sessions: KPR `dfc188fd-77c8-476e-b3b7-ad5c4d575e31`, Futsal `c61d40c1-515f-4137-9525-16a1f21462fc`. Replies are in `<project>-turn-N.json` (last good turn 10). Turn 11 hit the 5-hour usage limit after the answers were journaled, so the S4 close-out reply was lost.
 
 Resume in this order:
 
-1. Ticket 24 can run locally in Claude Code, which avoids the cloud Codex 401. Create two fresh folders outside this repository, run `/lvr-init-new-idea` for each approved scope with live search, then `lvr-review-plan` and handoff. Ask the owner only for decisions the plan needs.
-2. For each bundle, copy it to a separate folder with no Recipe skills, start a fresh builder session with `HANDOFF-PROMPT.md`, build M0 only, and run `VERIFICATION.md`. Record questions, guesses, test results, and the scorecard. Save sanitized evidence under `examples/`.
-3. Ticket 25: the local `gh` login is the repository owner with `repo` scope, so About, topics, branch protection, the tag, and the GitHub Release can be tried from here. Record the endpoint and error if any call fails.
+1. Resume each session in its folder and ask it to summarize where S4 stands and continue: KPR answered F-02 must, F-03 should, F-04 (export/delete must, restore should), "enough features". Futsal answered F-02/F-03 must, two-price F-04 must, "kamu" tone, "enough features". Keep answering as the owner, taking the recommendation unless it conflicts with a recorded decision.
+2. Finish all sections, then `lvr-review-plan` and handoff, then the clean-folder M0 builder run with `VERIFICATION.md`, scorecard, and sanitized evidence under `examples/`.
+3. Record these trial findings: the journal script drops a per-answer source field (KPR); the Futsal planner replied once in English after Indonesian answers; four core boosters were read from the host `~/.agents/skills`; KPR correctly refused to ask for income or savings figures.
+4. Tag and publish v1.0.0 (ticket 25).
 
 ## Recover the working archive
 
