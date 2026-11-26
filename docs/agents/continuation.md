@@ -41,6 +41,18 @@ For ticket 24, use a fresh folder per project and the [Recipe quickstart](../../
 
 The published cloud network policy reaches the Codex model endpoint, GitHub REST API, and official sources for both trials. A follow-up environment draft adds `auth.openai.com` for `codex login --device-auth` and a personal `LVR_GITHUB_ADMIN_TOKEN` binding scoped to `api.github.com`. After that draft is published, sign in to Codex again and retry a fresh session with live search. For the GitHub settings, bind a fine-grained token restricted to this repository with `Administration` read and write access. The eventual GitHub Release also requires `Contents` write access. Use the bound token for `gh` without printing it, and verify repository permissions before making changes.
 
+## Next session (local Claude Code, 2026-11-26)
+
+A local review of `d4ea316` on Node 24 passed skill sync, language, lint, type checking, and the production build. One test, `tests/lvr/booster-cleanup.test.mjs`, failed only because booster detection read the host home folder, where `grilling` and `simple-english` were already installed. The test now runs with an isolated `HOME`, and all 46 tests pass.
+
+The local checkout has no `.scratch/` folder. Recover it from `d583182` as described below when a ticket file is needed.
+
+Resume in this order:
+
+1. Ticket 24 can run locally in Claude Code, which avoids the cloud Codex 401. Create two fresh folders outside this repository, run `/lvr-init-new-idea` for each approved scope with live search, then `lvr-review-plan` and handoff. Ask the owner only for decisions the plan needs.
+2. For each bundle, copy it to a separate folder with no Recipe skills, start a fresh builder session with `HANDOFF-PROMPT.md`, build M0 only, and run `VERIFICATION.md`. Record questions, guesses, test results, and the scorecard. Save sanitized evidence under `examples/`.
+3. Ticket 25: the local `gh` login is the repository owner with `repo` scope, so About, topics, branch protection, the tag, and the GitHub Release can be tried from here. Record the endpoint and error if any call fails.
+
 ## Recover the working archive
 
 The working archive is ignored in the current checkout. Commit `d583182ef0cbfab510bd5f8b098cfc743520074f` retains its exact files, including the original resume prompt, issue trackers, verification notes, and fixtures. Open the [archive snapshot on GitHub](https://github.com/sayyidmibrahiim/lazy-vibers-recipe/tree/d583182ef0cbfab510bd5f8b098cfc743520074f/.scratch). The table above records current work after that snapshot.

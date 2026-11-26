@@ -11,9 +11,14 @@ const registry = JSON.parse(fs.readFileSync(new URL("../../skills/lvr-boosters.j
 
 test("cleanup after reopening uses receipt boundaries and preserves an explicit keep choice", (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lvr-cleanup-window-"));
-  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "lvr-cleanup-home-"));
+  t.after(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(home, { recursive: true, force: true });
+  });
+  const env = { ...process.env, HOME: home, USERPROFILE: home };
   const run = (args, { payload, code = 0 } = {}) => {
-    const result = spawnSync(process.execPath, [cli, "--dir", dir, ...args], { input: JSON.stringify(payload), encoding: "utf8" });
+    const result = spawnSync(process.execPath, [cli, "--dir", dir, ...args], { input: JSON.stringify(payload), encoding: "utf8", env });
     assert.equal(result.status, code, result.stdout + result.stderr);
     return JSON.parse(result.stdout);
   };
