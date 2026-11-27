@@ -7496,7 +7496,9 @@ async function cmdAnswerRecord({ dir, flags }) {
       decisionIds = payload.decisions.map((d) => d.id);
     }
     const r = appendLocked(dir, "answer_recorded", payload);
-    return { answer_id: id, seq: r.seq, ts: r.ts, state: r.state, decision_ids: decisionIds, journal_warnings: r.journal_warnings };
+    const saved = isStr(payload.project?.user_language) && payload.project.user_language ? payload.project.user_language : isStr(st?.project?.user_language) && st.project.user_language ? st.project.user_language : null;
+    const replyLanguage = { saved, rule: "Reply in the latest clear user language (an explicit request wins); else the saved language; else en. Conventions §4." };
+    return { answer_id: id, seq: r.seq, ts: r.ts, state: r.state, decision_ids: decisionIds, reply_language: replyLanguage, journal_warnings: r.journal_warnings };
   });
 }
 
@@ -9134,7 +9136,7 @@ const COMMANDS = {
     },
   },
   "answer record": {
-    help: "Record one answer (journal + state). --section S [--id ID] --q TEXT --a TEXT | --in JSON [--skipped] [--source owner|delegated_agent|accepted_recommendation] [--amend]. The JSON may also carry project, product and coverage (payload extensions)",
+    help: "Record one answer (journal + state). --section S [--id ID] --q TEXT --a TEXT | --in JSON [--skipped] [--source owner|delegated_agent|accepted_recommendation] [--amend]. The JSON may also carry project, product and coverage (payload extensions). The output carries reply_language (saved language and the reply rule)",
     flags: ["section", "id", "q", "a", "in", "payload", "skipped", "source", "amend", "decision"], run: cmdAnswerRecord,
   },
   "decision status": {

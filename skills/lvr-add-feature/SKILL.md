@@ -52,7 +52,7 @@ Script: `LVR ids next --reserve --in -` with `{"request":"<verbatim request>"}`
 
 Script: `LVR journal append --type feature_captured --payload '{"id":"F-NN","name":"…","priority":"…"}'`
 
-Follow `references/feature-capture.md` §1. Micro-batches by tier (T1 ≤3, T2 ≤2, T3 =1), every turn in the user's language, skip and enough controls visible.
+Follow `references/feature-capture.md` §1. Micro-batches by tier (T1 ≤3, T2 ≤2, T3 =1), every turn in the user's language, skip and enough controls visible. Resolve the conversation language again before each batch and after recording each answer batch (conventions §4); `answer record` returns `reply_language` as a reminder.
 
 Required before moving on: original request in the journal, English request summary and display name, named user, complete click-by-click happy path, four scoped unhappy paths, priority confirmed aloud and scope proposal. Review data, abuse, regulated domains, AI usage and measurable operation targets where the feature changes them. Track coverage with `LVR interview progress --section S4 --in -` using feature-specific keys. Group known facts into one confirmation. Ask only for gaps and preserve skip/enough. Use the S4 booster plan for edge cases, stories and acceptance criteria.
 

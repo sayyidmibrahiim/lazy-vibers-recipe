@@ -97,6 +97,16 @@ test("an approved designer-filled decision changes status through state, replay 
   assert.match(refuse("--id", "D-001", "--status", "approved"), /status/);
 });
 
+test("answer record reminds the reply language from the saved project language", (t) => {
+  const { run, start } = fixture(t);
+  start();
+  const first = run("answer", "record", "--section", "S0", "--payload", JSON.stringify({ q: "Which language?", a: "Bahasa Indonesia.", project: { user_language: "id" } }));
+  assert.equal(first.reply_language.saved, "id");
+  assert.match(first.reply_language.rule, /latest clear user language/);
+  const next = run("answer", "record", "--section", "S0", "--q", "Which market?", "--a", "Indonesia.");
+  assert.equal(next.reply_language.saved, "id");
+});
+
 test("replay distinguishes English summaries from original answers and reads legacy records", (t) => {
   const { dir, run, start } = fixture(t);
   start();
