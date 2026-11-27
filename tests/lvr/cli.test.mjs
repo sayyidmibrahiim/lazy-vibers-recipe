@@ -51,6 +51,23 @@ test("replay repairs state from a healthy journal", (t) => {
   assert.deepEqual(run("replay", "--compare").diff, []);
 });
 
+test("an answer keeps who gave it through state, replay and validation", (t) => {
+  const { dir, run, start } = fixture(t);
+  start();
+  run("answer", "record", "--section", "S0", "--q", "Which market?", "--a", "Indonesia.", "--source", "accepted_recommendation");
+  const file = path.join(dir, ".lvr/state.json");
+  const read = () => JSON.parse(fs.readFileSync(file, "utf8")).pipeline.sections.S0.answers;
+  assert.equal(read()["S0.q2"].source, "accepted_recommendation");
+  assert.equal(read()["S0.q1"].source, undefined);
+  fs.writeFileSync(file, "broken fixture\n");
+  run("replay", "--write");
+  assert.equal(read()["S0.q2"].source, "accepted_recommendation");
+  assert.deepEqual(run("replay", "--compare").diff, []);
+  const bad = spawnSync(process.execPath, [cli, "--dir", dir, "answer", "record", "--section", "S0", "--q", "Who?", "--a", "Me.", "--source", "someone"], { encoding: "utf8", env: environment });
+  assert.notEqual(bad.status, 0);
+  assert.match(bad.stdout + bad.stderr, /source/);
+});
+
 test("replay distinguishes English summaries from original answers and reads legacy records", (t) => {
   const { dir, run, start } = fixture(t);
   start();

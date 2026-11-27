@@ -56,6 +56,8 @@ const AGENT_STATUS = ["started", "done", "failed"];
 const CONFIDENCE = ["high", "medium", "low"];
 const REVIEW_VERDICTS = ["BUILD-READY", "FIX-THEN-BUILD", "NOT-READY", "INCOMPLETE"];
 const REVIEW_SCOPES = ["full", "scope-only"];
+/** Who gave an answer: the owner, an agent the owner delegated to, or the owner accepting the planner's recommendation. Optional; absent means not recorded. */
+const ANSWER_SOURCES = ["owner", "delegated_agent", "accepted_recommendation"];
 const RELEASE_KINDS = ["url_2xx", "package_install", "mcp_tools_listed", "workflow_import_run", "skill_trigger", "extension_load", "store_build", "build_runs", "agent_flow", "rag_answer"];
 const EVIDENCE_RE = /^(?:S(?:10|[0-9])\.q[0-9]+|D-\d{3,}|U-\d{2,}|RQ-\d{3,})$/;
 const FACT_KEY_RE = /^[a-z0-9][a-z0-9_.-]*$/;
@@ -390,7 +392,7 @@ const KEYS = {
   session: ["start_seq", "skill", "harness", "session_id", "session_id_reason", "model", "tier", "cwd", "started_at", "ended_at", "end_reason", "end_note", "sections", "agents", "boosters_installed", "boosters_uninstalled", "recovered_error"],
   recovered: ["seq", "skill", "step", "message"],
   boosters1: ["core", "enhancer"],
-  answer: ["q", "a", "skipped"],
+  answer: ["q", "a", "skipped", "source"],
   loop: ["id", "from", "to", "reason", "opened_at", "resolved_at"],
   decision: ["id", "section", "summary", "rationale", "status"],
   boosters: ["core", "enhancer", "installed"],
@@ -472,6 +474,7 @@ function validateState(s) {
             if (!(a.q === null || isStr(a.q))) E("E_ANSWER", `${ap}/q`, "q must be a string or null.");
             if (!(a.a === null || isStr(a.a))) E("E_ANSWER", `${ap}/a`, "a must be a string or null.");
             if (typeof a.skipped !== "boolean") E("E_ANSWER", `${ap}/skipped`, "skipped must be true or false.");
+            if (a.source !== undefined && !ANSWER_SOURCES.includes(a.source)) E("E_ANSWER", `${ap}/source`, `source must be ${ANSWER_SOURCES.join("|")}.`);
             if (a.skipped === true && a.a !== null && a.a !== undefined) W("W_SKIPPED_WITH_TEXT", ap, "A skipped answer still carries answer text.");
             if (a.skipped === false && (a.q === null || a.a === null)) W("W_ANSWER_TEXT_MISSING", ap, "Answer text is missing (q or a is null).");
           }
@@ -1209,6 +1212,7 @@ function validatePayload(type, p, opts = {}) {
       if (!(p.a === null || isStr(p.a))) throw invalid("a", "a string or null");
       if (typeof p.skipped !== "boolean") throw invalid("skipped", "true or false");
       if (p.skipped && p.a !== null) throw invalid("a", "null when skipped is true");
+      if (p.source !== undefined && !ANSWER_SOURCES.includes(p.source)) throw invalid("source", ANSWER_SOURCES.join("|"));
       break;
     case "loop_back_opened":
       if (!/^L-\d{2,}$/.test(p.id ?? "")) throw invalid("id", "L-NN");
@@ -1413,7 +1417,7 @@ function applyEvent(st, e, ctx) {
         ctx.legacy?.delete(id); ctx.payloadAnswers?.add(id);
       } else if (x.answers[id]) { q = x.answers[id].q; a = x.answers[id].a; }
       else { q = null; a = null; ctx.legacy?.add(id); }
-      x.answers[id] = { q, a, skipped: !!p.skipped };
+      x.answers[id] = { q, a, skipped: !!p.skipped, ...(ANSWER_SOURCES.includes(p.source) ? { source: p.source } : {}) };
       attribute(st, "sections", S);
       break;
     }
@@ -7387,6 +7391,8 @@ async function cmdAnswerRecord({ dir, flags }) {
   const skipped = flags.skipped === true || input.skipped === true;
   let a = flags.a ?? input.a ?? null;
   if (skipped) a = null;
+  const source = flags.source ?? input.source;
+  if (source !== undefined && !ANSWER_SOURCES.includes(source)) throw invalid("source", ANSWER_SOURCES.join("|"));
   if (!isStr(q)) throw invalid("q", "the question text (string)");
   if (!(a === null || isStr(a))) throw invalid("a", "a string or null");
   const decs = [...(Array.isArray(input.decisions) ? input.decisions : []), ...(flags.decision ?? []).map((d) => parseJsonObject(d, "--decision"))];
@@ -7402,7 +7408,7 @@ async function cmdAnswerRecord({ dir, flags }) {
     } else id = `${section}.q${maxQ(section, st, j.events) + 1}`;
     const exists = !!st?.pipeline?.sections?.[section]?.answers?.[id] || j.events.some((e) => e.type === "answer_recorded" && e.payload.answer_id === id);
     if (exists && !flags.amend) throw fail("ANSWER_EXISTS", `Answer ${id} is already recorded; use --amend to replace it.`, { id });
-    const payload = { section, answer_id: id, q, a, skipped, ...(isObj(input.extra) ? input.extra : {}) };
+    const payload = { section, answer_id: id, q, a, skipped, ...(source !== undefined ? { source } : {}), ...(isObj(input.extra) ? input.extra : {}) };
     if (isObj(input.project)) payload.project = input.project;
     if (isObj(input.product)) payload.product = input.product;
     if (isObj(input.coverage)) payload.coverage = input.coverage;
@@ -7501,7 +7507,7 @@ function restorePass(dir, st, j0, dry) {
     for (const [id, a] of Object.entries(sx.answers || {})) {
       if (answerIds.has(id) || !ANSWER_ID_RE.test(id) || !id.startsWith(S + ".")) continue;
       const skipped = a.skipped === true;
-      push(app("answer_recorded", { section: S, answer_id: id, q: isStr(a.q) ? a.q : "", a: skipped ? null : isStr(a.a) ? a.a : null, skipped }));
+      push(app("answer_recorded", { section: S, answer_id: id, q: isStr(a.q) ? a.q : "", a: skipped ? null : isStr(a.a) ? a.a : null, skipped, ...(ANSWER_SOURCES.includes(a.source) ? { source: a.source } : {}) }));
       answerIds.add(id); done.answers.push(id);
     }
     if (sx.status === "blocked" && !ev.some((e) => e.type === "section_blocked" && e.payload.section === S)) { push(app("section_blocked", { section: S })); done.sections.push(`${S}:blocked`); }
@@ -9037,8 +9043,8 @@ const COMMANDS = {
     },
   },
   "answer record": {
-    help: "Record one answer (journal + state). --section S [--id ID] --q TEXT --a TEXT | --in JSON [--skipped] [--amend]. The JSON may also carry project, product and coverage (payload extensions)",
-    flags: ["section", "id", "q", "a", "in", "payload", "skipped", "amend", "decision"], run: cmdAnswerRecord,
+    help: "Record one answer (journal + state). --section S [--id ID] --q TEXT --a TEXT | --in JSON [--skipped] [--source owner|delegated_agent|accepted_recommendation] [--amend]. The JSON may also carry project, product and coverage (payload extensions)",
+    flags: ["section", "id", "q", "a", "in", "payload", "skipped", "source", "amend", "decision"], run: cmdAnswerRecord,
   },
   "decision record": {
     help: "Record decisions on a carrier event. --event T [--payload JSON] --decision JSON (repeatable) | --in JSON [--amend]",

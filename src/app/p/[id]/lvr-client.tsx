@@ -398,6 +398,7 @@ function PipelineTab({ detail, openFile }: { detail: LvrProjectDetail; openFile:
                 <p className="mt-1 font-medium text-ink">{s.name}</p>
                 <p className="mt-0.5 text-[11px] text-ink/65 leading-tight">{s.desc}</p>
                 <p className="mt-2 text-[11px] text-ink/75">{secState.answerCount} answers · {state.decisions.filter((item) => item.section === s.key).length} decisions</p>
+                {secState.delegatedCount || secState.recommendedCount ? <p className="text-[11px] text-ink/65">{[secState.delegatedCount ? `${secState.delegatedCount} by a delegated agent` : "", secState.recommendedCount ? `${secState.recommendedCount} accepted recommendations` : ""].filter(Boolean).join(" · ")}</p> : null}
                 {secState.skippedCount ? <p className="text-[11px] text-ink/65">{secState.skippedCount} skipped</p> : null}
                 {secState.record && detail.docs.some((file) => file.category === "section" && file.title === secState.record) ? <button type="button" className="mt-2 text-xs text-blueprint hover:underline" onClick={() => { const file = detail.docs.find((item) => item.category === "section" && item.title === secState.record); if (file) openFile(file.relativePath); }}>Open record</button> : null}
               </div>

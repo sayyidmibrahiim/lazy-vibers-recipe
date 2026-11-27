@@ -14,6 +14,10 @@ export interface LvrSection {
   completed_at: string | null;
   answerCount: number;
   skippedCount: number;
+  /** Answers given by an agent the owner delegated to. */
+  delegatedCount: number;
+  /** Answers where the owner accepted the planner's recommendation. */
+  recommendedCount: number;
   coverageKnown: number;
   coverageTotal: number;
 }
@@ -200,6 +204,8 @@ function normalizeSection(raw: unknown): LvrSection {
     status: sectionStatus.has(String(item.status)) ? item.status as SectionStatus : "pending",
     record: text(item.record), started_at: text(item.started_at), completed_at: text(item.completed_at),
     answerCount: answers.filter((answer) => !answer.skipped).length, skippedCount: answers.filter((answer) => answer.skipped === true).length,
+    delegatedCount: answers.filter((answer) => !answer.skipped && answer.source === "delegated_agent").length,
+    recommendedCount: answers.filter((answer) => !answer.skipped && answer.source === "accepted_recommendation").length,
     coverageKnown: coverage.filter((evidence) => list(evidence).length > 0).length, coverageTotal: coverage.length,
   };
 }

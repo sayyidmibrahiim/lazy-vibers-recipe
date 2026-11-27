@@ -132,7 +132,7 @@ ID conventions: questions `S<n>.q<n>`, unpadded (`S1.q9`) · features `F-01…` 
 
 ## 3. Journal (`journal.ndjson`)
 
-Append-only; never rewritten. Every state mutation emits at least one event; `answer_recorded` fires per answer (that is the Checkpoint granularity). Its payload is `{ "section", "answer_id", "q", "a", "skipped" }` — `q` is the question text exactly as asked, `a` the user's verbatim answer, both in User Language; `a` is null when the answer was skipped. Legacy payloads carrying only `{ "section", "answer_id", "skipped" }` remain replayable — rebuilds fold q/a from the Section Record when the payload has no text. Each line:
+Append-only; never rewritten. Every state mutation emits at least one event; `answer_recorded` fires per answer (that is the Checkpoint granularity). Its payload is `{ "section", "answer_id", "q", "a", "skipped" }` — `q` is the question text exactly as asked, `a` the user's verbatim answer, both in User Language; `a` is null when the answer was skipped. An optional `source` records who gave the answer: `owner` (the owner answered), `delegated_agent` (an agent the owner delegated the question to), or `accepted_recommendation` (the owner accepted the planner's recommendation); it is stored on the answer in state and shown on the dashboard. Leave it out when unknown. Legacy payloads carrying only `{ "section", "answer_id", "skipped" }` remain replayable — rebuilds fold q/a from the Section Record when the payload has no text. Each line:
 
 ```json
 {"ts": "2026-11-08T09:00:00Z", "seq": 1, "type": "answer_recorded", "payload": { }}

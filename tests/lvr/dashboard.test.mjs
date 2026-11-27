@@ -62,6 +62,8 @@ test("typed dashboard readers tolerate partial and corrupt data and derive sessi
   assert.equal(state.pipeline.current, "S4");
   assert.equal(state.pipeline.sections.S4.answerCount, 1);
   assert.equal(state.pipeline.sections.S4.skippedCount, 1);
+  assert.equal(state.pipeline.sections.S4.delegatedCount, 0);
+  assert.equal(state.pipeline.sections.S4.recommendedCount, 0);
   assert.equal(state.pipeline.sections.S4.coverageKnown, 1);
   assert.equal(state.pipeline.sections.S4.coverageTotal, 2);
   assert.equal(state.sessions[0].endReason, "cancelled");
