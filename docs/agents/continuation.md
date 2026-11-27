@@ -26,7 +26,7 @@ A clean public snapshot passed 46 tests, lint, type checking, the production bui
 | 24 · Real project trials | Done on 2026-11-27. The owner limited the trial to planning, because Recipe focuses on a thorough plan, so no builder run was made. Both plans reached Build-ready 10/10 on review run 3 with handoff bundles. [Trial evidence](../../examples/trials-2026-11/README.md) |
 | 25 · v1.0.0 release | About, topics, and branch protection (required check `build-and-test`, linear history) are already set. Create the `v1.0.0` tag and the GitHub Release, then verify installation from the tag. |
 
-The trial README lists five defects for later fixes. The most useful one is a per-answer source field in the journal script.
+The trial README lists five defects for later fixes, tracked locally as `.scratch/trial-defects/issues/01` to `05` (status `needs-triage`): answer source field, conversation language drift, host booster reuse, decision status after approval, and ledger corrections.
 
 ## Next session
 

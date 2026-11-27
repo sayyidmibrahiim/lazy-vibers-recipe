@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.0 - 2026-11-27
 
 ### Added
 
@@ -10,6 +10,7 @@
 - A read-only dashboard with plan files, diagrams, progress, sessions, and review history.
 - A sample plan and screenshots for the dashboard, legacy generator, and CLI.
 - Repository language and skill packaging checks, plus a portable test matrix for Linux, macOS, and Windows.
+- Two real-project planning trials with reviewed handoff bundles in `examples/trials-2026-11/`.
 
 ### Changed
 
