@@ -1,0 +1,193 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-11-27T17:16:05.864Z",
+  "project": {
+    "slug": "futsal-court-booking",
+    "name": "Futsal Court Booking",
+    "user_language": "id",
+    "idea_summary_en": "A booking website for one futsal venue: players see open court slots and book one without an account; the database lets exactly one of two simultaneous bookings win and the other sees slot taken.",
+    "status": "bundled"
+  },
+  "stack": {
+    "primary": "sveltekit-cloudflare-supabase",
+    "components": [
+      "SvelteKit 3.4.1",
+      "Cloudflare Workers Free",
+      "Supabase Free",
+      "Cloudflare Turnstile Free"
+    ],
+    "reasons_ref": "DECISIONS.md#D-046"
+  },
+  "features": [
+    {
+      "id": "F-01",
+      "name": "Book an open slot",
+      "in_mvp": true,
+      "flows_ref": "USER_FLOWS.md#F-01"
+    },
+    {
+      "id": "F-02",
+      "name": "Admin daily schedule",
+      "in_mvp": true,
+      "flows_ref": "USER_FLOWS.md#F-02"
+    },
+    {
+      "id": "F-03",
+      "name": "Cancel my booking",
+      "in_mvp": true,
+      "flows_ref": "USER_FLOWS.md#F-03"
+    },
+    {
+      "id": "F-04",
+      "name": "Set prices",
+      "in_mvp": true,
+      "flows_ref": "USER_FLOWS.md#F-04"
+    },
+    {
+      "id": "F-05",
+      "name": "Weekly data download",
+      "in_mvp": true,
+      "flows_ref": "USER_FLOWS.md#F-05"
+    }
+  ],
+  "decisions_count": {
+    "confirmed": 46,
+    "assumed": 3,
+    "designer_filled": 15
+  },
+  "milestones": [
+    {
+      "id": "M0",
+      "goal": "Walking skeleton: one real booking on the live address, one winner per slot",
+      "verified": false,
+      "acceptance_count": 6,
+      "ref": "MILESTONES.md#M0"
+    },
+    {
+      "id": "M1",
+      "goal": "F-01 complete: safe public booking with abuse controls, consent and privacy pages",
+      "verified": false,
+      "acceptance_count": 8,
+      "ref": "MILESTONES.md#M1"
+    },
+    {
+      "id": "M2",
+      "goal": "F-02 admin daily schedule",
+      "verified": false,
+      "acceptance_count": 6,
+      "ref": "MILESTONES.md#M2"
+    },
+    {
+      "id": "M3",
+      "goal": "F-03 cancel and F-04 prices",
+      "verified": false,
+      "acceptance_count": 5,
+      "ref": "MILESTONES.md#M3"
+    },
+    {
+      "id": "M4",
+      "goal": "F-05 data download and operations, then the launch check",
+      "verified": false,
+      "acceptance_count": 7,
+      "ref": "MILESTONES.md#M4"
+    }
+  ],
+  "costs": {
+    "monthly_usd": 0,
+    "one_time_usd": 0.6,
+    "table_ref": "RESEARCH.md#cost-table"
+  },
+  "capabilities": [
+    {
+      "name": "supabase",
+      "kind": "skill",
+      "license": "not stated (runtime-dependency-only)",
+      "nc": false,
+      "install": "npx skills add supabase/agent-skills"
+    },
+    {
+      "name": "database-schema-designer",
+      "kind": "skill",
+      "license": "not stated (runtime-dependency-only)",
+      "nc": false,
+      "install": "npx skills add onewave-ai/claude-skills"
+    },
+    {
+      "name": "architecture-designer",
+      "kind": "skill",
+      "license": "not stated (runtime-dependency-only)",
+      "nc": false,
+      "install": "npx skills add jeffallan/claude-skills"
+    },
+    {
+      "name": "threat-modeling",
+      "kind": "skill",
+      "license": "not stated (runtime-dependency-only)",
+      "nc": false,
+      "install": "npx skills add briiirussell/cybersecurity-skills"
+    },
+    {
+      "name": "ux-copy",
+      "kind": "skill",
+      "license": "not stated (runtime-dependency-only)",
+      "nc": false,
+      "install": "npx skills add anthropics/knowledge-work-plugins"
+    },
+    {
+      "name": "planning-and-task-breakdown",
+      "kind": "skill",
+      "license": "MIT",
+      "nc": false,
+      "install": "npx skills add addyosmani/agent-skills"
+    },
+    {
+      "name": "anti-slop",
+      "kind": "skill",
+      "license": "MIT",
+      "nc": false,
+      "install": "npx skills add elithrar/dotfiles"
+    },
+    {
+      "name": "contrast-check.py (antislop-human)",
+      "kind": "skill",
+      "license": "MIT",
+      "nc": false,
+      "install": ".lvr/verification/"
+    }
+  ],
+  "pointers": {
+    "agents": "AGENTS.md",
+    "overview": "OVERVIEW.md",
+    "verification": "VERIFICATION.md",
+    "state": ".lvr/state.json"
+  },
+  "profile_files": [
+    "ROUTES_SITEMAP.md",
+    "UI_SPEC.md"
+  ],
+  "files": [
+    "AGENTS.md",
+    "OVERVIEW.md",
+    "DECISIONS.md",
+    "SPEC/prd.md",
+    "SPEC/requirements.md",
+    "SPEC/data-model.md",
+    "SPEC/api.md",
+    "SPEC/architecture.md",
+    "USER_FLOWS.md",
+    "CODE_STYLE.md",
+    "SECURITY.md",
+    "RESEARCH.md",
+    "SCOPE.md",
+    "MILESTONES.md",
+    "VERIFICATION.md",
+    "ASSUMPTIONS.md",
+    "HANDOVER.md",
+    "CAPABILITIES.md",
+    "CLAUDE.md",
+    "GEMINI.md",
+    "ROUTES_SITEMAP.md",
+    "UI_SPEC.md",
+    "blueprint.json"
+  ]
+}

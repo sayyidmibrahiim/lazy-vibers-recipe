@@ -1,0 +1,593 @@
+{
+  "schema_version": 1,
+  "as_of": "2026-11-27",
+  "candidates": [
+    {
+      "id": "next",
+      "type": "web",
+      "default": true,
+      "repository": "vercel/next.js",
+      "package": {
+        "name": "next",
+        "ecosystem": "npm"
+      },
+      "signals": {
+        "github_pushed": {
+          "value": "2026-11-27",
+          "source": "https://api.github.com/repos/vercel/next.js",
+          "fetched": "2026-11-27"
+        },
+        "github_archived": {
+          "value": false,
+          "source": "https://api.github.com/repos/vercel/next.js",
+          "fetched": "2026-11-27"
+        },
+        "github_stars": {
+          "value": 143745,
+          "source": "https://api.github.com/repos/vercel/next.js",
+          "fetched": "2026-11-27"
+        },
+        "github_license": {
+          "value": "MIT",
+          "source": "https://api.github.com/repos/vercel/next.js",
+          "fetched": "2026-11-27"
+        },
+        "github_release_tag": {
+          "value": "v16.4.6",
+          "source": "https://api.github.com/repos/vercel/next.js/releases/latest",
+          "fetched": "2026-11-27"
+        },
+        "github_released": {
+          "value": "2026-11-09",
+          "source": "https://api.github.com/repos/vercel/next.js/releases/latest",
+          "fetched": "2026-11-27"
+        },
+        "version": {
+          "value": "16.4.6",
+          "source": "https://registry.npmjs.org/next/latest",
+          "fetched": "2026-11-27"
+        },
+        "package_license": {
+          "value": "MIT",
+          "source": "https://registry.npmjs.org/next/latest",
+          "fetched": "2026-11-27"
+        },
+        "runtime_requirement": {
+          "value": ">=20.9.0",
+          "source": "https://registry.npmjs.org/next/latest",
+          "fetched": "2026-11-27"
+        },
+        "package_deprecated": {
+          "value": false,
+          "source": "https://registry.npmjs.org/next/latest",
+          "fetched": "2026-11-27"
+        },
+        "deps_published": {
+          "value": "2026-11-09",
+          "source": "https://api.deps.dev/v3/systems/npm/packages/next/versions/16.4.6",
+          "fetched": "2026-11-27"
+        },
+        "deps_license": {
+          "value": "MIT",
+          "source": "https://api.deps.dev/v3/systems/npm/packages/next/versions/16.4.6",
+          "fetched": "2026-11-27"
+        },
+        "deps_advisories": {
+          "value": [],
+          "source": "https://api.deps.dev/v3/systems/npm/packages/next/versions/16.4.6",
+          "fetched": "2026-11-27"
+        },
+        "deps_deprecated": {
+          "value": false,
+          "source": "https://api.deps.dev/v3/systems/npm/packages/next/versions/16.4.6",
+          "fetched": "2026-11-27"
+        },
+        "version_advisories": {
+          "value": {
+            "ids": [],
+            "critical_ids": []
+          },
+          "source": "https://api.osv.dev/v1/query",
+          "fetched": "2026-11-27"
+        },
+        "version_published": {
+          "value": "2026-11-09",
+          "source": "https://api.deps.dev/v3/systems/npm/packages/next/versions/16.4.6",
+          "fetched": "2026-11-27"
+        },
+        "license": {
+          "value": "MIT",
+          "source": "https://registry.npmjs.org/next/latest",
+          "fetched": "2026-11-27"
+        },
+        "license_class": {
+          "value": "osi-permissive",
+          "source": "https://registry.npmjs.org/next/latest",
+          "fetched": "2026-11-27"
+        },
+        "weekly_downloads": {
+          "value": 91831403,
+          "source": "https://api.npmjs.org/downloads/point/last-week/next",
+          "fetched": "2026-11-27"
+        },
+        "llms_txt": {
+          "value": true,
+          "source": "https://nextjs.org/llms.txt",
+          "fetched": "2026-11-27"
+        },
+        "context7": {
+          "value": {
+            "status": "matched",
+            "id": "/vercel/next.js",
+            "benchmark": 79.53,
+            "snippets": 7974,
+            "updated": "2026-11-26"
+          },
+          "source": "https://context7.com/api/v1/search?query=nextjs",
+          "fetched": "2026-11-27"
+        },
+        "openssf_scorecard": {
+          "value": 6.2,
+          "source": "https://api.securityscorecards.dev/projects/github.com/vercel/next.js",
+          "fetched": "2026-11-27"
+        },
+        "end_of_life": {
+          "value": "2027-10-22",
+          "source": "https://endoflife.date/api/nextjs.json",
+          "fetched": "2026-11-27"
+        },
+        "days_since_push": {
+          "value": 0,
+          "source": "https://api.github.com/repos/vercel/next.js",
+          "fetched": "2026-11-27"
+        },
+        "days_since_release": {
+          "value": 18,
+          "source": "https://api.deps.dev/v3/systems/npm/packages/next/versions/16.4.6",
+          "fetched": "2026-11-27"
+        }
+      },
+      "warnings": []
+    },
+    {
+      "id": "sveltekit",
+      "type": "web",
+      "default": false,
+      "repository": "sveltejs/kit",
+      "package": {
+        "name": "@sveltejs/kit",
+        "ecosystem": "npm"
+      },
+      "signals": {
+        "github_pushed": {
+          "value": "2026-11-26",
+          "source": "https://api.github.com/repos/sveltejs/kit",
+          "fetched": "2026-11-27"
+        },
+        "github_archived": {
+          "value": false,
+          "source": "https://api.github.com/repos/sveltejs/kit",
+          "fetched": "2026-11-27"
+        },
+        "github_stars": {
+          "value": 20928,
+          "source": "https://api.github.com/repos/sveltejs/kit",
+          "fetched": "2026-11-27"
+        },
+        "github_license": {
+          "value": "MIT",
+          "source": "https://api.github.com/repos/sveltejs/kit",
+          "fetched": "2026-11-27"
+        },
+        "github_release_tag": {
+          "value": "@sveltejs/adapter-node@6.0.6",
+          "source": "https://api.github.com/repos/sveltejs/kit/releases/latest",
+          "fetched": "2026-11-27"
+        },
+        "github_released": {
+          "value": null,
+          "source": "https://api.github.com/repos/sveltejs/kit/releases/latest",
+          "fetched": "2026-11-27",
+          "reason": "noncanonical_tag"
+        },
+        "version": {
+          "value": "3.4.1",
+          "source": "https://registry.npmjs.org/%40sveltejs%2Fkit/latest",
+          "fetched": "2026-11-27"
+        },
+        "package_license": {
+          "value": "MIT",
+          "source": "https://registry.npmjs.org/%40sveltejs%2Fkit/latest",
+          "fetched": "2026-11-27"
+        },
+        "runtime_requirement": {
+          "value": ">=22.17",
+          "source": "https://registry.npmjs.org/%40sveltejs%2Fkit/latest",
+          "fetched": "2026-11-27"
+        },
+        "package_deprecated": {
+          "value": false,
+          "source": "https://registry.npmjs.org/%40sveltejs%2Fkit/latest",
+          "fetched": "2026-11-27"
+        },
+        "deps_published": {
+          "value": "2026-11-25",
+          "source": "https://api.deps.dev/v3/systems/npm/packages/%40sveltejs%2Fkit/versions/3.4.1",
+          "fetched": "2026-11-27"
+        },
+        "deps_license": {
+          "value": "MIT",
+          "source": "https://api.deps.dev/v3/systems/npm/packages/%40sveltejs%2Fkit/versions/3.4.1",
+          "fetched": "2026-11-27"
+        },
+        "deps_advisories": {
+          "value": [],
+          "source": "https://api.deps.dev/v3/systems/npm/packages/%40sveltejs%2Fkit/versions/3.4.1",
+          "fetched": "2026-11-27"
+        },
+        "deps_deprecated": {
+          "value": false,
+          "source": "https://api.deps.dev/v3/systems/npm/packages/%40sveltejs%2Fkit/versions/3.4.1",
+          "fetched": "2026-11-27"
+        },
+        "version_advisories": {
+          "value": {
+            "ids": [],
+            "critical_ids": []
+          },
+          "source": "https://api.osv.dev/v1/query",
+          "fetched": "2026-11-27"
+        },
+        "version_published": {
+          "value": "2026-11-25",
+          "source": "https://api.deps.dev/v3/systems/npm/packages/%40sveltejs%2Fkit/versions/3.4.1",
+          "fetched": "2026-11-27"
+        },
+        "license": {
+          "value": "MIT",
+          "source": "https://registry.npmjs.org/%40sveltejs%2Fkit/latest",
+          "fetched": "2026-11-27"
+        },
+        "license_class": {
+          "value": "osi-permissive",
+          "source": "https://registry.npmjs.org/%40sveltejs%2Fkit/latest",
+          "fetched": "2026-11-27"
+        },
+        "weekly_downloads": {
+          "value": 4628338,
+          "source": "https://api.npmjs.org/downloads/point/last-week/@sveltejs/kit",
+          "fetched": "2026-11-27"
+        },
+        "llms_txt": {
+          "value": true,
+          "source": "https://svelte.dev/llms.txt",
+          "fetched": "2026-11-27"
+        },
+        "context7": {
+          "value": {
+            "status": "matched",
+            "id": "/sveltejs/kit",
+            "benchmark": 70.69,
+            "snippets": 1740,
+            "updated": "2026-11-24"
+          },
+          "source": "https://context7.com/api/v1/search?query=sveltekit",
+          "fetched": "2026-11-27"
+        },
+        "openssf_scorecard": {
+          "value": null,
+          "source": "https://api.securityscorecards.dev/projects/github.com/sveltejs/kit",
+          "fetched": "2026-11-27",
+          "reason": "http_404"
+        },
+        "days_since_push": {
+          "value": 1,
+          "source": "https://api.github.com/repos/sveltejs/kit",
+          "fetched": "2026-11-27"
+        },
+        "days_since_release": {
+          "value": 2,
+          "source": "https://api.deps.dev/v3/systems/npm/packages/%40sveltejs%2Fkit/versions/3.4.1",
+          "fetched": "2026-11-27"
+        }
+      },
+      "warnings": [
+        "noncanonical_github_release_tag"
+      ]
+    },
+    {
+      "id": "astro",
+      "type": "web",
+      "default": false,
+      "repository": "withastro/astro",
+      "package": {
+        "name": "astro",
+        "ecosystem": "npm"
+      },
+      "signals": {
+        "github_pushed": {
+          "value": "2026-11-27",
+          "source": "https://api.github.com/repos/withastro/astro",
+          "fetched": "2026-11-27"
+        },
+        "github_archived": {
+          "value": false,
+          "source": "https://api.github.com/repos/withastro/astro",
+          "fetched": "2026-11-27"
+        },
+        "github_stars": {
+          "value": 64237,
+          "source": "https://api.github.com/repos/withastro/astro",
+          "fetched": "2026-11-27"
+        },
+        "github_license": {
+          "value": null,
+          "source": "https://api.github.com/repos/withastro/astro",
+          "fetched": "2026-11-27",
+          "reason": "missing_field"
+        },
+        "github_release_tag": {
+          "value": "@astrojs/node@11.1.14",
+          "source": "https://api.github.com/repos/withastro/astro/releases/latest",
+          "fetched": "2026-11-27"
+        },
+        "github_released": {
+          "value": null,
+          "source": "https://api.github.com/repos/withastro/astro/releases/latest",
+          "fetched": "2026-11-27",
+          "reason": "noncanonical_tag"
+        },
+        "version": {
+          "value": "7.4.13",
+          "source": "https://registry.npmjs.org/astro/latest",
+          "fetched": "2026-11-27"
+        },
+        "package_license": {
+          "value": "MIT",
+          "source": "https://registry.npmjs.org/astro/latest",
+          "fetched": "2026-11-27"
+        },
+        "runtime_requirement": {
+          "value": ">=22.23.4",
+          "source": "https://registry.npmjs.org/astro/latest",
+          "fetched": "2026-11-27"
+        },
+        "package_deprecated": {
+          "value": false,
+          "source": "https://registry.npmjs.org/astro/latest",
+          "fetched": "2026-11-27"
+        },
+        "deps_published": {
+          "value": "2026-11-18",
+          "source": "https://api.deps.dev/v3/systems/npm/packages/astro/versions/7.4.13",
+          "fetched": "2026-11-27"
+        },
+        "deps_license": {
+          "value": "MIT",
+          "source": "https://api.deps.dev/v3/systems/npm/packages/astro/versions/7.4.13",
+          "fetched": "2026-11-27"
+        },
+        "deps_advisories": {
+          "value": [],
+          "source": "https://api.deps.dev/v3/systems/npm/packages/astro/versions/7.4.13",
+          "fetched": "2026-11-27"
+        },
+        "deps_deprecated": {
+          "value": false,
+          "source": "https://api.deps.dev/v3/systems/npm/packages/astro/versions/7.4.13",
+          "fetched": "2026-11-27"
+        },
+        "version_advisories": {
+          "value": {
+            "ids": [],
+            "critical_ids": []
+          },
+          "source": "https://api.osv.dev/v1/query",
+          "fetched": "2026-11-27"
+        },
+        "version_published": {
+          "value": "2026-11-18",
+          "source": "https://api.deps.dev/v3/systems/npm/packages/astro/versions/7.4.13",
+          "fetched": "2026-11-27"
+        },
+        "license": {
+          "value": "MIT",
+          "source": "https://registry.npmjs.org/astro/latest",
+          "fetched": "2026-11-27"
+        },
+        "license_class": {
+          "value": "osi-permissive",
+          "source": "https://registry.npmjs.org/astro/latest",
+          "fetched": "2026-11-27"
+        },
+        "weekly_downloads": {
+          "value": 12379043,
+          "source": "https://api.npmjs.org/downloads/point/last-week/astro",
+          "fetched": "2026-11-27"
+        },
+        "llms_txt": {
+          "value": false,
+          "source": "https://docs.astro.build/llms.txt",
+          "fetched": "2026-11-27",
+          "reason": "http_404"
+        },
+        "context7": {
+          "value": {
+            "status": "matched",
+            "id": "/withastro/astro",
+            "benchmark": 35.26,
+            "snippets": 2542,
+            "updated": "2026-11-26"
+          },
+          "source": "https://context7.com/api/v1/search?query=astro",
+          "fetched": "2026-11-27"
+        },
+        "openssf_scorecard": {
+          "value": null,
+          "source": "https://api.securityscorecards.dev/projects/github.com/withastro/astro",
+          "fetched": "2026-11-27",
+          "reason": "http_404"
+        },
+        "days_since_push": {
+          "value": 0,
+          "source": "https://api.github.com/repos/withastro/astro",
+          "fetched": "2026-11-27"
+        },
+        "days_since_release": {
+          "value": 9,
+          "source": "https://api.deps.dev/v3/systems/npm/packages/astro/versions/7.4.13",
+          "fetched": "2026-11-27"
+        }
+      },
+      "warnings": [
+        "noncanonical_github_release_tag"
+      ]
+    },
+    {
+      "id": "react-router",
+      "type": "web",
+      "default": false,
+      "repository": "remix-run/react-router",
+      "package": {
+        "name": "react-router",
+        "ecosystem": "npm"
+      },
+      "signals": {
+        "github_pushed": {
+          "value": "2026-11-24",
+          "source": "https://api.github.com/repos/remix-run/react-router",
+          "fetched": "2026-11-27"
+        },
+        "github_archived": {
+          "value": false,
+          "source": "https://api.github.com/repos/remix-run/react-router",
+          "fetched": "2026-11-27"
+        },
+        "github_stars": {
+          "value": 56655,
+          "source": "https://api.github.com/repos/remix-run/react-router",
+          "fetched": "2026-11-27"
+        },
+        "github_license": {
+          "value": "MIT",
+          "source": "https://api.github.com/repos/remix-run/react-router",
+          "fetched": "2026-11-27"
+        },
+        "github_release_tag": {
+          "value": "react-router@8.5.3",
+          "source": "https://api.github.com/repos/remix-run/react-router/releases/latest",
+          "fetched": "2026-11-27"
+        },
+        "github_released": {
+          "value": null,
+          "source": "https://api.github.com/repos/remix-run/react-router/releases/latest",
+          "fetched": "2026-11-27",
+          "reason": "noncanonical_tag"
+        },
+        "version": {
+          "value": "8.5.3",
+          "source": "https://registry.npmjs.org/react-router/latest",
+          "fetched": "2026-11-27"
+        },
+        "package_license": {
+          "value": "MIT",
+          "source": "https://registry.npmjs.org/react-router/latest",
+          "fetched": "2026-11-27"
+        },
+        "runtime_requirement": {
+          "value": ">=22.22.0",
+          "source": "https://registry.npmjs.org/react-router/latest",
+          "fetched": "2026-11-27"
+        },
+        "package_deprecated": {
+          "value": false,
+          "source": "https://registry.npmjs.org/react-router/latest",
+          "fetched": "2026-11-27"
+        },
+        "deps_published": {
+          "value": "2026-11-24",
+          "source": "https://api.deps.dev/v3/systems/npm/packages/react-router/versions/8.5.3",
+          "fetched": "2026-11-27"
+        },
+        "deps_license": {
+          "value": "MIT",
+          "source": "https://api.deps.dev/v3/systems/npm/packages/react-router/versions/8.5.3",
+          "fetched": "2026-11-27"
+        },
+        "deps_advisories": {
+          "value": [],
+          "source": "https://api.deps.dev/v3/systems/npm/packages/react-router/versions/8.5.3",
+          "fetched": "2026-11-27"
+        },
+        "deps_deprecated": {
+          "value": false,
+          "source": "https://api.deps.dev/v3/systems/npm/packages/react-router/versions/8.5.3",
+          "fetched": "2026-11-27"
+        },
+        "version_advisories": {
+          "value": {
+            "ids": [],
+            "critical_ids": []
+          },
+          "source": "https://api.osv.dev/v1/query",
+          "fetched": "2026-11-27"
+        },
+        "version_published": {
+          "value": "2026-11-24",
+          "source": "https://api.deps.dev/v3/systems/npm/packages/react-router/versions/8.5.3",
+          "fetched": "2026-11-27"
+        },
+        "license": {
+          "value": "MIT",
+          "source": "https://registry.npmjs.org/react-router/latest",
+          "fetched": "2026-11-27"
+        },
+        "license_class": {
+          "value": "osi-permissive",
+          "source": "https://registry.npmjs.org/react-router/latest",
+          "fetched": "2026-11-27"
+        },
+        "weekly_downloads": {
+          "value": 79292237,
+          "source": "https://api.npmjs.org/downloads/point/last-week/react-router",
+          "fetched": "2026-11-27"
+        },
+        "llms_txt": {
+          "value": false,
+          "source": "https://reactrouter.com/llms.txt",
+          "fetched": "2026-11-27",
+          "reason": "http_404"
+        },
+        "context7": {
+          "value": {
+            "status": "matched",
+            "id": "/remix-run/react-router",
+            "benchmark": 75.77,
+            "snippets": 3074,
+            "updated": "2026-11-17"
+          },
+          "source": "https://context7.com/api/v1/search?query=react%20router",
+          "fetched": "2026-11-27"
+        },
+        "openssf_scorecard": {
+          "value": 5.9,
+          "source": "https://api.securityscorecards.dev/projects/github.com/remix-run/react-router",
+          "fetched": "2026-11-27"
+        },
+        "days_since_push": {
+          "value": 3,
+          "source": "https://api.github.com/repos/remix-run/react-router",
+          "fetched": "2026-11-27"
+        },
+        "days_since_release": {
+          "value": 3,
+          "source": "https://api.deps.dev/v3/systems/npm/packages/react-router/versions/8.5.3",
+          "fetched": "2026-11-27"
+        }
+      },
+      "warnings": [
+        "noncanonical_github_release_tag"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1575 @@
+{
+  "schema_version": 2,
+  "project": {
+    "slug": "futsal-court-booking",
+    "name": "Futsal Court Booking",
+    "idea_raw": "I want a web app, Futsal Court Booking, for a futsal venue. Players see open\ncourt slots and reserve one. Reservations are stored in Supabase. If two\nplayers try to reserve the same court, date, and time at once, exactly one\nrequest must win and the other must get a clear \"slot taken\" answer.",
+    "user_language": "id",
+    "created_at": "2026-11-26T08:47:57.641Z",
+    "status": "bundled",
+    "error": null
+  },
+  "product": {
+    "types": [
+      "web"
+    ],
+    "flags": {
+      "has_ui": true,
+      "stores_data": true,
+      "public_form": true,
+      "storage_supabase": true,
+      "regulated_domain": false
+    },
+    "status": "decided",
+    "source": "user",
+    "rationale": null,
+    "confirmed": true,
+    "updated_at": "2026-11-27T02:23:31.051Z"
+  },
+  "pipeline": {
+    "current_section": "S9",
+    "sections": {
+      "S0": {
+        "status": "done",
+        "record": "S0-intake.md",
+        "started_at": "2026-11-26T08:47:57.641Z",
+        "completed_at": "2026-11-26T08:49:43.449Z",
+        "answers": {
+          "S0.q1": {
+            "q": "Tell me everything in your head about this idea — what it is, who it's for, why you want it. Multi-paragraph is welcome; don't organize it, just pour it out.",
+            "a": "I want a web app, Futsal Court Booking, for a futsal venue. Players see open\ncourt slots and reserve one. Reservations are stored in Supabase. If two\nplayers try to reserve the same court, date, and time at once, exactly one\nrequest must win and the other must get a clear \"slot taken\" answer.",
+            "skipped": false
+          },
+          "S0.q2": {
+            "q": "Language. You're writing in English, so I'll run the interview in English. Is that right, or do you want another language (for example Bahasa Indonesia)? The plan documents will be in English either way.",
+            "a": "Bahasa: sesuaikan dengan bahasa user, jadi tanya dalam bahasa Indonesia.",
+            "skipped": false
+          },
+          "S0.q3": {
+            "q": "Name. Working name: Futsal Court Booking (slug: futsal-court-booking). Keep it, or rename?",
+            "a": "Nama: pakai apa adanya.",
+            "skipped": false
+          },
+          "S0.q4": {
+            "q": "Market. I'll research the rules and costs for Indonesia, since the earlier plan for this venue was priced in rupiah. Is that where players will use it? If it's more than one country, name the main one.",
+            "a": "Pasar: Indonesia (kota tidak dijawab, lewati).",
+            "skipped": false
+          },
+          "S0.q5": {
+            "q": "Optional. Is there anything else about the idea you want on record? For example, who runs the venue, how many courts it has, or why you want this now. You can answer \"no\" to skip it.",
+            "a": null,
+            "skipped": true
+          }
+        }
+      },
+      "S1": {
+        "status": "done",
+        "record": "S1-context.md",
+        "started_at": "2026-11-26T08:53:31.254Z",
+        "completed_at": "2026-11-26T13:46:38.882Z",
+        "answers": {
+          "S1.q1": {
+            "q": "1. Konfirmasi. Dari ide awal Anda, saya memahami dua hal. Pertama, jenis produknya website / web app (dari daftar: website, aplikasi HP, ekstensi browser, dan lain-lain). Kedua, pengguna utamanya pemain futsal yang memesan slot. Apakah keduanya benar? Kalau ada yang salah, tolong koreksi. (Juga: D-001 dua sisi pemain + pengelola; D-002 website yang bisa dipasang di layar HP, tanpa Play Store/App Store — silakan koreksi.)",
+            "a": "Benar: website yang bisa dipasang di layar HP, pengguna utama pemain yang memesan slot. Sisi admin pengelola tetap ada. D-001 dan D-002 disetujui.",
+            "skipped": false
+          },
+          "S1.q2": {
+            "q": "2. Masalahnya, dengan kata-kata Anda sendiri. Saat ini, bagaimana pemain memesan lapangan di venue ini, misalnya lewat WhatsApp ke admin, telepon, buku catatan, AYO, atau cara lain? Ceritakan satu kejadian nyata ketika cara itu bermasalah.",
+            "a": "Sekarang booking lewat chat WhatsApp ke admin. Contoh masalah: dua tim sama-sama dapat konfirmasi untuk Jumat jam 19.00 lalu bentrok di lapangan.",
+            "skipped": false
+          },
+          "S1.q3": {
+            "q": "3. Tanda berhasil. Enam bulan setelah aplikasi ini dipakai, apa yang berubah di minggu Anda sehingga Anda merasa pembuatannya sepadan?",
+            "a": "Tanda berhasil: tidak ada lagi jadwal bentrok, dan admin tidak perlu membalas chat booking satu per satu.",
+            "skipped": false
+          },
+          "S1.q4": {
+            "q": "(Tambahan tanpa ditanya, dikirim bersama jawaban S1) Kota/area dan info venue",
+            "a": "Tambahan S0: kota/area = Jakarta Selatan, dan Depok bagian yang berbatasan dengan Jakarta Selatan. Info venue (asumsi uji coba, bukan data venue sungguhan): satu venue, 3 lapangan, dikelola satu pemilik/admin.",
+            "skipped": false
+          },
+          "S1.q5": {
+            "q": "4. Dari mana pemain mendapat link? Di mana pemain pertama kali menemukan link pemesanan? (Rekomendasi: satu link pendek di profil WhatsApp Business, bio Instagram, dan Google Maps venue, langsung membuka jadwal slot hari ini.)",
+            "a": "Satu link pendek di profil WhatsApp Business, bio Instagram, dan Google Maps venue, langsung membuka jadwal slot hari ini.",
+            "skipped": false
+          },
+          "S1.q6": {
+            "q": "5. Halaman apa yang boleh dilihat tanpa login? (Rekomendasi: pemain bisa melihat jadwal dan memesan tanpa membuat akun; yang perlu login hanya halaman admin.)",
+            "a": "Pemain melihat jadwal dan memesan tanpa akun; hanya halaman admin yang perlu login.",
+            "skipped": false
+          },
+          "S1.q7": {
+            "q": "6. Setelah berhasil memesan, pemain diarahkan ke mana? (Rekomendasi: halaman konfirmasi dengan lapangan, tanggal, jam, kode booking, tombol Bagikan ke WhatsApp; jika slot keburu diambil, pesan jelas 'Slot sudah diambil' dan kembali ke jadwal.)",
+            "a": "Halaman konfirmasi dengan lapangan, tanggal, jam, kode booking, dan tombol Bagikan ke WhatsApp; jika slot keburu diambil, pesan jelas 'Slot sudah diambil' dan kembali ke jadwal.",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "product-type": [
+            "S0.q1",
+            "S1.q1"
+          ],
+          "platform": [
+            "S0.q1",
+            "S1.q1"
+          ],
+          "target-users": [
+            "S0.q1",
+            "S1.q1"
+          ],
+          "problem": [
+            "S1.q2"
+          ],
+          "success": [
+            "S1.q3"
+          ],
+          "web-pages": [
+            "S1.q5",
+            "S1.q6",
+            "S1.q7"
+          ]
+        }
+      },
+      "S2": {
+        "status": "done",
+        "record": "S2-kondisi.md",
+        "started_at": "2026-11-26T13:46:39.071Z",
+        "completed_at": "2026-11-26T13:51:47.357Z",
+        "answers": {
+          "S2.q1": {
+            "q": "1. Perangkat. Admin memakai perangkat apa (HP Android atau iPhone, laptop Windows atau Mac)? Kira-kira pemain kebanyakan memakai HP apa? (Rekomendasi: admin 1 HP Android + 1 laptop Windows; pemain kebanyakan Android, sebagian iPhone; wajib jalan di Chrome Android dan Safari iPhone, termasuk HP Android lama layar kecil.)",
+            "a": "Admin: 1 HP Android dan 1 laptop Windows. Pemain kebanyakan Android, sebagian iPhone. Wajib jalan di Chrome Android dan Safari iPhone, termasuk HP Android lama layar kecil.",
+            "skipped": false
+          },
+          "S2.q2": {
+            "q": "2. Langganan yang sudah dibayar. Apakah venue sudah membayar sesuatu yang terkait, misalnya website, hosting, nama domain, atau aplikasi kasir? (Rekomendasi: belum ada; hanya WhatsApp Business, Instagram, Google Maps.)",
+            "a": "Belum ada; hanya WhatsApp Business, Instagram, Google Maps.",
+            "skipped": false
+          },
+          "S2.q3": {
+            "q": "3. Batas anggaran bulanan. Berapa paling banyak yang sanggup dikeluarkan setiap bulan untuk aplikasi ini? (Rekomendasi: Rp 0 per bulan selama uji coba, layanan gratis yang mengizinkan bisnis plus ekspor data mingguan D-009; tinjau ulang hanya jika batas gratis tercapai.) [Juga: D-009 silakan koreksi]",
+            "a": "Rp0/bulan selama uji coba, layanan gratis yang mengizinkan bisnis plus ekspor data mingguan (D-009). Tinjau ulang hanya jika batas gratis tercapai. D-009 disetujui.",
+            "skipped": false
+          },
+          "S2.q4": {
+            "q": "4. Own address or free address? Do you want your own address (for example namavenue.biz.id), or is the host's free address enough (it carries the provider's name, for example ….pages.dev)? (Recommendation: buy .biz.id now, Rp 9.900 for the first year and Rp 60.000 a year to renew, with auto-renew on and the reminder sent to the admin email.)",
+            "a": "Beli .biz.id sekarang, auto-renew aktif, pengingat ke email admin.",
+            "skipped": false
+          },
+          "S2.q5": {
+            "q": "5. How busy is the venue? What are the opening hours, how long is one slot, and roughly how many bookings come in during a normal month versus a busy one? (Recommendation, trial assumption: open 08.00–24.00, 1-hour slots, 48 slots per day across 3 courts; normal month ~40% full ≈ 576 bookings; busy month ~70% ≈ 1.000 bookings.)",
+            "a": "Buka 08.00-24.00, slot 1 jam, 3 lapangan. Bulan biasa ~40% terisi (~576 booking), bulan sibuk ~70% (~1.000 booking). Asumsi uji coba.",
+            "skipped": false
+          },
+          "S2.q6": {
+            "q": "6. Does the app collect money in the first version? Should players pay a deposit (DP) or the full amount inside the app, for example by QRIS, or is that left out for now? (Recommendation: no payment inside the app in the first version; booking confirmed straight away, player pays at the venue; online DP parked.)",
+            "a": "Tidak ada pembayaran di aplikasi versi pertama; booking langsung terkonfirmasi, bayar di venue. DP online ditunda.",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "devices": [
+            "S2.q1"
+          ],
+          "existing-payments": [
+            "S2.q2"
+          ],
+          "budget": [
+            "S2.q3"
+          ],
+          "deploy-target": [
+            "S1.q1",
+            "D-003",
+            "S2.q3"
+          ],
+          "paid-accounts": [
+            "S1.q1",
+            "D-003",
+            "S2.q3",
+            "S2.q4"
+          ],
+          "usage": [
+            "S1.q4",
+            "S2.q5"
+          ]
+        }
+      },
+      "S3": {
+        "status": "done",
+        "record": "S3-data.md",
+        "started_at": "2026-11-26T13:51:47.554Z",
+        "completed_at": "2026-11-26T13:59:42.612Z",
+        "answers": {
+          "S3.q1": {
+            "q": "1. What data is kept for one booking? (Recommendation: only the booker or team name and WhatsApp number, plus court, date, time and booking code; no ID number, address, photo or other sensitive data.)",
+            "a": "Hanya nama pemesan/nama tim dan nomor WhatsApp, plus lapangan, tanggal, jam, kode booking.",
+            "skipped": false
+          },
+          "S3.q2": {
+            "q": "2. Where is the venue, and do the prices shown include tax? (Recommendation: treat the venue as South Jakarta for the trial; the schedule shows the final price including 10% PBJT; research Depok first if the venue turns out to be there.)",
+            "a": "Anggap venue di Jakarta Selatan; harga di jadwal adalah harga akhir termasuk PBJT 10%.",
+            "skipped": false
+          },
+          "S3.q3": {
+            "q": "3. How does the admin log in, and which email is used? (Recommendation: one admin account, email and password login, a dedicated venue email used for every service, protected with two-step verification.)",
+            "a": "Satu akun admin, login email dan kata sandi, email khusus venue dengan verifikasi dua langkah.",
+            "skipped": false
+          },
+          "S3.q4": {
+            "q": "4 (batch 2 q1). How are fake or bulk bookings prevented? (Recommendation: at most 2 upcoming bookings per WhatsApp number; Cloudflare Turnstile on the form; at most 5 bookings per 10 minutes per device/connection; admin can cancel bookings and block numbers; tests: 3rd booking from the same number rejected, submission without Turnstile rejected.)",
+            "a": "Setuju: maks 2 booking akan datang per nomor WhatsApp, Cloudflare Turnstile, 5 booking per 10 menit per perangkat/koneksi, admin bisa batalkan dan blokir nomor.",
+            "skipped": false
+          },
+          "S3.q5": {
+            "q": "5 (batch 2 q2). Who may see player data? (Recommendation: public schedule shows only Available/Taken; full name and number only for the admin; confirmation page opened by a random hard-to-guess code, number masked; price always taken from the database.)",
+            "a": "Setuju: jadwal umum hanya Tersedia/Terisi, data lengkap hanya admin, halaman konfirmasi via kode acak dengan nomor disamarkan, harga dari database.",
+            "skipped": false
+          },
+          "S3.q6": {
+            "q": "6 (batch 2 q3). How long is data kept, and how is a deletion request handled? (Recommendation: name and number deleted automatically 90 days after the play date, anonymous slot record kept; weekly exports older than 90 days deleted; deletion requests via the venue WhatsApp handled by the admin within 3x24 hours, then the player is told.)",
+            "a": "Setuju: hapus otomatis nama dan nomor 90 hari setelah tanggal main, ekspor >90 hari dihapus, permintaan hapus via WhatsApp diproses maks 3x24 jam.",
+            "skipped": false
+          },
+          "S3.q7": {
+            "q": "7 (batch 2 q4). PSE registration with Komdigi (U-03)? (Recommendation: register before the site opens to the public via the official route (OSS); step added to the launch task list; procedure re-verified in S5; a closed trial with known teams does not wait for it.)",
+            "a": "Setuju: daftar PSE sebelum dibuka untuk umum, masuk daftar tugas peluncuran.",
+            "skipped": false
+          },
+          "S3.q8": {
+            "q": "8 (loop-back L-01). Bookers under 18: UU 27/2022 Art. 25 requires parental consent. (Recommendation: online booking only for bookers aged 18+, or a parent/guardian booking for their child; new consent tick box text; under-18 players ask a parent or book through the admin.)",
+            "a": "Ikuti rekomendasi: booking online 18 tahun ke atas atau orang tua/wali yang memesan, dengan kotak persetujuan baru.",
+            "skipped": false
+          },
+          "S3.q9": {
+            "q": "9 (loop-back L-01). Data stored abroad in Singapore (UU 27/2022 Art. 56). (Recommendation: add 'Data booking disimpan di server penyedia layanan kami di Singapura, dengan perjanjian perlindungan data.' to the form notice and the privacy policy; the existing consent tick box covers it.)",
+            "a": "Ikuti rekomendasi: tambahkan kalimat lokasi data di Singapura di formulir dan kebijakan privasi.",
+            "skipped": false
+          },
+          "S3.q10": {
+            "q": "10 (loop-back L-03). PP 33/2026 takes effect 16 January 2027: update the privacy decisions where it adds duties? (Asked as S7 batch 2 q2.)",
+            "a": "Ya, baca teks resmi PP 33/2026 dan panduan PSE, perbarui S3 bila perlu.",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "data-inventory": [
+            "S3.q1"
+          ],
+          "login": [
+            "D-007",
+            "S3.q1"
+          ],
+          "tax-location": [
+            "S3.q2"
+          ],
+          "auth-method": [
+            "S3.q3"
+          ],
+          "abuse-controls": [
+            "S3.q4"
+          ],
+          "public-form": [
+            "S3.q1",
+            "S3.q5",
+            "S3.q6"
+          ],
+          "pse": [
+            "S3.q7"
+          ],
+          "minors": [
+            "S3.q8"
+          ],
+          "transfer-abroad": [
+            "S3.q9"
+          ],
+          "pdp-regulation": [
+            "S3.q10"
+          ]
+        }
+      },
+      "S4": {
+        "status": "done",
+        "record": "S4-fitur.md",
+        "started_at": "2026-11-26T14:00:39.013Z",
+        "completed_at": "2026-11-27T02:13:29.964Z",
+        "answers": {
+          "S4.q1": {
+            "q": "1. If the app could do only ONE thing on day one, what would it be? (Recommendation: players see open slots and book one with instant confirmation; when two players book the same slot at once, exactly one wins and the other sees 'Slot sudah diambil'.)",
+            "a": "Setuju: pemain melihat jadwal slot kosong lalu memesan satu slot dan langsung terkonfirmasi; dua pemain bersamaan untuk slot sama, hanya satu berhasil, yang lain melihat 'Slot sudah diambil'.",
+            "skipped": false
+          },
+          "S4.q2": {
+            "q": "2 (batch 2 q1). Is the F-01 script and D-027 right, and is the priority must? (Recommendation: approve as is, priority must.)",
+            "a": "F-01 dan D-027 disetujui, prioritas must.",
+            "skipped": false
+          },
+          "S4.q3": {
+            "q": "3 (batch 2 q2). How far ahead may players book, and until when? (Recommendation: today plus the next 14 days, while the slot has not started.)",
+            "a": "Hari ini sampai 14 hari ke depan, selama jam main belum dimulai.",
+            "skipped": false
+          },
+          "S4.q4": {
+            "q": "4 (batch 2 q3). Which venue rules appear on the form, and what happens on cancellation or no-show? (Recommendation: 'Cancel at least 3 hours before play. Two no-shows without notice = number blocked from online booking.' Admin marks no-shows.)",
+            "a": "Setuju teks aturan: batalkan paling lambat 3 jam sebelum main; tidak datang tanpa kabar 2 kali = nomor diblokir dari booking online.",
+            "skipped": false
+          },
+          "S4.q5": {
+            "q": "5 (batch 2 q4). After F-01, what are the second and third features? (Recommendation: F-02 admin daily schedule incl. manual bookings, attendance marks, cancel, block; F-03 player self-cancel via the booking code up to 3 hours before.)",
+            "a": "Setuju F-02 jadwal harian admin (termasuk booking manual) dan F-03 pemain membatalkan sendiri.",
+            "skipped": false
+          },
+          "S4.q6": {
+            "q": "6 (batch 2 q5). What does a player see when every slot on a date is full, or the venue is closed? (Recommendation: 'Semua lapangan penuh di tanggal ini' with 'Lihat besok'; admin can close dates or hours with a reason shown as 'Venue tutup – <reason>'.)",
+            "a": "Setuju: 'Semua lapangan penuh di tanggal ini' + 'Lihat besok'; admin bisa menutup tanggal/jam dengan alasan.",
+            "skipped": false
+          },
+          "S4.q7": {
+            "q": "7 (batch 3 q1). Is the F-02 script and D-032 right, and is the priority must? (Recommendation: approve, must.)",
+            "a": "F-02 dan D-032 disetujui, must.",
+            "skipped": false
+          },
+          "S4.q8": {
+            "q": "8 (batch 3 q2). Is the F-03 script and D-033 right, and is the priority must? (Recommendation: approve, must.)",
+            "a": "F-03 dan D-033 disetujui, must.",
+            "skipped": false
+          },
+          "S4.q9": {
+            "q": "9 (batch 3 q3). Is the rent the same at every hour? (Recommendation: two prices, regular Mon-Fri 08-16 and peak Mon-Fri 16-24 plus Sat, Sun and holidays all day, set by the admin on a 'Pengaturan harga' page as F-04 must; changes apply only to new bookings.)",
+            "a": "Setuju dua harga (biasa dan jam ramai) sebagai F-04 must, perubahan hanya untuk booking baru.",
+            "skipped": false
+          },
+          "S4.q10": {
+            "q": "10 (batch 3 q4). Address players as 'kamu' or 'Anda'? (Recommendation: 'kamu', friendly, short, polite; admin pages plain and direct.)",
+            "a": "'kamu' untuk pemain, admin lugas.",
+            "skipped": false
+          },
+          "S4.q11": {
+            "q": "11 (batch 3 q5). Any other must-have feature for the first version, or enough? (Recommendation: enough after F-04; park online DP, automatic WhatsApp reminders, membership and revenue reports.)",
+            "a": "Cukup setelah F-04; ide lain dicatat untuk versi berikutnya.",
+            "skipped": false
+          },
+          "S4.q12": {
+            "q": "12 (final batch q1). Approve, fix or drop F-04 and D-039? (Recommendation: approve as is.)",
+            "a": "Setujui F-04 dan D-039 apa adanya.",
+            "skipped": false
+          },
+          "S4.q13": {
+            "q": "13 (final batch q2). Readability and access conditions? (Recommendation: text at least 16 px; tap targets at least 44 x 44 px; high contrast for sunlight; status always written, never colour alone; schedule grid scrolls sideways on small phones with the hour column fixed; admin laptop shows all three courts without scrolling.)",
+            "a": "Ikuti rekomendasi aksesibilitas (huruf 16 px, tombol 44 px, kontras tinggi, status ada tulisan, tabel geser).",
+            "skipped": false
+          },
+          "S4.q14": {
+            "q": "14 (final batch q3). One example of a look to avoid? (Recommendation: no ads, promo banners or pop-ups before the schedule; no long ungrouped slot lists; the schedule is the first thing seen.)",
+            "a": "Ikuti rekomendasi: hindari iklan, banner, pop-up dan daftar panjang tanpa pengelompokan lapangan.",
+            "skipped": false
+          },
+          "S4.q15": {
+            "q": "15 (loop-back L-02). The weekly export (D-013) has no screen. (Recommendation: add F-05 Weekly data download, must: reminder bar after 7 days, Pengaturan → Unduh data, 'Unduh semua data (CSV)' to the laptop, last-download date updated; retry on failure; handover covers laptop password, one folder, delete files older than 90 days; restore tested in a milestone.)",
+            "a": "Setuju tambah F-05 Unduh data mingguan (wajib) beserta kondisi tidak lancarnya.",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "f01-seed": [
+            "S4.q1"
+          ],
+          "f01-script": [
+            "S4.q2"
+          ],
+          "f01-priority": [
+            "S4.q2"
+          ],
+          "booking-window": [
+            "S4.q3"
+          ],
+          "venue-rules": [
+            "S4.q4"
+          ],
+          "next-features": [
+            "S4.q5"
+          ],
+          "empty-state": [
+            "S4.q6"
+          ],
+          "f02-script": [
+            "S4.q7"
+          ],
+          "f02-priority": [
+            "S4.q7"
+          ],
+          "f03-script": [
+            "S4.q8"
+          ],
+          "f03-priority": [
+            "S4.q8"
+          ],
+          "pricing": [
+            "S4.q9"
+          ],
+          "f04-priority": [
+            "S4.q9"
+          ],
+          "ui-voice": [
+            "S4.q10"
+          ],
+          "enough": [
+            "S4.q11"
+          ],
+          "f04-script": [
+            "S4.q12"
+          ],
+          "ui-access": [
+            "S4.q13"
+          ],
+          "web-device": [
+            "D-010",
+            "S4.q13"
+          ],
+          "ui-avoid": [
+            "S4.q14"
+          ],
+          "f05-script": [
+            "S4.q15"
+          ],
+          "f05-priority": [
+            "S4.q15"
+          ]
+        }
+      },
+      "S5": {
+        "status": "done",
+        "record": "S5-research.md",
+        "started_at": "2026-11-27T02:13:51.595Z",
+        "completed_at": "2026-11-27T02:19:51.993Z",
+        "answers": {
+          "S5.q1": {
+            "q": "1. Which framework should the builder agent use? (Recommendation: SvelteKit + Cloudflare Workers Free + Supabase Free + Turnstile; strongest downside: smaller ecosystem than React; alternatives React Router, Next.js.)",
+            "a": "SvelteKit + Cloudflare Workers Free + Supabase Free + Turnstile (ikuti rekomendasi).",
+            "skipped": false
+          },
+          "S5.q2": {
+            "q": "2. Who builds and maintains the app? (Recommendation: correct as assumed — an AI builder agent builds from this plan, the owner uses and oversees, no programmer, budget Rp 0.)",
+            "a": "Benar: agen AI yang membangun, pemilik tidak menulis kode, anggaran Rp0.",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "stack": [
+            "S5.q1"
+          ],
+          "persona": [
+            "S5.q2"
+          ]
+        }
+      },
+      "S6": {
+        "status": "done",
+        "record": "S5-research.md",
+        "started_at": "2026-11-27T02:19:58.505Z",
+        "completed_at": "2026-11-27T02:24:15.247Z",
+        "answers": {}
+      },
+      "S7": {
+        "status": "done",
+        "record": "S7-scope.md",
+        "started_at": "2026-11-27T02:24:24.590Z",
+        "completed_at": "2026-11-27T13:41:32.356Z",
+        "answers": {
+          "S7.q1": {
+            "q": "1. Run the short critical scope review before the lock? (Recommendation: run it.)",
+            "a": "Jalankan pemeriksaan kritisnya.",
+            "skipped": false
+          },
+          "S7.q2": {
+            "q": "2. Move any feature in or out? (Recommendation: no change.)",
+            "a": "Tidak ada perubahan fitur.",
+            "skipped": false
+          },
+          "S7.q3": {
+            "q": "3 (batch 2 q1). Add the four drafted fixes (kill criteria per feature, success measure, maintenance time, WhatsApp quick reply) to the S7 record before the lock? (Recommendation: yes, as drafted.)",
+            "a": "Ya, masukkan keempat rancangan perbaikan.",
+            "skipped": false
+          },
+          "S7.q4": {
+            "q": "4 (batch 2 q2). Read the official PP 33/2026 text and the PSE guide, update S3 where needed; does the venue have an NIB? (Recommendation: assume not; getting an NIB through OSS is the owner's first task.)",
+            "a": "Ya, baca teks resmi PP 33/2026 dan panduan PSE, perbarui S3 bila perlu. Venue belum punya NIB (asumsi uji coba), jadikan tugas pertama pemilik.",
+            "skipped": false
+          },
+          "S7.q5": {
+            "q": "5 (batch 2 q3). Route the six minor scope-review findings to S8 and S9 without asking again? (Recommendation: yes.)",
+            "a": "Ya, catat enam temuan kecil ke S8 dan S9.",
+            "skipped": false
+          },
+          "S7.q6": {
+            "q": "6 (batch 2 q4). Is this the first version: F-01 to F-05 in the MVP and four ideas parked (online DP, automatic WhatsApp reminders, membership, revenue reports)? (Recommendation: yes, lock it with the fixes of questions 3 to 5.)",
+            "a": "Ya, ini versi pertama, F-01 sampai F-05, empat ide diparkir. Kunci.",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "scope-review": [
+            "S7.q1"
+          ],
+          "split": [
+            "S7.q2"
+          ],
+          "review-fixes": [
+            "S7.q3"
+          ],
+          "legal-followup": [
+            "S7.q4"
+          ],
+          "minor-routing": [
+            "S7.q5"
+          ],
+          "lock": [
+            "S7.q6"
+          ]
+        }
+      },
+      "S8": {
+        "status": "done",
+        "record": "S8-milestones.md",
+        "started_at": "2026-11-27T13:42:07.288Z",
+        "completed_at": "2026-11-27T13:45:24.140Z",
+        "answers": {
+          "S8.q1": {
+            "q": "1. Approve milestones M0 to M4 as drafted? (Recommendation: yes, as is.)",
+            "a": "Setuju tahap M0 sampai M4 apa adanya.",
+            "skipped": false
+          },
+          "S8.q2": {
+            "q": "2. Approve D-056 (PP 33/2026 duties: consent record, 3x24-hour request handling, record of processing, incident notice) as written into S3? (Recommendation: yes.)",
+            "a": "Setuju D-056.",
+            "skipped": false
+          },
+          "S8.q3": {
+            "q": "3. When to buy the .biz.id domain? (Recommendation: at the start of M0, so the first deploy uses it.)",
+            "a": "Domain dibeli saat M0 dimulai.",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "milestones": [
+            "S8.q1"
+          ],
+          "privacy": [
+            "S8.q2"
+          ],
+          "accounts": [
+            "S8.q3"
+          ]
+        }
+      },
+      "S9": {
+        "status": "done",
+        "record": "blueprint.json",
+        "started_at": "2026-11-27T13:45:24.344Z",
+        "completed_at": "2026-11-27T17:13:06.521Z"
+      }
+    },
+    "loop_backs": [
+      {
+        "id": "L-01",
+        "from": "S6",
+        "to": "S3",
+        "reason": "Regulated-domain screen: minors unclear (UU 27/2022 Art. 25 parental consent) and data stored in Supabase Singapore is a transfer abroad (Art. 56); consent text and booking rule need the owner call",
+        "opened_at": "2026-11-27T02:22:00.201Z",
+        "resolved_at": "2026-11-27T02:24:03.126Z"
+      },
+      {
+        "id": "L-02",
+        "from": "S6",
+        "to": "S4",
+        "reason": "Weekly export (D-013) has no feature or screen in F-01..F-04, so the only backup on Supabase Free (U-07) would never happen",
+        "opened_at": "2026-11-27T02:22:00.394Z",
+        "resolved_at": "2026-11-27T02:24:03.306Z"
+      },
+      {
+        "id": "L-03",
+        "from": "S7",
+        "to": "S3",
+        "reason": "Scope review RV-L01-4ebd3f1e: PP 33/2026 (implementing regulation of UU 27/2022, in force 16 January 2027) is missing from the privacy decisions; the owner asked to update S3 where needed (S7.q4)",
+        "opened_at": "2026-11-27T13:40:14.481Z",
+        "resolved_at": "2026-11-27T13:41:10.826Z"
+      }
+    ],
+    "research": {
+      "brief": {
+        "rq": [
+          "RQ-002",
+          "RQ-003",
+          "RQ-004",
+          "RQ-005",
+          "RQ-006"
+        ],
+        "findings": [
+          "U-01",
+          "U-02",
+          "U-03",
+          "U-04",
+          "U-05",
+          "U-06",
+          "U-07",
+          "U-08",
+          "U-09",
+          "U-10",
+          "U-11",
+          "U-12",
+          "U-13",
+          "U-14"
+        ],
+        "updated_at": "2026-11-26T08:52:30.573Z"
+      },
+      "scans": {
+        "S1": {
+          "rq": [
+            "RQ-007"
+          ],
+          "findings": [
+            "U-15",
+            "U-16"
+          ],
+          "note": "Freshness gate: brief cite check clean, no refresh needed. ITN PDF had no text layer; CODEX PDF text extracted locally with pdftotext.",
+          "at": "2026-11-26T08:54:47.090Z"
+        },
+        "S2": {
+          "rq": [
+            "RQ-008"
+          ],
+          "findings": [
+            "U-17",
+            "U-18",
+            "U-19"
+          ],
+          "note": "Freshness gate clean. Namecheap refused fetch (403); pandi.id/harga-domain 404 and PANDI pages carry no price list, so .id prices come from one registrar's own page. Vercel pricing and Hobby docs do not mention commercial use; the restriction is in the Terms of Service section 4.",
+          "at": "2026-11-26T13:48:18.225Z"
+        },
+        "S3": {
+          "rq": [
+            "RQ-009",
+            "RQ-010"
+          ],
+          "findings": [
+            "U-20"
+          ],
+          "note": "No new Domain Brief items; findings feed S3 batch 2 recommendations. Turnstile Free: price Free, 'best for small to medium businesses ... most production applications', up to 20 widgets, 10 hostnames per widget, unlimited challenges (docs dateModified 2026-08-14). The Cloudflare CDN Free plan's 'personal or hobby' wording belongs to the domain/CDN plan, not Turnstile. UU 27/2022: Art. 40 stop processing within 3x24h after consent is withdrawn; Art. 41 restriction within 3x24h; Art. 43 delete when no longer needed or on the subject's request; Art. 45 tell the subject the data was deleted. The Act text itself sets no 3x24h for deletion (Art. 43(2) defers to implementing rules); press reports of a 3x24h deletion deadline refer to draft implementing rules, not verified. PDF read locally with pdftotext.",
+          "at": "2026-11-26T13:58:03.539Z"
+        },
+        "S4": {
+          "rq": [
+            "RQ-011"
+          ],
+          "findings": [],
+          "note": "0 new items. Results repeat known items: no-show and cancellations are common (U-09) and deposits reduce them (U-11); apps advertise availability checks and booking history (U-13). No Indonesian app's concrete cancellation or reschedule policy found. Items shown in S4: U-08, U-09, U-11, U-13.",
+          "at": "2026-11-26T14:00:54.406Z"
+        }
+      },
+      "log": {
+        "count": 18,
+        "failed": [],
+        "last_id": "RQ-018",
+        "last_at": "2026-11-27T13:46:41.397Z"
+      },
+      "web_check": {
+        "id": "RQ-001",
+        "outcome": "found",
+        "reason": null,
+        "at": "2026-11-26T08:27:07.163Z"
+      }
+    }
+  },
+  "decisions": [
+    {
+      "id": "D-001",
+      "section": "S1",
+      "summary": "The product has two sides: a player booking page and a separate venue-manager side for the schedule and reservations",
+      "rationale": "Players reserve slots (S0.q1), and someone at the venue must see and manage those reservations; comparable owner tools offer schedule management, availability settings and reports per U-14 [cite: market · https://apps.apple.com/id/app/id1607354989 · n.d. · acc 2026-11-26 · primary · live]. Who logs in, and how, is decided in S3.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-002",
+      "section": "S1",
+      "summary": "Ship as a website players open from a link, built so it can also be installed to the phone home screen (installable web app); no Play Store or App Store app",
+      "rationale": "The owner asked for a web app (S0.q1). Per U-16 an installable web app gets a home-screen icon without an app store [cite: general · https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable · upd 2026-10-06 · acc 2026-11-26 · primary · live], so no store account or store review is needed.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-003",
+      "section": "S1",
+      "summary": "Platform: a website players open from a link, installable to the phone home screen; no store app (the owner approved D-002)",
+      "rationale": "Owner confirmed in S1.q1; installable web apps need no app store per U-16 [cite: general · https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Guides/Making_PWAs_installable · upd 2026-10-06 · acc 2026-11-26 · primary · live]. Supersedes D-002 as an assumption.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-004",
+      "section": "S1",
+      "summary": "Target users: players who reserve court slots (primary) and the venue owner/admin who manages the schedule (separate admin side; the owner approved D-001)",
+      "rationale": "Owner confirmed in S1.q1. Supersedes D-001 as an assumption.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-005",
+      "section": "S1",
+      "summary": "Success picture: zero double bookings, and the admin no longer answers booking chats one by one",
+      "rationale": "Owner's own words in S1.q3.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-006",
+      "section": "S1",
+      "summary": "Entry point: one short link placed on the venue's WhatsApp Business profile, Instagram bio and Google Maps listing; it opens today's slot schedule",
+      "rationale": "S1.q5 (answered by the owner's delegated test agent).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-007",
+      "section": "S1",
+      "summary": "Public pages: schedule and booking need no account; only the admin pages require login",
+      "rationale": "S1.q6 (answered by the owner's delegated test agent). The login method and the data asked from players are settled in S3.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-008",
+      "section": "S1",
+      "summary": "After booking: a confirmation page with court, date, time, booking code and a Share-to-WhatsApp button; if the slot was taken first, a clear 'Slot sudah diambil' message and a return to the schedule",
+      "rationale": "S1.q7 (answered by the owner's delegated test agent); serves the success picture D-005.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-009",
+      "section": "S2",
+      "summary": "Backups are a planned duty: while the database runs on Supabase Free, the plan includes a scheduled automatic export of all reservations at least weekly, stored outside Supabase, plus a tested restore step",
+      "rationale": "Per U-07, Supabase Free has no automatic backups and Supabase tells free projects to export their own data [cite: quota · https://supabase.com/docs/guides/platform/backups · n.d. · acc 2026-11-26 · primary · live]. A lost reservation table would bring back the double-booking problem the owner wants gone (S1.q2, D-005).",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-010",
+      "section": "S2",
+      "summary": "Support matrix: Chrome on Android (including old small-screen phones) and Safari on iPhone for players; the admin uses one Android phone and one Windows laptop",
+      "rationale": "S2.q1 (delegated answer).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-011",
+      "section": "S2",
+      "summary": "Budget ceiling: Rp 0 per month during the trial; review only when a free-tier limit is reached. This rules out Vercel Hobby (personal or non-commercial use only per U-17) and any paid plan, such as Supabase Pro from USD 25 per month or Cloudflare Workers Paid from USD 5 per month",
+      "rationale": "S2.q3 (delegated answer). Vercel terms [cite: legal · https://vercel.com/legal/terms · upd 2026-10-19 · acc 2026-11-26 · primary · live]; Supabase Pro [cite: price · https://supabase.com/pricing · n.d. · acc 2026-11-26 · primary · live]; Cloudflare minimum [cite: price · https://developers.cloudflare.com/workers/platform/pricing/ · upd 2026-11-18 · acc 2026-11-26 · primary · live].",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-012",
+      "section": "S2",
+      "summary": "Deploy target: free-tier hosting whose terms allow business use, with the database on Supabase Free; the exact host is chosen in S5",
+      "rationale": "S2.q3 (delegated answer) with U-17 and U-18.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-013",
+      "section": "S2",
+      "summary": "Weekly automatic export of reservations stored outside Supabase, with a tested restore, while on Supabase Free (the owner approved D-009)",
+      "rationale": "S2.q3 (delegated answer); per U-07. Supersedes D-009 as an assumption.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-014",
+      "section": "S2",
+      "summary": "Own domain: buy a .biz.id address now (Rp 9.900 first year, Rp 60.000 per year renewal at Rumahweb [cite: price · https://www.rumahweb.com/domain-murah/ · n.d. · acc 2026-11-26 · primary · live]), with auto-renew on and renewal reminders to the admin email",
+      "rationale": "S2.q4 (delegated answer); per U-19 a lapsed domain breaks every shared link (D-006).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-015",
+      "section": "S2",
+      "summary": "Usage baseline (trial assumption): open 08:00-24:00, 1-hour slots, 3 courts = 48 slots per day; normal month about 576 bookings (40% full), busy month about 1,000 bookings (70% full)",
+      "rationale": "S2.q5 (delegated answer), labelled a trial assumption; S5 checks free-tier limits against the busy month.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-016",
+      "section": "S2",
+      "summary": "No payment inside the app in the first version: a booking is confirmed at once and the player pays at the venue; online DP (for example QRIS) is parked",
+      "rationale": "S2.q6 (delegated answer). Per U-05 and U-12, QRIS would add per-payment fees above the 0% limits [cite: price · https://www.bi.go.id/id/publikasi/ruang-media/news-release/Pages/sp_2815926.aspx · upd 2026-09-08 · acc 2026-11-26 · primary · live]. No-show and cancellation rules are captured in S4.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-017",
+      "section": "S3",
+      "summary": "Privacy at launch: a privacy-policy page, plus a short notice on the booking form stating why the name and WhatsApp number are kept, with an explicit consent tick box before the booking is sent",
+      "rationale": "Per U-01, UU 27/2022 Article 20 requires a lawful basis such as explicit consent for a stated purpose [cite: regulation · https://peraturan.bpk.go.id/Details/229798/uu-no-27-tahun-2022 · pub 2022-10-17 · acc 2026-11-26 · primary · live · amend-check 2026-11-26]. Triggered because bookings keep personal data (S0.q1).",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-018",
+      "section": "S3",
+      "summary": "Data-breach procedure: a written step-by-step plan in the handover documents to notify affected players (via their stored WhatsApp numbers) and the authority in writing within 3 x 24 hours of discovering a leak",
+      "rationale": "Per U-02, UU 27/2022 Article 46(1) sets this 3 x 24-hour written notice duty [cite: regulation · https://peraturan.bpk.go.id/Details/229798/uu-no-27-tahun-2022 · pub 2022-10-17 · acc 2026-11-26 · primary · live · amend-check 2026-11-26].",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-019",
+      "section": "S3",
+      "summary": "Admin password reset: a \"forgot password\" link sends a reset email to the admin email address; no other recovery path",
+      "rationale": "The admin pages require login (D-007); without a reset path, a forgotten password locks the owner out of the schedule. Designer-surfaced because owners rarely ask what happens after \"forgot password\".",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-020",
+      "section": "S3",
+      "summary": "Data inventory: a booking keeps only the booker or team name and a WhatsApp number, plus court, date, time and booking code; no ID number, address, photo or sensitive data",
+      "rationale": "S3.q1 (delegated answer). Data minimisation lowers the duties and the breach impact under UU 27/2022 (U-01, U-02).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-021",
+      "section": "S3",
+      "summary": "Venue treated as South Jakarta for the trial; every price on the schedule is the final price including the 10% PBJT, so players pay exactly what they saw",
+      "rationale": "S3.q2 (delegated answer). Per U-04 in the Domain Brief, futsal court rental in Jakarta is a PBJT object at 10%. U-20 (Depok) no longer applies unless the venue moves; then research before setting prices.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-022",
+      "section": "S3",
+      "summary": "One admin account with email and password login; a dedicated venue email (not a personal one) owns every service account (hosting, Supabase, domain) and has two-step verification on",
+      "rationale": "S3.q3 (delegated answer). Follows D-007 and D-019; one dedicated email keeps all access recoverable if staff change.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-023",
+      "section": "S3",
+      "summary": "Abuse controls on the public booking form: at most 2 upcoming bookings per WhatsApp number; Cloudflare Turnstile verified on the server for every submit; at most 5 booking submits per 10 minutes per device/connection; admin can cancel any booking and block a number. Verification: a 3rd upcoming booking from one number is rejected; a submit without a valid Turnstile token is rejected; the 6th submit inside 10 minutes is rejected",
+      "rationale": "S3.q4 (delegated answer). No account and no deposit make slot squatting cheap (threat-modeling abuse case). Turnstile Free is for small to medium businesses and production apps with unlimited challenges [cite: price · https://developers.cloudflare.com/turnstile/plans/ · upd 2026-08-14 · acc 2026-11-26 · primary · live].",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-024",
+      "section": "S3",
+      "summary": "Visibility: the public schedule shows only Available/Taken with no names; full names and WhatsApp numbers are readable only by the admin (database row rules deny public reads); the confirmation page opens only with a random hard-to-guess booking code and shows the number masked (e.g. 0812****789); the price is always read from the database, never from the page",
+      "rationale": "S3.q5 (delegated answer). Threat-modeling: information disclosure (harvesting numbers, guessing codes), tampering (price sent from the page) and elevation of privilege (public reads of admin data).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-025",
+      "section": "S3",
+      "summary": "Retention and deletion: name and WhatsApp number are erased automatically 90 days after the play date (an anonymous record that the slot was taken stays for reports); weekly export files older than 90 days are deleted; a deletion or consent-withdrawal request arrives via the venue WhatsApp, the admin deletes it from the admin page within 3 x 24 hours and tells the player it is done",
+      "rationale": "S3.q6 (delegated answer). UU 27/2022 Art. 40 (stop within 3x24h after withdrawal), Art. 43 (delete when no longer needed or on request), Art. 45 (tell the subject) [cite: regulation · https://jdih.kemenkeu.go.id/download/46c17b53-4a45-411c-9b76-c6799e5769fc/UU_Nomor_27_Tahun_2022%20Perlindungan%20Data%20Pribadi.pdf · pub 2022-10-17 · acc 2026-11-26 · primary · live · amend-check 2026-11-26].",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-026",
+      "section": "S3",
+      "summary": "Register as a private electronic system operator (PSE Lingkup Privat) with Komdigi before the site opens to the public; the registration is a launch task; the current procedure is re-verified in S5; a closed trial with known teams may start before it",
+      "rationale": "S3.q7 (delegated answer). Per U-03, Komdigi was still enforcing registration in September 2026 with warning letters and access blocking [cite: regulation · https://infopublik.id/kategori/nasional-ekonomi-bisnis/989611/kemkomdigi-beri-tenggat-22-september-bagi-25-pse-untuk-penuhi-kewajiban-pendaftaran · pub 2026-09-17 · acc 2026-11-26 · primary · live · amend-check 2026-11-26].",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-027",
+      "section": "S4",
+      "summary": "F-01 routine recovery defaults: no slot hold while the form is open (a slot is taken only at submit); each form carries a one-time request key so a double tap or a retry after a dropped connection returns the same booking instead of a second one; slot times use Asia/Jakarta (WIB) from the server clock and a slot whose start time has passed cannot be booked; a refused booking keeps the typed name and number",
+      "rationale": "deliver-edge-cases on F-01 (abandon, retry, expiry); the one-winner rule itself is the database refusal per U-08. Shown to the owner for correction.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-028",
+      "section": "S4",
+      "summary": "F-01 Book an open slot: script approved as drafted; priority must",
+      "rationale": "S4.q2 (delegated answer), confirmed aloud.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-029",
+      "section": "S4",
+      "summary": "Booking window: today plus the next 14 days (date tabs); a slot can be booked until its start time (Asia/Jakarta)",
+      "rationale": "S4.q3 (delegated answer). Limits slot hoarding (D-023).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-030",
+      "section": "S4",
+      "summary": "Venue rules shown on the booking form before submit: online cancellation up to 3 hours before play; two no-shows without notice block the WhatsApp number from online booking",
+      "rationale": "S4.q4 (delegated answer). U-09: unstated rules caused disputes; with no deposit (D-016) the rule is a simple block.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-031",
+      "section": "S4",
+      "summary": "Empty and closed states: a fully booked date shows 'Semua lapangan penuh di tanggal ini' with a 'Lihat besok' button; the admin can close dates or hours (per court or all courts) with a reason, shown to players as 'Venue tutup – <reason>'",
+      "rationale": "S4.q6 (delegated answer).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-032",
+      "section": "S4",
+      "summary": "F-02 routine defaults: manual bookings by the admin skip Turnstile and the 2-upcoming limit, WhatsApp number optional; the same database rule refuses a manual booking on a slot just taken online; closing hours that already hold bookings lists them and requires cancelling them first; attendance marks are allowed from the slot start until the end of the next day; the second no-show mark blocks the number automatically and the admin can unblock; admin login session ends after 30 days without use",
+      "rationale": "deliver-edge-cases on F-02. Shown to the owner for correction.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-033",
+      "section": "S4",
+      "summary": "F-03 routine defaults: a booking is found by its code plus the last 4 digits of the WhatsApp number, with one message \"Booking tidak ditemukan\" for any mismatch and at most 5 lookups per 10 minutes per device/connection; cancelling twice shows \"Booking ini sudah dibatalkan\"; the 3-hour limit is checked on the server in WIB, after which the button is replaced by a WhatsApp link to the venue; a cancelled slot returns to Tersedia at once and frees one of the 2 upcoming bookings",
+      "rationale": "deliver-edge-cases on F-03, aligned with D-023 and D-024. Shown to the owner for correction.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-034",
+      "section": "S4",
+      "summary": "F-02 Admin daily schedule (incl. manual bookings, attendance marks, cancel, block, close hours): script approved as drafted; priority must",
+      "rationale": "S4.q7 (delegated answer), confirmed aloud. Manual bookings keep WhatsApp and walk-in bookings on the same schedule, closing the double-booking gap.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-035",
+      "section": "S4",
+      "summary": "F-03 Cancel my booking: script approved as drafted; priority must",
+      "rationale": "S4.q8 (delegated answer), confirmed aloud. Supports D-005 (no one-by-one booking chats).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-036",
+      "section": "S4",
+      "summary": "Pricing: two prices per hour, both final prices including 10% PBJT (D-021) — regular (Mon-Fri 08.00-16.00) and peak (Mon-Fri 16.00-24.00, and Sat, Sun and holidays all day); set by the admin in F-04 (priority must); a price change applies only to new bookings, each booking keeps the price it was made at",
+      "rationale": "S4.q9 (delegated answer), priority confirmed aloud.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-037",
+      "section": "S4",
+      "summary": "Product voice: player screens use Indonesian (id-ID) with 'kamu', friendly, short and polite (e.g. 'Slot sudah diambil. Pilih jam lain, ya.'); admin screens are plain and direct",
+      "rationale": "S4.q10 (delegated answer). Feeds UI_SPEC.md and ux-copy.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-038",
+      "section": "S4",
+      "summary": "Feature capture ends after F-04. Parked for a later version (not built now): online DP, automatic WhatsApp reminders, membership or subscriptions, revenue reports",
+      "rationale": "S4.q11 (delegated answer), the 'enough' control.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-039",
+      "section": "S4",
+      "summary": "F-04 routine defaults: prices are whole rupiah per hour between Rp 1 and Rp 5.000.000; the admin adds holiday dates by hand (no automatic national calendar) and past dates are refused; if the price changed while a player had the form open, the server uses the current price and the player must confirm \"Harga berubah menjadi Rp X. Lanjut pesan?\"; two admin devices saving prices: the last save wins and the page shows when it was last changed",
+      "rationale": "deliver-edge-cases on F-04; follows D-024 (price read from the database). Shown to the owner for correction.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-040",
+      "section": "S4",
+      "summary": "F-04 Set prices: script approved as drafted (priority must per D-036); D-039 defaults approved",
+      "rationale": "S4.q12 (delegated answer), final complete-or-drop batch.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-041",
+      "section": "S4",
+      "summary": "Accessibility and layout: body text at least 16 px; tap targets at least 44 x 44 px; high-contrast colours readable in sunlight; every status written as text (Tersedia, Terisi, Tutup), never colour alone; phone first — on small phones the schedule grid scrolls sideways with the hour column fixed; on the admin laptop all three courts show without sideways scrolling",
+      "rationale": "S4.q13 (delegated answer). Support matrix D-010 includes small old Android phones.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-042",
+      "section": "S4",
+      "summary": "Avoid: ads, promo banners and pop-ups before the schedule, and long slot lists not grouped by court; the schedule grid is the first thing visible when the link opens",
+      "rationale": "S4.q14 (delegated answer). Feeds UI_SPEC.md.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-043",
+      "section": "S5",
+      "summary": "Builder and maintainer: an AI builder agent builds from the bundle; the owner does not write code and only uses and oversees the app; no programmer; budget Rp 0 per month",
+      "rationale": "S5.q2 (delegated answer); confirms the S5b persona used for weights.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-044",
+      "section": "S5",
+      "summary": "Paid fallback for hosting: if the 100,000 requests/day Workers Free limit is ever hit, move to Cloudflare Workers Paid (USD 5 per month minimum); the owner is asked before any paid change (D-011)",
+      "rationale": "Free tiers have cliffs; price per RQ-013 [cite: price · https://developers.cloudflare.com/workers/platform/pricing/ · upd 2026-11-18 · acc 2026-11-27 · primary · live].",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-045",
+      "section": "S5",
+      "summary": "Paid fallback for data: if the 500 MB database, the pause rule or the lack of automatic backups becomes a real problem, move to Supabase Pro (from USD 25 per month); the owner is asked before any paid change (D-011)",
+      "rationale": "Free tiers have cliffs; price per RQ-013 [cite: price · https://supabase.com/pricing · n.d. · acc 2026-11-27 · primary · live].",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-046",
+      "section": "S5",
+      "summary": "Stack: SvelteKit 3.4.1 on Cloudflare Workers Free (@sveltejs/adapter-cloudflare), Supabase Free (Postgres, Supabase Auth for the admin, row rules), Cloudflare Turnstile Free; recheck evidence by 2026-12-11",
+      "rationale": "S5.q1 (delegated answer) following the S5b rank (SvelteKit 96, Next.js 90, React Router 86). Rp 0 on plans that allow business use (D-011, D-012); server form actions carry the booking write, Turnstile check and the database one-winner refusal; light pages for old phones (D-010). Strongest downside: smaller ecosystem than React.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-047",
+      "section": "S6",
+      "summary": "Store: Supabase (Postgres) — shared online store for concurrent player and admin writes, database-level one-winner constraint, row-level access rules; rejected alternative: Firestore (document model, no SQL exclusion constraint for the slot rule); migration path: standard Postgres dump/restore to any Postgres host, plus the weekly export (D-013)",
+      "rationale": "Named by the owner in the idea (S0) and confirmed with the stack in S5.q1 (D-046); data module comparison: multiple online users, concurrent writes, record-level access (D-024). U-08 for the constraint.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-048",
+      "section": "S6",
+      "summary": "One daily Cloudflare Cron Trigger (free, 1 of 5 per account) calls a protected cleanup endpoint that erases names and numbers 90 days after the play date (D-025) through the Supabase API; the same daily database call keeps the Supabase Free project active during long venue closures (U-06)",
+      "rationale": "S6 risk R-2/R-3: Supabase pauses Free projects after 7 days of low database activity [cite: quota · https://supabase.com/docs/guides/platform/free-project-pausing · n.d. · acc 2026-11-27 · primary · live]; Workers Free allows 5 Cron Triggers [cite: quota · https://developers.cloudflare.com/workers/platform/limits/ · upd 2026-11-25 · acc 2026-11-27 · primary · live].",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-049",
+      "section": "S6",
+      "summary": "Supabase project region: Southeast Asia (Singapore) ap-southeast-1, the nearest to Jakarta; there is no Indonesian region; Supabase DPA with standard contractual clauses applies through the Terms",
+      "rationale": "S6 R-5 [cite: general · https://supabase.com/docs/guides/platform/regions · n.d. · acc 2026-11-27 · primary · live] [cite: legal · https://supabase.com/legal/dpa · pub 2026-08-01 · acc 2026-11-27 · primary · live]. How players are told is decided in L-01 (S3).",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-050",
+      "section": "S3",
+      "summary": "Age rule: online booking is for bookers aged 18 or over, or a parent/guardian booking for their child; the consent tick box reads 'Saya berusia 18 tahun ke atas, atau saya orang tua/wali yang memesan untuk anak saya.'; under-18 players ask a parent/guardian or book through the admin. The service is not intended for minors, so regulated_domain stays false",
+      "rationale": "S3.q8 (delegated answer), L-01. UU 27/2022 Art. 25 [cite: regulation · https://jdih.kemenkeu.go.id/download/46c17b53-4a45-411c-9b76-c6799e5769fc/UU_Nomor_27_Tahun_2022%20Perlindungan%20Data%20Pribadi.pdf · pub 2022-10-17 · acc 2026-11-27 · primary · live · amend-check 2026-11-27].",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-051",
+      "section": "S3",
+      "summary": "Storage abroad disclosed: the booking-form notice and the privacy policy say 'Data booking disimpan di server penyedia layanan kami di Singapura, dengan perjanjian perlindungan data.'; the binding safeguard is the Supabase DPA with standard contractual clauses, and the consent tick box covers the disclosure",
+      "rationale": "S3.q9 (delegated answer), L-01. UU 27/2022 Art. 56(3)-(4); Supabase DPA [cite: legal · https://supabase.com/legal/dpa · pub 2026-08-01 · acc 2026-11-27 · primary · live].",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-052",
+      "section": "S4",
+      "summary": "F-05 Weekly data download added, priority must: reminder bar when the last export is older than 7 days; Pengaturan → Unduh data shows the last download date and 'Unduh semua data (CSV)' (bookings, prices, closures, holidays, block list); unhappy paths as drafted; the file holds personal data, so the handover requires a laptop password, one folder, and deleting files older than 90 days; restore is tested in a milestone",
+      "rationale": "S4.q15 (delegated answer), L-02. Supabase Free has no automatic backups (U-07); implements D-013. Emailing exports rejected to keep personal data out of inboxes.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-053",
+      "section": "S7",
+      "summary": "Scope-review fixes adopted: (1) kill criteria — F-01 under 30% of bookings online after 2 months → rethink the booking flow; F-02 more than 1 clash a month → fix the admin screen; F-03 under 1 in 5 cancellations through the page after 2 months → rethink the cancel flow; F-04 no price change in 6 months → simplify next version; F-05 no download 3 weeks running → move to an automatic export. (2) Success measure: count booking chats in the week before launch as the baseline; each month read online vs admin-entered bookings from the weekly CSV (F-05); target at month 6: at least 70% online and zero clashes. (3) Maintenance: the owner about 15 minutes a week (download, read service emails) plus one AI builder-agent session a month for updates, Rp 0. (4) Launch step: a WhatsApp Business quick reply 'Booking sekarang lewat <link>, langsung terkonfirmasi.' used for every booking chat in the first month",
+      "rationale": "S7.q3 (delegated answer); fixes RV-L04-789d07ea, RV-L15-44011fb1, RV-L15-e34a95af, RV-L15-bba5f9c0 from scope review run 1 (D-005, D-006, D-043)",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-054",
+      "section": "S7",
+      "summary": "Accounts and approvals: the venue has no NIB (trial assumption). Owner's first task: get an NIB through OSS with a KBLI matching court rental; then register the PSE Lingkup Privat in OSS (PB-UMKU) before public opening (D-026), using the NIB, the owner's KTP, the .biz.id domain, screenshots, the privacy policy and a terms page. No official processing time is published, so the NIB is started in the week of M0 and the PSE filing as soon as the site and privacy page are live. All service accounts (Cloudflare, Supabase, registrar, Turnstile, OSS) sit on the venue email (D-022) with the owner as holder",
+      "rationale": "S7.q4 (delegated answer); fixes RV-L10-a74e1201. Registration goes through OSS [cite: legal · https://pse.komdigi.go.id/ · n.d. · acc 2026-11-27 · primary · live]; an NIB is needed first [cite: legal · https://quasa.io/id/media/daftar-pse-privat-lewat-oss-nib-dan-kbli-harus-siap-lebih-dulu · n.d. · acc 2026-11-27 · live] [cite: legal · https://izin.co.id/blog/apa-itu-pse-kominfo/ · pub 2026 · acc 2026-11-27 · live]; RQ-017",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-055",
+      "section": "S7",
+      "summary": "Minor scope-review findings routed: S8 milestones carry a Cloudflare rate-limiting rule on the schedule route and a site-down fallback text (RV-L08-e4d46940), the Turnstile-error fallback 'Pemesanan online sedang gangguan. Hubungi admin lewat WhatsApp' (RV-L10-03e2438a) and the password-recovery check; S9 writes the bad-month row and move-away costs in RESEARCH.md and SPEC/architecture.md (RV-L10-dd0b5e69), a one-way-door list (RV-L10-4a47bac9), and the Supabase default-SMTP limits with the dashboard recovery route in SECURITY.md and HANDOVER.md (RV-L10-ed22d6f6); the WhatsApp quick reply is a launch step (RV-L15-bba5f9c0, D-053)",
+      "rationale": "S7.q5 (delegated answer). Supabase default SMTP sends only to team addresses, 2 messages per hour, best-effort [cite: quota · https://supabase.com/docs/guides/auth/auth-smtp · n.d. · acc 2026-11-27 · primary · live]; Workers Free returns Error 1027 over 100,000 requests a day [cite: quota · https://developers.cloudflare.com/workers/platform/limits/ · upd 2026-11-25 · acc 2026-11-27 · primary · live]",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-056",
+      "section": "S3",
+      "summary": "PP 33/2026 applied (in force 16 January 2027): (a) data requests sent to the venue WhatsApp — access, correction, consent withdrawal (handled as erasure of name and number), restriction and deletion — are handled by the admin within 3x24 hours of receipt, each with its received and done date written in a request log kept with the weekly exports; (b) every online booking stores the time of consent and the consent-text version; (c) a record of processing activities, a written incident policy and an incident record template go in SECURITY.md at S9, and a breach is told to players and the agency within 3x24 hours (U-02); (d) no data protection officer and no impact assessment are required: no public service, no large-scale monitoring, no specific data, none of the high-risk cases; (e) the transfer to Singapore rests on the Supabase DPA standard clauses plus the form notice (D-051), with the transfer map and minimised fields recorded in SECURITY.md; (f) the signed text is re-read at S9",
+      "rationale": "S3.q10 (delegated answer: update S3 where needed); drafted from the regulation, shown for correction. PP 33/2026 Pasal 71, 74, 77, 92, 99, 114-117, 120, 142, 160-165, 225 [cite: regulation · https://www.matthewswong.com/en/blog/gr-33-2026-pdp-implementing-regulation-developers/ · pub 2026-10 · acc 2026-11-27 · live · amend-check 2026-11-27] [cite: regulation · https://pro.hukumonline.com/a/lt6a97c3fe4527c/pemerintah-akhirnya-terbitkan-kerangka-implementasi-pelindungan-data-pribadi--berlaku-mulai-16-januari-2027 · pub 2026 · acc 2026-11-27 · live · amend-check 2026-11-27]; RQ-017",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-057",
+      "section": "S7",
+      "summary": "Scope locked for the first version: in-MVP F-01 Book an open slot, F-02 Admin daily schedule, F-03 Cancel my booking, F-04 Set prices, F-05 Weekly data download; Parking Lot: online DP, automatic WhatsApp reminders, membership or subscriptions, revenue reports. Scope review run 1 (fix before locking, 7/10) answered by D-053 to D-056; no feature moved. Changes from here go through /lvr-add-feature",
+      "rationale": "S7.q6 (delegated answer); S7.q2 no feature change; review report .lvr/review/REVIEW-2026-11-27-1.md",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-058",
+      "section": "S8",
+      "summary": "Milestone order and grouping: M0 walking skeleton with the one-winner race test, M1 F-01, M2 F-02, M3 F-03 + F-04, M4 F-05 + operations and the launch re-check",
+      "rationale": "S8.q1 (delegated answer); vertical slices, schema and one-winner rule first (S4.q1, D-005).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-059",
+      "section": "S8",
+      "summary": "Owner approves D-056 as written: PP 33/2026 duties carried into M1 consent v1, M4 erasure job and SECURITY.md (record of processing, incident policy, transfer map, request log)",
+      "rationale": "S8.q2 (delegated answer); PP 33/2026 is in force from 16 January 2027.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-060",
+      "section": "S8",
+      "summary": "Domain timing: the .biz.id domain is bought when M0 starts (refines D-014 'buy now'), auto-renew on, on the venue email",
+      "rationale": "S8.q3 (delegated answer); the first deploy in M0 needs the domain, and nothing earlier uses it.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-061",
+      "section": "S9",
+      "summary": "Submit and lookup limits (5 per 10 minutes per device/connection) are counted in an attempts table keyed by an HMAC-SHA-256 of the connection IP with a server secret; the raw IP is never stored and rows are deleted after 24 hours by the daily job",
+      "rationale": "Compile gap: D-023 and D-033 set the limits but no record says where the count lives; a salted hash keeps the count without storing the IP",
+      "status": "assumed"
+    },
+    {
+      "id": "D-062",
+      "section": "S9",
+      "summary": "Seed prices in the first migration are placeholders (regular 150000, peak 250000 rupiah) used only until the owner sets real prices in F-04 at M3",
+      "rationale": "Compile gap: M0 needs a price to show and store (S8 M0 seeds fixed prices), but no record gives the venue prices",
+      "status": "assumed"
+    },
+    {
+      "id": "D-063",
+      "section": "S9",
+      "summary": "UI palette (green action #15803D on warm neutrals), system font stack at 16 px, motion budget and four proposed copy keys (book.limit, book.rate, field.consent, book.success)",
+      "rationale": "Compile gap: S4 recorded feel, voice and accessibility but no colours or font; all pairs pass WCAG AA in the contrast helper",
+      "status": "assumed"
+    },
+    {
+      "id": "D-064",
+      "section": "S3",
+      "summary": "Block-list retention: a blocked WhatsApp number is deleted from blocked_numbers 180 days after the block unless the admin renews it; the daily job removes expired rows; the period is stated in the privacy policy",
+      "rationale": "Review finding RV-L06-3fec352b; recommendation accepted on the owner's delegation (rekomendasi diterima atas delegasi pemilik); keeps every personal field under a retention limit (D-025, D-056)",
+      "status": "user_confirmed"
+    }
+  ],
+  "boosters": {
+    "core": [
+      {
+        "name": "pm-skills interview patterns",
+        "repo": "product-on-purpose/pm-skills",
+        "license": "Apache-2.0",
+        "tier": "core",
+        "status": "installed"
+      },
+      {
+        "name": "grilling",
+        "repo": "mattpocock/skills",
+        "license": "MIT",
+        "tier": "core",
+        "status": "installed"
+      },
+      {
+        "name": "planning-and-task-breakdown",
+        "repo": "addyosmani/agent-skills",
+        "license": "MIT",
+        "tier": "core",
+        "status": "installed"
+      },
+      {
+        "name": "ponytail",
+        "repo": "DietrichGebert/ponytail",
+        "license": "MIT",
+        "tier": "core",
+        "status": "installed"
+      },
+      {
+        "name": "anti-slop",
+        "repo": "elithrar/dotfiles",
+        "license": "MIT",
+        "tier": "core",
+        "status": "installed"
+      },
+      {
+        "name": "SimpleEnglish (document-rule subset)",
+        "repo": "AminBlg/SimpleEnglish",
+        "license": "MIT",
+        "tier": "core",
+        "status": "installed"
+      }
+    ],
+    "enhancer": [
+      {
+        "name": "threat-modeling",
+        "repo": "briiirussell/cybersecurity-skills",
+        "license": null,
+        "tier": "enhancer",
+        "status": "installed"
+      },
+      {
+        "name": "mom-test",
+        "repo": "wondelai/skills",
+        "license": null,
+        "tier": "enhancer",
+        "status": "installed"
+      },
+      {
+        "name": "user-stories",
+        "repo": "phuryn/pm-skills",
+        "license": null,
+        "tier": "enhancer",
+        "status": "installed"
+      },
+      {
+        "name": "ux-copy",
+        "repo": "anthropics/knowledge-work-plugins",
+        "license": null,
+        "tier": "enhancer",
+        "status": "installed"
+      },
+      {
+        "name": "architecture-designer",
+        "repo": "jeffallan/claude-skills",
+        "license": null,
+        "tier": "enhancer",
+        "status": "installed"
+      },
+      {
+        "name": "database-schema-designer",
+        "repo": "onewave-ai/claude-skills",
+        "license": null,
+        "tier": "enhancer",
+        "status": "installed"
+      },
+      {
+        "name": "supabase",
+        "repo": "supabase/agent-skills",
+        "license": null,
+        "tier": "enhancer",
+        "status": "installed"
+      }
+    ],
+    "installed": [
+      {
+        "name": "planning-and-task-breakdown",
+        "kind": "skill",
+        "repo": "addyosmani/agent-skills",
+        "sha": "8c99fa36d90068c82d547f7c12a9d67a3e95f4ee",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/planning-and-task-breakdown",
+        "tier": "core",
+        "section": null,
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-26T08:28:21.307Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "anti-slop",
+        "kind": "skill",
+        "repo": "elithrar/dotfiles",
+        "sha": "eb4f994e0c1ebe1199f032f4e5fe1633d1b8067c",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/anti-slop",
+        "tier": "core",
+        "section": null,
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-26T08:47:02.935Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "threat-modeling",
+        "kind": "skill",
+        "repo": "briiirussell/cybersecurity-skills",
+        "sha": "b19875422c1388db8c14d91ba7c1f8343e98c48b",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/threat-modeling",
+        "tier": "enhancer",
+        "section": "S3",
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-26T13:56:47.021Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "mom-test",
+        "kind": "skill",
+        "repo": "wondelai/skills",
+        "sha": "c37678106e63ef1c5472d848fb3d8b8c5b33fafe",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/mom-test",
+        "tier": "enhancer",
+        "section": "S4",
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-26T14:00:06.622Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "user-stories",
+        "kind": "skill",
+        "repo": "phuryn/pm-skills",
+        "sha": "9af7bfd0bc47fdad43c2eaa7a43cd13918e7aaef",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/user-stories",
+        "tier": "enhancer",
+        "section": "S4",
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-26T14:00:13.661Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "ux-copy",
+        "kind": "skill",
+        "repo": "anthropics/knowledge-work-plugins",
+        "sha": "0e0fcacddcc892eb92a1b7873ff9d68159c47571",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/ux-copy",
+        "tier": "enhancer",
+        "section": "S4",
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-26T14:00:19.021Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "architecture-designer",
+        "kind": "skill",
+        "repo": "jeffallan/claude-skills",
+        "sha": "4b94d98605baf742b751bb82832ace5caf942271",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/architecture-designer",
+        "tier": "enhancer",
+        "section": "S6",
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-27T02:20:34.886Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "database-schema-designer",
+        "kind": "skill",
+        "repo": "onewave-ai/claude-skills",
+        "sha": "b2267d9171af4f56848d82992381b20b89b44056",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/database-schema-designer",
+        "tier": "enhancer",
+        "section": "S6",
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-27T02:20:45.270Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "supabase",
+        "kind": "skill",
+        "repo": "supabase/agent-skills",
+        "sha": "c9be0e931b7930f7d02126d04774d904c381e7d7",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/supabase",
+        "tier": "enhancer",
+        "section": "S6",
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-27T02:20:47.916Z",
+        "uninstalled_at": null
+      }
+    ]
+  },
+  "model_profile": {
+    "tier": "T1",
+    "probe": "skipped",
+    "declared_at": "2026-11-26T08:27:11.413Z"
+  },
+  "milestones": [
+    {
+      "id": "M0",
+      "goal": "Walking skeleton: one real booking on the live address, one winner per slot",
+      "features": [],
+      "verified": false,
+      "verified_at": null
+    },
+    {
+      "id": "M1",
+      "goal": "F-01 complete: safe public booking with abuse controls, consent and privacy pages",
+      "features": [
+        "F-01"
+      ],
+      "verified": false,
+      "verified_at": null
+    },
+    {
+      "id": "M2",
+      "goal": "F-02 admin daily schedule",
+      "features": [
+        "F-02"
+      ],
+      "verified": false,
+      "verified_at": null
+    },
+    {
+      "id": "M3",
+      "goal": "F-03 cancel and F-04 prices",
+      "features": [
+        "F-03",
+        "F-04"
+      ],
+      "verified": false,
+      "verified_at": null
+    },
+    {
+      "id": "M4",
+      "goal": "F-05 data download and operations, then the launch check",
+      "features": [
+        "F-05"
+      ],
+      "verified": false,
+      "verified_at": null
+    }
+  ],
+  "deployment": null,
+  "handoff": {
+    "status": "done",
+    "completed_at": "2026-11-27T17:16:59.853Z"
+  },
+  "framework_decision": {
+    "slot": "stack",
+    "decision_id": "D-046",
+    "chosen": {
+      "id": "sveltekit",
+      "name": "SvelteKit",
+      "version": "3.4.1"
+    },
+    "alternatives": [
+      {
+        "id": "react-router",
+        "score": 86
+      },
+      {
+        "id": "next",
+        "score": 90
+      },
+      {
+        "id": "astro",
+        "score": 62
+      }
+    ],
+    "confidence": "medium",
+    "user_override": false,
+    "defaulted": false,
+    "signals_ref": {
+      "path": ".lvr/signals-2026-11-27.json",
+      "sha256": "74a639a1c790b3531be073bb62a23c29067f879cb68d1c5dcd9720afb19923e2"
+    },
+    "recheck_by": "2026-12-11",
+    "section": "S5",
+    "decided_at": "2026-11-27T02:19:41.211Z",
+    "libraries": []
+  },
+  "release_check": {},
+  "review": {
+    "ledger": ".lvr/review/LEDGER.jsonl",
+    "runs": 3,
+    "last": {
+      "run": 3,
+      "scope": "full",
+      "started_at": "2026-11-27T17:16:03.921Z",
+      "done_at": "2026-11-27T17:16:28.841Z",
+      "verdict": "BUILD-READY",
+      "score": 10,
+      "lens_scores": {
+        "L01": 10,
+        "L02": 10,
+        "L03": 10,
+        "L04": 10,
+        "L05": 10,
+        "L06": 10,
+        "L07": 10,
+        "L08": 10,
+        "L09": 10,
+        "L10": 10,
+        "L11": 10,
+        "L12": 10,
+        "L13": 10,
+        "L14": 10,
+        "L15": 10
+      },
+      "open": {
+        "blocking": 0,
+        "major": 0,
+        "minor": 0
+      },
+      "missed_earlier": 0,
+      "report": ".lvr/review/REVIEW-2026-11-27-3.md",
+      "ledger_sha256": "fcb2d50ff7461cb8b271f124be5f373cf837c022be9b06c9eb6aa079429f495e"
+    }
+  },
+  "agents_delegated": [],
+  "sessions": [
+    {
+      "start_seq": 1,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": "c61d40c1-515f-4137-9525-16a1f21462fc",
+      "session_id_reason": null,
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/futsal-court-booking",
+      "started_at": "2026-11-26T08:27:05.011Z",
+      "ended_at": null,
+      "end_reason": null,
+      "end_note": null,
+      "sections": [
+        "S0",
+        "S1",
+        "S2",
+        "S3",
+        "S4",
+        "S5",
+        "S6",
+        "S7",
+        "S8",
+        "S9"
+      ],
+      "agents": [],
+      "boosters_installed": [
+        "planning-and-task-breakdown",
+        "anti-slop",
+        "threat-modeling",
+        "mom-test",
+        "user-stories",
+        "ux-copy",
+        "architecture-designer",
+        "database-schema-designer",
+        "supabase"
+      ],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 163,
+      "skill": "lvr-review-plan",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "not exposed in this non-interactive session",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/futsal-court-booking",
+      "started_at": "2026-11-27T17:13:13.042Z",
+      "ended_at": "2026-11-27T17:16:29.335Z",
+      "end_reason": "done",
+      "end_note": "review run 2 and apply run 3 done",
+      "sections": [],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 177,
+      "skill": "lvr-handoff",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "not exposed in this non-interactive session",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/futsal-court-booking",
+      "started_at": "2026-11-27T17:16:35.429Z",
+      "ended_at": "2026-11-27T17:17:00.073Z",
+      "end_reason": "done",
+      "end_note": "handoff done; build not started by instruction",
+      "sections": [],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    }
+  ]
+}

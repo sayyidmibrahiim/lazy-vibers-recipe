@@ -1,0 +1,1871 @@
+{
+  "schema_version": 2,
+  "project": {
+    "slug": "kpr-house-hunter",
+    "name": "KPR House Hunter",
+    "idea_raw": "I want a personal tool, KPR House Hunter, for my own house search in Indonesia.\nI give it a local listings file (exported from property sites) and it filters\nthe listings into a shortlist that fits my KPR (mortgage) situation.\nKeep my personal profile and financial inputs local; nothing about my income\nor savings leaves my machine. The first workflow is: load my listings file,\napply my criteria and affordability limits, and get a ranked shortlist.",
+    "user_language": "id",
+    "created_at": "2026-11-26T08:47:30.037Z",
+    "status": "bundled",
+    "error": null
+  },
+  "product": {
+    "types": [
+      "web"
+    ],
+    "flags": {
+      "has_ui": true,
+      "stores_data": true,
+      "public_form": false,
+      "regulated_domain": false
+    },
+    "status": "decided",
+    "source": "user",
+    "rationale": null,
+    "confirmed": true,
+    "updated_at": "2026-11-27T02:23:25.239Z"
+  },
+  "pipeline": {
+    "current_section": "S9",
+    "sections": {
+      "S0": {
+        "status": "done",
+        "record": "S0-intake.md",
+        "started_at": "2026-11-26T08:47:30.037Z",
+        "completed_at": "2026-11-26T08:49:43.600Z",
+        "answers": {
+          "S0.q1": {
+            "q": "Tell me everything in your head about this idea — what it is, who it's for, why you want it. Multi-paragraph is welcome; don't organize it, just pour it out.",
+            "a": "I want a personal tool, KPR House Hunter, for my own house search in Indonesia.\nI give it a local listings file (exported from property sites) and it filters\nthe listings into a shortlist that fits my KPR (mortgage) situation.\nKeep my personal profile and financial inputs local; nothing about my income\nor savings leaves my machine. The first workflow is: load my listings file,\napply my criteria and affordability limits, and get a ranked shortlist.",
+            "skipped": false
+          },
+          "S0.q2": {
+            "q": "Language: You wrote in English, so I'll ask my questions in English. Is that right, or would you prefer Bahasa Indonesia? (The planning documents are written in English either way.)",
+            "a": "Bahasa: sesuaikan dengan bahasa user, jadi tanya dalam bahasa Indonesia.",
+            "skipped": false
+          },
+          "S0.q3": {
+            "q": "Name: I'll call it KPR House Hunter (short name: kpr-house-hunter). Keep it, or rename?",
+            "a": "Nama: pakai apa adanya.",
+            "skipped": false
+          },
+          "S0.q4": {
+            "q": "Country: I'll research the rules and costs for Indonesia. Is that where you'll use it? If you're looking in particular cities or provinces, name them. Housing rules and prices differ by region.",
+            "a": "Negara: Indonesia. Kota/provinsi: lewati untuk sekarang (tidak dijawab).",
+            "skipped": false
+          }
+        }
+      },
+      "S1": {
+        "status": "done",
+        "record": "S1-context.md",
+        "started_at": "2026-11-26T08:55:14.344Z",
+        "completed_at": "2026-11-26T13:46:47.048Z",
+        "answers": {
+          "S1.q1": {
+            "q": "Alat ini mau berbentuk apa? a. Aplikasi web lokal: dibuka di browser, tapi hanya jalan di laptop atau server Anda sendiri. b. Alat command-line. c. Skill atau plugin untuk agen AI. d. Kombinasi, atau belum yakin.",
+            "a": "(a) Aplikasi web lokal, hanya jalan di laptop saya.",
+            "skipped": false
+          },
+          "S1.q2": {
+            "q": "Dari mana file listing Anda nanti berasal, dan formatnya apa? Situs mana saja, dan kira-kira berapa listing per file?",
+            "a": "Saya salin manual ke spreadsheet CSV dari Rumah123, 99.co, atau Lamudi, sekitar 20-50 listing per file.",
+            "skipped": false
+          },
+          "S1.q3": {
+            "q": "Enam bulan setelah alat ini ada, apa yang berubah dalam proses cari rumah Anda sehingga Anda bilang alat ini berguna?",
+            "a": "Tanda berhasil: menyaring listing jauh lebih cepat, dan saya tidak lagi tertarik pada rumah yang ternyata di luar kemampuan cicilan.",
+            "skipped": false
+          },
+          "S1.q4": {
+            "q": "Yang saya anggap sudah diketahui dari ide Anda (koreksi kalau keliru): masalahnya menyaring banyak listing menjadi daftar pendek sesuai batas KPR dan kriteria; penggunanya hanya Anda; data penghasilan dan tabungan tidak keluar dari komputer Anda. Juga keputusan D-001 (istilah standar KPR).",
+            "a": "Konfirmasi: masalah, pengguna (hanya saya), syarat data lokal, dan D-001 benar.",
+            "skipped": false
+          },
+          "S1.q5": {
+            "q": "Country: I'll research the rules and costs for Indonesia. Is that where you'll use it? If you're looking in particular cities or provinces, name them. (bagian kota/provinsi dari S0.q4, dijawab menyusul)",
+            "a": "Tambahan S0: kota/area = Jakarta Selatan, dan Depok bagian yang berbatasan dengan Jakarta Selatan.",
+            "skipped": false
+          },
+          "S1.q6": {
+            "q": "Usulan halaman dan cara membuka aplikasi: bookmark ke alamat lokal di laptop (http://localhost:…), tanpa login karena hanya bisa diakses dari laptop Anda; tiga halaman: Impor CSV, Profil & Kriteria, Daftar Pendek. Setuju?",
+            "a": "Setuju, tiga halaman itu.",
+            "skipped": false
+          },
+          "S1.q7": {
+            "q": "Setelah daftar pendek muncul, apa langkah berikutnya? Pilihannya: simpan daftar pendek sebagai CSV, cetak, beri tanda favorit, atau cukup dilihat di layar.",
+            "a": "Simpan daftar pendek sebagai CSV, lengkap dengan perkiraan cicilan dan dana tunai awal per rumah.",
+            "skipped": false
+          },
+          "S1.q8": {
+            "q": "Bahasa di layar aplikasi: Bahasa Indonesia, Inggris, atau campuran?",
+            "a": "Bahasa Indonesia, dengan istilah KPR standar sesuai D-001.",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "problem": [
+            "S0.q1",
+            "S1.q4"
+          ],
+          "target-users": [
+            "D-005"
+          ],
+          "platform": [
+            "D-002"
+          ],
+          "success": [
+            "D-004"
+          ],
+          "pages": [
+            "D-007"
+          ]
+        }
+      },
+      "S2": {
+        "status": "done",
+        "record": "S2-kondisi.md",
+        "started_at": "2026-11-26T13:46:47.217Z",
+        "completed_at": "2026-11-26T13:52:42.399Z",
+        "answers": {
+          "S2.q1": {
+            "q": "Anda mempertimbangkan rumah baru dari developer, rumah seken, atau keduanya?",
+            "a": "Keduanya. CSV punya kolom baru/seken, harga di listing dianggap harga final, versi pertama tidak menghitung PPN.",
+            "skipped": false
+          },
+          "S2.q2": {
+            "q": "NPOPTKP untuk rumah di Depok: a. Pakai Rp80 juta (batas minimum nasional) sebagai perkiraan terburuk, atau b. biarkan kosong dan tandai belum lengkap?",
+            "a": "a. Pakai Rp80 juta sebagai bawaan konservatif, bisa diubah.",
+            "skipped": false
+          },
+          "S2.q3": {
+            "q": "Laptop Anda pakai sistem apa (Windows, Mac, atau Linux), apakah sudah ada layanan berbayar yang terkait, dan berapa anggaran bulanan untuk aplikasinya?",
+            "a": "Linux, tidak ada layanan berbayar, anggaran Rp0/bulan.",
+            "skipped": false
+          },
+          "S2.q4": {
+            "q": "(Konfirmasi keputusan) D-010 sampai D-014 — koreksi kalau ada yang tidak sesuai.",
+            "a": "D-010 sampai D-014 disetujui.",
+            "skipped": false
+          },
+          "S2.q5": {
+            "q": "Seberapa sering Anda akan memasukkan file listing baru? Sebutkan untuk bulan biasa dan bulan sibuk.",
+            "a": "Bulan biasa 2-4 file (±100-200 listing), bulan sibuk 2-3 file per minggu (±400-600 listing).",
+            "skipped": false
+          },
+          "S2.q6": {
+            "q": "Bagaimana Anda mau menyalakan aplikasinya? a. Mengetik satu perintah di terminal setiap kali mau pakai. b. Aplikasi menyala otomatis saat laptop hidup.",
+            "a": "a. Satu perintah di terminal.",
+            "skipped": false
+          },
+          "S2.q7": {
+            "q": "Berapa waktu per minggu yang Anda mau sisihkan untuk merawat aplikasi?",
+            "a": "Sekitar 15 menit per bulan; tampilkan tanggal terakhir tiap angka bawaan diperbarui dan peringatkan jika lebih dari 30 hari.",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "budget": [
+            "D-017"
+          ],
+          "surface": [
+            "D-002",
+            "D-017"
+          ],
+          "usage": [
+            "D-018"
+          ],
+          "paid-accounts": [
+            "D-014"
+          ]
+        }
+      },
+      "S3": {
+        "status": "done",
+        "record": "S3-data-privacy.md",
+        "started_at": "2026-11-26T13:52:42.604Z",
+        "completed_at": "2026-11-26T13:59:37.054Z",
+        "answers": {
+          "S3.q1": {
+            "q": "Data apa saja yang disimpan aplikasi di laptop? Apakah CSV Anda juga berisi nama atau nomor HP agen?",
+            "a": "Simpan semua yang diusulkan; CSV kadang berisi nama/nomor HP agen, buang kolom itu saat impor dan simpan link listing saja.",
+            "skipped": false
+          },
+          "S3.q2": {
+            "q": "Kalau laptop hilang atau rusak, apa yang harus aman dan bisa dipulihkan? a. Enkripsi disk Linux + tombol Ekspor cadangan; b. enkripsi di aplikasi dengan kata sandi; c. tanpa cadangan. Apakah enkripsi disk sudah aktif?",
+            "a": "a. Enkripsi disk Linux plus tombol Ekspor cadangan. Status enkripsi disk saya: tidak tahu.",
+            "skipped": false
+          },
+          "S3.q3": {
+            "q": "Cara menghapus data: a. Hapus semua data; b. hapus per file impor; c. keduanya.",
+            "a": "c. Keduanya, konfirmasi dengan mengetik HAPUS, profil keuangan bisa dihapus terpisah.",
+            "skipped": false
+          },
+          "S3.q4": {
+            "q": "(Konfirmasi keputusan) D-021 sampai D-023 — koreksi kalau ada yang tidak sesuai.",
+            "a": "D-021 sampai D-023 disetujui.",
+            "skipped": false
+          },
+          "S3.q5": {
+            "q": "(Konfirmasi keputusan) D-027, D-028, D-029 — koreksi kalau ada yang tidak sesuai.",
+            "a": "D-027, D-028, D-029 disetujui.",
+            "skipped": false
+          },
+          "S3.q6": {
+            "q": "Kapan aplikasi mengingatkan Anda membuat cadangan? a. bersamaan dengan pengingat 30 hari angka bawaan; b. setiap selesai impor; c. tidak perlu.",
+            "a": "a. Bersamaan dengan pengingat 30 hari.",
+            "skipped": false
+          },
+          "S3.q7": {
+            "q": "File cadangan berisi penghasilan dan tabungan dalam bentuk terbaca. a. biarkan apa adanya dengan peringatan saat ekspor; b. kunci dengan kata sandi.",
+            "a": "a. Biarkan apa adanya dengan peringatan saat ekspor.",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "login": [
+            "D-007"
+          ],
+          "data-inventory": [
+            "D-024"
+          ],
+          "payments": [
+            "D-014"
+          ],
+          "web-forms": [
+            "D-024",
+            "D-005",
+            "D-026"
+          ]
+        }
+      },
+      "S4": {
+        "status": "done",
+        "record": "S4-features.md",
+        "started_at": "2026-11-26T13:59:37.228Z",
+        "completed_at": "2026-11-27T02:09:51.290Z",
+        "answers": {
+          "S4.q1": {
+            "q": "F-01 Impor listing dan susun daftar pendek: apakah langkah 1-6 (bookmark → Impor CSV → pratinjau → Impor → Daftar Pendek dengan cicilan, dana tunai awal, catatan, rumah gugur beserta alasan → Simpan CSV) sudah benar?",
+            "a": "Setuju dengan langkah F-01 seperti ditulis.",
+            "skipped": false
+          },
+          "S4.q2": {
+            "q": "Aturan mampu bayar: a. 30% penghasilan bersih dikurangi cicilan lain, dihitung pada bunga floating (bawaan 11%); b. pada bunga promo; c. tentukan sendiri.",
+            "a": "a. 30% (bisa diubah), dihitung pada bunga floating bawaan 11%, tampilkan cicilan masa promo dan setelah promo.",
+            "skipped": false
+          },
+          "S4.q3": {
+            "q": "Urutan daftar pendek: a. paling banyak memenuhi nice-to-have lalu dana tunai awal terkecil; b. cicilan teringan; c. harga per m² termurah.",
+            "a": "a. Paling banyak memenuhi nice-to-have, lalu dana tunai awal paling kecil.",
+            "skipped": false
+          },
+          "S4.q4": {
+            "q": "(Konfirmasi keputusan) D-032 dan D-033 — koreksi kalau ada yang tidak sesuai.",
+            "a": "D-032 dan D-033 disetujui.",
+            "skipped": false
+          },
+          "S4.q5": {
+            "q": "Prioritas F-01 (must/should/could) dan persetujuan D-037.",
+            "a": "F-01 must, D-037 disetujui.",
+            "skipped": false
+          },
+          "S4.q6": {
+            "q": "Listing yang sama masuk dua kali: a. link sama = satu rumah, impor terbaru menggantikan; b. simpan keduanya; c. tanya satu per satu.",
+            "a": "a. Link sama dianggap satu rumah, impor terbaru menggantikan.",
+            "skipped": false
+          },
+          "S4.q7": {
+            "q": "F-02 Isi profil dan kriteria: apakah langkah 1-6 (Keuangan, KPR per bank, Kriteria wajib, Nice-to-have, Simpan) benar? Rekomendasi tambahan: gugur jika dana tunai awal melebihi dana tunai yang diisi.",
+            "a": "F-02 disetujui dengan tambahan aturan gugur jika dana tunai awal melebihi dana tunai yang diisi.",
+            "skipped": false
+          },
+          "S4.q8": {
+            "q": "Prioritas F-02 dan persetujuan D-041.",
+            "a": "F-02 must, D-041 disetujui.",
+            "skipped": false
+          },
+          "S4.q9": {
+            "q": "F-03 Perbarui angka bawaan: langkah 1-4 (pita kuning → halaman Angka Bawaan dengan tanggal dan link sumber → ubah atau Tandai sudah dicek → Simpan) dan prioritas.",
+            "a": "F-03 disetujui, prioritas should.",
+            "skipped": false
+          },
+          "S4.q10": {
+            "q": "F-04 Cadangan, pulihkan, hapus data: langkah 1-4 dan prioritas.",
+            "a": "F-04 disetujui: ekspor dan hapus must, pulihkan should, dengan cadangan otomatis sebelum memulihkan.",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "enough": [
+            "S4.q10"
+          ],
+          "features": [
+            "D-034",
+            "D-040",
+            "D-043",
+            "D-044"
+          ],
+          "priorities": [
+            "D-038",
+            "D-042",
+            "D-043",
+            "D-044"
+          ],
+          "unhappy-paths": [
+            "D-037",
+            "D-041",
+            "D-045",
+            "D-046"
+          ]
+        }
+      },
+      "S5": {
+        "status": "done",
+        "record": "S5-research.md",
+        "started_at": "2026-11-27T02:09:51.461Z",
+        "completed_at": "2026-11-27T02:19:45.064Z",
+        "answers": {
+          "S5.q1": {
+            "q": "Apakah D-045, D-046, D-047 dan D-048 (Python) disetujui?",
+            "a": "Setuju D-045, D-046, D-047, D-048 (Python).",
+            "skipped": false
+          },
+          "S5.q2": {
+            "q": "Alat mana yang selama ini Anda pakai atau jadi pembanding? a. Rumah123; b. simulator bank; c. spreadsheet; d. belum pernah.",
+            "a": "a, Rumah123.",
+            "skipped": false
+          },
+          "S5.q3": {
+            "q": "Hasil python3 --version di laptop?",
+            "a": "Python 3.14.4. Kalau perlu 3.15, masukkan cara pasang ke panduan serah terima.",
+            "skipped": false
+          },
+          "S5.q4": {
+            "q": "Kerangka web mana yang dipakai? a. Django 6.1; b. FastAPI.",
+            "a": "a, Django 6.1 (ikuti rekomendasi).",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "competitors": [
+            "RQ-013"
+          ],
+          "stack": [
+            "D-048",
+            "D-051"
+          ],
+          "costs": [
+            "RQ-014"
+          ]
+        }
+      },
+      "S6": {
+        "status": "done",
+        "record": "S5-research.md",
+        "started_at": "2026-11-27T02:19:45.262Z",
+        "completed_at": "2026-11-27T02:23:35.973Z",
+        "answers": {
+          "S6.q1": {
+            "q": "Apakah hasil pemeriksaan bidang yang diatur hukum (keuangan, kesehatan, jasa hukum, anak: tidak berlaku) sudah benar?",
+            "a": "Benar, hasil pemeriksaan bidang diatur hukum sudah benar.",
+            "skipped": false
+          },
+          "S6.q2": {
+            "q": "Apakah D-052 (satu file SQLite di folder home) disetujui?",
+            "a": "Setuju D-052.",
+            "skipped": false
+          },
+          "S6.q3": {
+            "q": "Berapa lama listing lama disimpan? a. sampai dihapus sendiri; b. hapus otomatis setelah 12 bulan; c. tanya setiap kali.",
+            "a": "a, simpan sampai dihapus sendiri.",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "findings": [
+            "RQ-013",
+            "RQ-014",
+            "D-052",
+            "D-054"
+          ],
+          "regulated-domain": [
+            "D-053"
+          ]
+        }
+      },
+      "S7": {
+        "status": "done",
+        "record": "S7-scope.md",
+        "started_at": "2026-11-27T02:23:42.643Z",
+        "completed_at": "2026-11-27T13:39:29.694Z",
+        "answers": {
+          "S7.q1": {
+            "q": "Apakah kelima fitur (F-01 sampai F-05) masuk versi pertama, atau F-05 ditunda?",
+            "a": "Kelima fitur F-01 sampai F-05 masuk versi pertama.",
+            "skipped": false
+          },
+          "S7.q2": {
+            "q": "Jalankan pemeriksaan kritis cakupan sebelum dikunci, atau lewati?",
+            "a": "Jalankan pemeriksaan kritis cakupan.",
+            "skipped": false
+          },
+          "S7.q3": {
+            "q": "Tenor dan umur: (a) tenor dipotong otomatis sesuai usia (bawaan 65), atau (b) tenor manual dengan peringatan?",
+            "a": "Setuju (a): tenor dipotong otomatis sesuai usia, usia diketik pengguna sendiri secara lokal di aplikasi.",
+            "skipped": false
+          },
+          "S7.q4": {
+            "q": "Notaris dan asuransi: (b) tanpa angka bawaan, dana tunai awal tampil 'belum lengkap' sampai diisi, atau (a) cari angka perkiraan bersumber?",
+            "a": "Setuju (b): tanpa angka bawaan, tampil 'belum lengkap'.",
+            "skipped": false
+          },
+          "S7.q5": {
+            "q": "Boleh saya terapkan perbaikan teks untuk format CSV, langkah pemasangan venv, tanggal DP 0%, dan biaya administrasi BCA?",
+            "a": "Ya, terapkan perbaikan format CSV, venv, tanggal DP 0%, dan biaya administrasi BCA.",
+            "skipped": false
+          },
+          "S7.q6": {
+            "q": "Setuju dengan contoh batas buang per fitur dan ukuran sukses, atau mau diubah?",
+            "a": "Setuju contoh batas buang dan ukuran sukses.",
+            "skipped": false
+          },
+          "S7.q7": {
+            "q": "Ini versi pertama? Setelah Anda jawab ya, daftar ini dibekukan. (In-MVP F-01 sampai F-05, Parking Lot kosong, setelah perbaikan S7.q3–S7.q6.)",
+            "a": "Ya, ini versi pertama, F-01 sampai F-05, kunci daftar.",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "split": [
+            "S7.q1",
+            "D-062"
+          ],
+          "scope-review": [
+            "S7.q2",
+            "RQ-015",
+            "RQ-016"
+          ],
+          "fixes": [
+            "D-055",
+            "D-056",
+            "D-057",
+            "D-058",
+            "D-059",
+            "D-060",
+            "D-061"
+          ],
+          "lock": [
+            "S7.q7",
+            "D-062"
+          ]
+        }
+      },
+      "S8": {
+        "status": "done",
+        "record": "S8-milestones.md",
+        "started_at": "2026-11-27T13:40:07.837Z",
+        "completed_at": "2026-11-27T13:44:03.071Z",
+        "answers": {
+          "S8.q1": {
+            "q": "Setuju dengan urutan M0 → M1 → M2 → M3 → M4 (D-063), atau ada yang mau diubah?",
+            "a": "Setuju urutan M0 sampai M4 (D-063).",
+            "skipped": false
+          },
+          "S8.q2": {
+            "q": "Setuju dengan target mutu: Firefox dan Chromium, bisa dipakai dengan keyboard, log tanpa data keuangan (D-064)?",
+            "a": "Setuju target mutu (D-064).",
+            "skipped": false
+          },
+          "S8.q3": {
+            "q": "Nama tampilan aplikasi tetap \"KPR House Hunter\", atau mau diganti sebelum bundel ditulis?",
+            "a": "Nama tetap 'KPR House Hunter'.",
+            "skipped": false
+          }
+        },
+        "coverage": {
+          "plan": [
+            "D-063",
+            "S8.q1"
+          ],
+          "quality": [
+            "D-064",
+            "S8.q2"
+          ]
+        }
+      },
+      "S9": {
+        "status": "done",
+        "record": "AGENTS.md",
+        "started_at": "2026-11-27T13:44:27.429Z",
+        "completed_at": "2026-11-27T17:12:19.402Z"
+      }
+    },
+    "loop_backs": [],
+    "research": {
+      "brief": {
+        "rq": [
+          "RQ-002",
+          "RQ-003",
+          "RQ-004",
+          "RQ-005",
+          "RQ-006",
+          "RQ-007"
+        ],
+        "findings": [
+          "U-08",
+          "U-09",
+          "U-10",
+          "U-11",
+          "U-12",
+          "U-13",
+          "U-01",
+          "U-02",
+          "U-03",
+          "U-04",
+          "U-05",
+          "U-06",
+          "U-07"
+        ],
+        "updated_at": "2026-11-26T08:55:10.042Z"
+      },
+      "scans": {
+        "S1": {
+          "rq": [
+            "RQ-008"
+          ],
+          "findings": [
+            "U-14"
+          ],
+          "note": "No evidence found that Rumah123, 99.co or Lamudi offer a listings export; this stays an open point inside the U-03 question.",
+          "at": "2026-11-26T08:56:14.408Z"
+        },
+        "S2": {
+          "rq": [
+            "RQ-010"
+          ],
+          "findings": [
+            "U-15",
+            "U-16",
+            "U-17"
+          ],
+          "note": null,
+          "at": "2026-11-26T13:48:37.569Z"
+        },
+        "S3": {
+          "rq": [
+            "RQ-011"
+          ],
+          "findings": [
+            "U-18"
+          ],
+          "note": null,
+          "at": "2026-11-26T13:53:33.618Z"
+        },
+        "S4": {
+          "rq": [
+            "RQ-012"
+          ],
+          "findings": [
+            "U-19"
+          ],
+          "note": null,
+          "at": "2026-11-26T14:01:28.625Z"
+        },
+        "S8": {
+          "rq": [
+            "RQ-017"
+          ],
+          "findings": [],
+          "note": "No brief item targets S8; the facts the milestones use were re-fetched today in RQ-015 and RQ-016. Nothing new.",
+          "at": "2026-11-27T13:40:18.349Z"
+        }
+      },
+      "log": {
+        "count": 18,
+        "failed": [
+          "RQ-009"
+        ],
+        "last_id": "RQ-018",
+        "last_at": "2026-11-27T17:14:44.498Z"
+      },
+      "web_check": {
+        "id": "RQ-001",
+        "outcome": "found",
+        "reason": null,
+        "at": "2026-11-26T08:27:09.102Z"
+      }
+    }
+  },
+  "decisions": [
+    {
+      "id": "D-001",
+      "section": "S1",
+      "summary": "The tool labels its inputs and results with the standard Indonesian KPR terms: KPR, DP (uang muka), tenor, cicilan, rasio cicilan (DTI), bunga fixed/floating.",
+      "rationale": "These are the words Indonesian banks and listing sites already use, so the owner can match the tool to a bank offer line by line; per U-11 [cite: general · https://www.rumah123.com/kemampuan-kpr/ · n.d. · acc 2026-11-26 · live]",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-002",
+      "section": "S1",
+      "summary": "Platform shape: a local web app opened in the browser that runs only on the owner's laptop; no public hosting.",
+      "rationale": "Owner's choice (S1.q1); it keeps income and savings on the owner's machine as required in S0.q1.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-003",
+      "section": "S1",
+      "summary": "Input is a CSV file the owner fills by hand from Rumah123, 99.co or Lamudi, about 20–50 listings per file; the tool never scrapes or fetches listing sites.",
+      "rationale": "Owner's answer (S1.q2); manual private copying stays within Rumah123's terms, which forbid scraping and building a property database (U-03 [cite: legal · https://www.rumah123.com/en/terms-of-use/ · upd 2020-03 · acc 2026-11-26 · primary · live]).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-004",
+      "section": "S1",
+      "summary": "Success picture: filtering a listings file is much faster than by hand, and no house outside the owner's installment capacity reaches the shortlist.",
+      "rationale": "Owner's answer (S1.q3).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-005",
+      "section": "S1",
+      "summary": "Target user: the owner alone, searching for a house to buy with a KPR; no other users or accounts.",
+      "rationale": "Confirmed by the owner (S1.q4), stated in S0.q1.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-006",
+      "section": "S1",
+      "summary": "Hard constraint: the owner's profile, income and savings never leave the laptop; no network calls carry them.",
+      "rationale": "Stated in S0.q1 and confirmed in S1.q4.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-007",
+      "section": "S1",
+      "summary": "Pages and entry point: the owner opens a bookmarked localhost address on the laptop, with no login; three pages, all for the owner only: Import CSV, Profile & Criteria, Shortlist.",
+      "rationale": "Proposed by the designer and accepted in S1.q6 by the owner's delegated test agent; login and network binding are confirmed in S3.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-008",
+      "section": "S1",
+      "summary": "End of the main task: the owner saves the shortlist as a CSV that includes the estimated monthly installment and the upfront cash needed per house.",
+      "rationale": "Answer S1.q7 by the owner's delegated test agent.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-009",
+      "section": "S1",
+      "summary": "Screen language: Indonesian, using the standard KPR terms of D-001.",
+      "rationale": "Answer S1.q8 by the owner's delegated test agent.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-010",
+      "section": "S2",
+      "summary": "Minimum down payment is a per-bank setting the owner enters locally. Default: 5%. A 0% DP is used only for a bank the owner marks as offering it.",
+      "rationale": "Only banks meeting BI bad-loan criteria may lend 100% until 31 Dec 2027; under PADG 30/2025 other banks stay at 95% LTV for landed houses above 70 m², so 5% is the safe default. Per U-01 [cite: regulation · https://www.bi.go.id/id/publikasi/peraturan/Pages/PADG_302025.aspx · upd 2025-12-24 · acc 2026-11-26 · primary · live · amend-check 2026-11-26]",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-011",
+      "section": "S2",
+      "summary": "The upfront-cash estimate per house = DP + BPHTB + bank fees + notary and insurance estimates. BPHTB = 5% × (price − NPOPTKP). NPOPTKP is an area setting: South Jakarta default Rp250 juta; Depok has no default, so Depok houses show \"BPHTB belum lengkap\" until the owner enters the figure. Bank fee defaults (provisi 1%, administration, appraisal) are editable.",
+      "rationale": "BPHTB and bank fees are cash due at or before the akad, and the owner asked for upfront cash per house (D-008). Per U-04 [cite: regulation · https://ortax.org/ketentuan-bphtb-dan-cara-menghitung · pub 2023-04-28 · acc 2026-11-26 · amend-check 2026-11-26], U-15 [cite: regulation · https://news.ddtc.co.id/berita/daerah/1823579/beli-atau-dapat-warisan-properti-di-jakarta-pahami-kewajiban-pajaknya · pub 2026-10-26 · acc 2026-11-26 · amend-check 2026-11-26], U-05 [cite: price · https://www.bca.co.id/id/individu/produk/pinjaman/kpr/kpr-first · n.d. · acc 2026-11-26 · primary · live]. The Depok gap (U-16) is handled by leaving no default, not by assuming a value.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-012",
+      "section": "S2",
+      "summary": "The tool applies no first-home BPHTB relief automatically; the estimate is the conservative, full BPHTB.",
+      "rationale": "Sources disagree on the current DKI relief scheme, and eligibility depends on the owner's KTP, which stays off this conversation. A conservative estimate cannot hide a cash shortfall. Per U-17 [cite: regulation · https://pajakku.com/artikel/beli-rumah-pertama-di-jakarta-bisa-hemat-bphtb-hingga-50 · upd 2026-07-15 · acc 2026-11-26 · amend-check 2026-11-26]",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-013",
+      "section": "S2",
+      "summary": "The tool does not check credit history. The shortlist page and CSV carry a fixed note that bank approval also depends on the owner's SLIK OJK record.",
+      "rationale": "Banks check SLIK; larger paylater or online-loan arrears can block a KPR even when the numbers fit. Per U-10 [cite: regulation · https://www.fortuneidn.com/finance/slik-dilonggarkan-nasabah-nunggak-di-bawah-rp1-juta-masih-bisa-ambil-kpr-subsidi-00-ccw2k-15tp04 · pub 2026-04-14 · acc 2026-11-26 · amend-check 2026-11-26]",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-014",
+      "section": "S2",
+      "summary": "No paid account, hosting or store fee is needed: the app runs on the owner's laptop (D-002).",
+      "rationale": "S2 hard-rule check against the S1 platform shape: a local web app has no app-store or hosting account. Shown here for correction.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-015",
+      "section": "S2",
+      "summary": "Both new (developer) and resale houses are in scope. The CSV has a new/resale column; the listed price is treated as the final price; version 1 does not compute VAT (PPN).",
+      "rationale": "Answered by the owner's delegated test agent (S2.q1). Avoids depending on the unresolved PPN DTP price limit (U-07).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-016",
+      "section": "S2",
+      "summary": "Depok NPOPTKP default = Rp80 juta, the national legal minimum, editable by the owner; this replaces the \"no default\" Depok rule in D-011.",
+      "rationale": "Answered by the owner's delegated test agent (S2.q2). Rp80 juta is the verified national minimum, so BPHTB is never underestimated; per U-04 [cite: regulation · https://ortax.org/ketentuan-bphtb-dan-cara-menghitung · pub 2023-04-28 · acc 2026-11-26 · amend-check 2026-11-26]. Depok's own figure stays unverified (U-16, RQ-009).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-017",
+      "section": "S2",
+      "summary": "Budget ceiling for the tool: Rp0 per month; no paid services. Target device: the owner's Linux laptop.",
+      "rationale": "Answered by the owner's delegated test agent (S2.q3).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-018",
+      "section": "S2",
+      "summary": "Usage: typical month 2–4 files (about 100–200 listings); busy month 2–3 files per week (about 400–600 listings). Running cost stays Rp0 at both levels because nothing is metered.",
+      "rationale": "Answered by the owner's delegated test agent (S2.q5). A local app has no per-use fee (D-014, D-017).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-019",
+      "section": "S2",
+      "summary": "The owner starts the app with one terminal command when needed; nothing runs in the background otherwise.",
+      "rationale": "Answered by the owner's delegated test agent (S2.q6).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-020",
+      "section": "S2",
+      "summary": "Upkeep: about 15 minutes per month. Every default figure (rates, fees, NPOPTKP, minimum DP) shows its last-updated date, and the app warns when a figure is more than 30 days old.",
+      "rationale": "Answered by the owner's delegated test agent (S2.q7). Rates and rules change, e.g. the 100% LTV relief ends 31 Dec 2027 (U-01).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-021",
+      "section": "S3",
+      "summary": "The local server listens only on 127.0.0.1 and rejects (HTTP 400) any request whose Host header is not localhost or 127.0.0.1 with the app port; no other device on the Wi-Fi and no website can read the profile.",
+      "rationale": "Binding to loopback alone does not stop DNS rebinding from a website open in the same browser. Per U-18 [cite: general · https://github.com/nccgroup/singularity/wiki/Preventing-DNS-Rebinding-Attacks · n.d. · acc 2026-11-26] [cite: general · https://docs.gitlab.com/user/application_security/api_security_testing/checks/dns_rebinding_check/ · n.d. · acc 2026-11-26]",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-022",
+      "section": "S3",
+      "summary": "The app makes no network calls of its own: no analytics, no error reporting, no fonts or scripts from the internet, no external maps or AI services; it works with the internet off. Listing links in the CSV open only when the owner clicks them.",
+      "rationale": "Hard constraint D-006: income and savings never leave the laptop; anything loaded from the internet could carry data out. No money flows in the app (D-014) and there is no login (D-007).",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-023",
+      "section": "S3",
+      "summary": "No privacy policy, consent screen or data-protection officer is planned: the tool processes the owner’s own data for personal, household use only. If it is ever shared with other people or used commercially, this decision is reopened.",
+      "rationale": "UU PDP Art. 2(2) excludes processing by an individual for personal or household purposes. Per U-02 [cite: regulation · https://jdih.komdigi.go.id/produk_hukum/view/id/832/t/undangundang%2Bnomor%2B27%2Btahun%2B2022 · pub 2022-10-17 · acc 2026-11-26 · primary · live · amend-check 2026-11-26] [cite: regulation · https://www.hukumonline.com/berita/a/mk--uu-pdp-lindungi-pemrosesan-data-privat-bersifat-nonkomersil-lt6454b8bc84511/?page=all · pub 2023-05-05 · acc 2026-11-26 · amend-check 2026-11-26]",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-024",
+      "section": "S3",
+      "summary": "Stored on the laptop: the financial profile (income, savings, other installments), house criteria, bank and tax default figures with their last-updated dates, imported listings and the shortlist. Agent name and phone columns are dropped at import; only the listing link is kept.",
+      "rationale": "Answered by the owner's delegated test agent (S3.q1). Keeping third-party contacts adds data nobody uses; the link leads back to them.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-025",
+      "section": "S3",
+      "summary": "Protection at rest relies on Linux full-disk encryption (LUKS); the app adds no password of its own. An \"Ekspor cadangan\" button writes all app data to one file the owner stores where they choose; an import restores it. The owner does not know whether disk encryption is on, so the handover includes a one-line check (lsblk -f shows crypto_LUKS) and the app shows a reminder on the Profile page until the owner ticks \"sudah dicek\".",
+      "rationale": "Answered by the owner's delegated test agent (S3.q2). An app password that is forgotten loses the data; nothing is backed up unless something does it on purpose.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-026",
+      "section": "S3",
+      "summary": "Erasure: \"Hapus semua data\", delete per import file, and delete the financial profile alone; each needs the owner to type HAPUS. Deleted data is removed from the app's storage file, not hidden. Exported backup files are the owner's to delete.",
+      "rationale": "Answered by the owner's delegated test agent (S3.q3).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-027",
+      "section": "S3",
+      "summary": "Imported CSV is untrusted text: every cell is shown as plain text (never as HTML); only http/https listing links become clickable; files over 5 MB or 2,000 rows are refused with a plain message; in the exported shortlist CSV, cells starting with = + - @ are prefixed with an apostrophe so a spreadsheet cannot run them as formulas.",
+      "rationale": "Threat-modeling pass (tampering): listing text is copied from public sites and may carry markup, javascript: links or spreadsheet formulas. Limits sit well above the busy month of 400–600 listings (D-018).",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-028",
+      "section": "S3",
+      "summary": "Every request that changes data (import, save profile, delete) must come from the app's own page: the server checks that the Origin header is the app's localhost address and rejects anything else. A website cannot trigger \"Hapus semua data\" or overwrite the profile.",
+      "rationale": "Threat-modeling pass (tampering): a hidden form on any website can send a request to localhost with a valid Host header, so the Host check of D-021 alone does not stop it.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-029",
+      "section": "S3",
+      "summary": "Instead of a legal privacy policy (not needed per D-023), the app has a short \"Data & privasi\" page in plain Indonesian: what is stored, that it never leaves the laptop, where the storage file lives, how to back up, and how to delete.",
+      "rationale": "Privacy-policy rule: the product keeps personal data. No store or consent screen applies, so an in-app explanation meets the purpose.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-030",
+      "section": "S3",
+      "summary": "Backup reminder: shown together with the 30-day stale-defaults warning (D-020) when the last backup export is more than 30 days old or never made.",
+      "rationale": "Answered by the owner's delegated test agent (S3.q6). Fits the 15-minute monthly upkeep.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-031",
+      "section": "S3",
+      "summary": "Backup files are not encrypted by the app in v1. Every export shows a warning: the file contains income and savings; keep it on an encrypted disk or a personal USB drive, not in cloud storage or chat apps. Residual risk accepted by the owner.",
+      "rationale": "Answered by the owner's delegated test agent (S3.q7). A forgotten backup password would make the backup useless.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-032",
+      "section": "S4",
+      "summary": "A listing whose price per m² of land is below 60% of the median of listings in the same area within the loaded files is marked \"Harga jauh di bawah pasaran — cek keaslian\". It is not removed and not ranked higher for being cheap.",
+      "rationale": "Per U-14 [cite: general · https://www.rumah123.com/panduan-properti/ciri-ciri-penipuan-tanah-kavling/ · pub 2026-06-04 · acc 2026-11-26]: a price far below comparables is a scam sign, and a cheapest-first ranking would push such listings to the top.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-033",
+      "section": "S4",
+      "summary": "The CSV may carry an optional certificate column (SHM, SHGB, AJB, PPJB/inden, unknown). The shortlist shows a plain note for anything other than SHM: SHGB \"perlu perpanjangan\", AJB/PPJB \"belum sertifikat — cek ke notaris\", unknown \"status sertifikat belum diisi\". Ranking does not change.",
+      "rationale": "Per U-09 [cite: general · https://www.detik.com/properti/tips-dan-panduan/d-8238944/mau-beli-rumah-yang-belum-dibangun-cek-8-hal-ini-dulu-biar-nggak-ketipu · pub 2025-12-02 · acc 2026-11-26]: a cheap listing may be cheap because of its title or build status.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-034",
+      "section": "S4",
+      "summary": "F-01 Import listings and build the shortlist — happy path: open the bookmark (Import CSV page); choose the CSV (required columns: title, link, price, land area, building area, bedrooms, area Jaksel/Depok, new/resale; optional certificate); preview shows rows read, rejected rows with reasons and dropped agent columns; click Impor; the Shortlist page applies criteria and KPR limits from Profile & Criteria and lists passing houses in order with monthly installment, upfront cash and notes; rejected houses are viewable with reasons; click Simpan CSV to get the shortlist file.",
+      "rationale": "Answered by the owner's delegated test agent (S4.q1).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-035",
+      "section": "S4",
+      "summary": "Affordability rule: maximum installment = net monthly income × 30% (editable) − other installments. A house passes only if its installment at the floating rate fits. Floating rate is set per bank, default 11%. The shortlist shows two installments: during the promo period and after it.",
+      "rationale": "Answered by the owner's delegated test agent (S4.q2). Per U-08 [cite: price · https://www.bca.co.id/id/individu/produk/pinjaman/kpr/kpr-first · n.d. · acc 2026-11-26 · primary · live], U-12 [cite: legal · https://www.rumah123.com/kemampuan-kpr/ · n.d. · acc 2026-11-26 · primary · live], U-19 [cite: price · https://www.bankmandiri.co.id/web/guest/kpr-bunga-spesial · n.d. · acc 2026-11-26 · primary · live].",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-036",
+      "section": "S4",
+      "summary": "Shortlist order: most nice-to-have criteria met first; ties broken by the smallest upfront cash.",
+      "rationale": "Answered by the owner's delegated test agent (S4.q3). Avoids cheapest-first ranking that lifts likely scams (U-14).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-037",
+      "section": "S4",
+      "summary": "F-01 unhappy-path defaults. Abandon: nothing is saved until Impor is clicked; closing the tab during preview discards it. Invalid input: common price formats are read (\"Rp1.250.000.000\", \"1,25 M\", \"850 jt\"); a row with an unreadable price or area, or a missing required column, is rejected with its row number and reason while the other rows import; a file without the required header is refused with the list of expected columns. Repeat: the Impor button locks after one click, so one click = one import. Expiry: each listing shows its import date by the laptop clock (WIB); listings imported more than 30 days ago are marked \"cek apakah masih dijual\".",
+      "rationale": "Routine recoveries taken as safe defaults (S4 guidance; deliver-edge-cases checklist via grilling). Shown for correction.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-038",
+      "section": "S4",
+      "summary": "F-01 Import listings and build the shortlist — priority: must.",
+      "rationale": "Answered by the owner's delegated test agent (S4.q5).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-039",
+      "section": "S4",
+      "summary": "Duplicates: listings with the same link are one house; the newest import replaces the older data and the preview reports \"X listing diperbarui\". The same house advertised on two sites stays as two listings (different links).",
+      "rationale": "Answered by the owner's delegated test agent (S4.q6).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-040",
+      "section": "S4",
+      "summary": "F-02 Set profile and criteria — happy path: open Profile & Criteria; Finance: net monthly income, total other installments, cash available; KPR: per bank minimum DP (default 5%), promo rate and promo length, floating rate (default 11%), tenor (default 20 years), installment cap 30%; Must-have criteria: max price, area (Jaksel/Depok), min bedrooms, min land area, new/resale/both — failing any drops the house; Nice-to-have: larger building area, more bedrooms, SHM, new house — used for ordering; click Simpan; the shortlist recalculates and the page shows \"Tersimpan\" with the date. A house is also dropped when its upfront cash (DP + BPHTB + bank fees + notary/insurance) exceeds the cash available.",
+      "rationale": "Answered by the owner's delegated test agent (S4.q7).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-041",
+      "section": "S4",
+      "summary": "F-02 unhappy-path defaults. Abandon: leaving with unsaved changes shows \"Ada perubahan belum disimpan\"; nothing is saved without Simpan. Invalid input: each field checks its range (amounts ≥ 0; DP 0–100%; rates 0–30%; tenor 1–30 years; cap 1–100%) with a message next to the field, and Simpan stays disabled until fixed. Empty profile: the Shortlist page shows \"Isi profil keuangan dulu\" with a link and applies only the must-have criteria. Two tabs: saving from an outdated tab is refused with \"Data sudah diubah di tab lain — muat ulang\". Expiry: each rate and default shows its last-updated date with the 30-day warning (D-020).",
+      "rationale": "Routine recoveries taken as safe defaults; shown for correction.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-042",
+      "section": "S4",
+      "summary": "F-02 Set profile and criteria — priority: must.",
+      "rationale": "Answered by the owner's delegated test agent (S4.q8).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-043",
+      "section": "S4",
+      "summary": "F-03 Update default figures — happy path: a yellow banner on any page (\"N angka bawaan lebih dari 30 hari — perbarui\") opens the Default Figures part of Profile & Criteria: NPOPTKP per area (Jaksel Rp250 juta, Depok Rp80 juta), bank fees per bank (provisi, administration, appraisal), notary and insurance estimates, each with last-updated date and source link; the owner checks the source, edits or clicks \"Tandai sudah dicek\", clicks Simpan; dates become today, the banner disappears and the shortlist recalculates. Priority: should.",
+      "rationale": "Answered by the owner's delegated test agent (S4.q9). Supports D-020.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-044",
+      "section": "S4",
+      "summary": "Split by priority. F-04 Export backup and delete data (must): open Data & privasi from the footer link; Ekspor cadangan shows the D-031 warning, Lanjut downloads kpr-cadangan-YYYY-MM-DD.json; delete offers all data, one import file, or the financial profile only, confirmed by typing HAPUS, ending with \"Data dihapus\". F-05 Restore from backup (should): Pulihkan dari cadangan, choose the file, see its contents (listing count, profile date) and a replace warning, type PULIHKAN; the app first exports an automatic backup of the current data, then restores.",
+      "rationale": "Answered by the owner's delegated test agent (S4.q10). One feature per priority so scope lock can treat them separately.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-045",
+      "section": "S4",
+      "summary": "F-03 unhappy-path defaults. Abandon: unsaved edits are lost with the same \"Ada perubahan belum disimpan\" warning as F-02. Invalid input: amounts ≥ 0, percentages 0–100, with field messages. Repeat: Tandai sudah dicek twice only refreshes the date. Expiry: the 30-day clock per figure uses the laptop date (WIB); a laptop date earlier than a saved date shows no warning and no error.",
+      "rationale": "Routine recoveries taken as safe defaults (enough protocol, step 2); shown for correction.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-046",
+      "section": "S4",
+      "summary": "F-04 and F-05 unhappy-path defaults. Export: if the download is cancelled nothing changes and the backup reminder stays. Delete: typing anything but HAPUS keeps the button disabled; a cancelled delete changes nothing. Restore: a file that is not a valid app backup, or is from a newer app version, is refused before anything changes; the automatic backup is written first, and if the restore fails midway the app returns to the state before restoring and says so. Repeat: delete and restore buttons lock after one click.",
+      "rationale": "Routine recoveries taken as safe defaults; shown for correction.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-047",
+      "section": "S4",
+      "summary": "First run and stopped app. First open: the Import CSV page shows a short three-step guide (1. isi profil, 2. impor CSV, 3. lihat daftar pendek) and a downloadable sample CSV with the expected columns. If the terminal is closed while a page is open, the next click shows the browser's own connection error; nothing half-saved remains because each save is all-or-nothing. Screen target: laptop browser first; phone layout is not planned (D-002).",
+      "rationale": "S4 bank question 9 and web profile S4 (web-empty, web-retry, web-device), taken as safe defaults; shown for correction.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-048",
+      "section": "S5",
+      "summary": "Recommended stack: Python 3.15 with the built-in sqlite3 store, one local data file in the owner's home folder, served on 127.0.0.1 only and started with one command. Node.js 26 LTS with node:sqlite was weighed and not chosen.",
+      "rationale": "sqlite3 is part of the Python standard library, while node:sqlite is still \"Stability: 1.2 - Release candidate\" [cite: version · https://nodejs.org/api/sqlite.html · n.d. · acc 2026-11-27 · primary · live]; Python 3.15 is supported to 2031-10 [cite: version · https://devguide.python.org/versions/ · n.d. · acc 2026-11-27 · primary · live]. Both cost Rp0 (S2.q3); a stable store fits the 15-minute monthly upkeep (D-020).",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-049",
+      "section": "S5",
+      "summary": "Rumah123 is the reference tool: result labels follow its wording where it fits D-001 (for example \"Angsuran/bulan\", \"Uang Muka\", \"Sisa Pinjaman Setelah Periode Fix\").",
+      "rationale": "Answered by the owner's delegated test agent (S5.q2). Familiar labels reduce reading effort; per the competitor scan [cite: general · https://www.rumah123.com/kpr/simulasi-kpr/ · n.d. · acc 2026-11-27 · primary · live].",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-050",
+      "section": "S5",
+      "summary": "Runtime: the Python 3.14 already on the laptop (3.14.4), supported to 2030-10; no extra Python install is needed. The handover only checks python3 --version shows 3.12 or newer and gives an upgrade note for later.",
+      "rationale": "Answered by the owner's delegated test agent (S5.q3). Python 3.14 is in bugfix status with end of life 2030-10 [cite: version · https://devguide.python.org/versions/ · n.d. · acc 2026-11-27 · primary · live]; Django 6.1 needs Python >=3.12 (signals snapshot). Installing 3.15 would add upkeep without a benefit.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-051",
+      "section": "S5",
+      "summary": "Web framework: Django 6.1.3 on the laptop's Python 3.14, with SQLite as the single local data file; ALLOWED_HOSTS limited to localhost and 127.0.0.1 (D-021) and the built-in CSRF/Origin check on every data-changing request (D-028). FastAPI 0.165.0 was weighed (score 66 vs 86) and not chosen.",
+      "rationale": "Answered by the owner's delegated test agent (S5.q4), following the recommendation. Django's Host check and Origin-checking CSRF are built in [cite: version · https://docs.djangoproject.com/en/stable/ref/csrf/ · n.d. · acc 2026-11-27 · primary · live]; FastAPI would need python-multipart and custom security middleware.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-052",
+      "section": "S6",
+      "summary": "Storage: one SQLite database file in the owner's home folder, managed by Django migrations. Rejected: JSON files (no atomic multi-record update) and Postgres/Supabase (needs a server or online account). A unique index on the listing link enforces D-039.",
+      "rationale": "Data-module comparison in the S6 risks: one user, one device, offline (D-005, D-002, D-022), about 1,200–7,200 listings a year (D-018), atomic saves needed for D-047 and F-05. Shown to the owner for confirmation (S6.q2).",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-053",
+      "section": "S6",
+      "summary": "Regulated-domain screen: finance, health, legal services and minors are all absent. The tool estimates for the owner's own purchase only and is not shared or sold; sharing or selling it reopens this screen and D-023.",
+      "rationale": "Answered by the owner's delegated test agent (S6.q1). Evidence: D-005, D-014, D-023, D-033.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-054",
+      "section": "S3",
+      "summary": "Retention: listings, shortlist and profile are kept until the owner deletes them (F-04); nothing is deleted automatically.",
+      "rationale": "Answered by the owner's delegated test agent (S6.q3). Volume is small (D-018); old listings help compare prices; stale ones are marked after 30 days (D-037).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-055",
+      "section": "S4",
+      "summary": "Tenor is capped by age: the owner types their current age in Profile & Criteria (stored only in the local database); each bank has a maximum tenor (default 25 years) and a maximum age at loan end (default 65; 66 for self-employed); the tenor used = the smallest of the entered tenor, the maximum tenor and (age limit - current age). The shortlist shows the tenor actually used.",
+      "rationale": "Answered by the owner's delegated test agent (S7.q3). Fixes scope review RV-L02-b541707a: BCA allows at most 25 years and age 65/66 at loan end (RQ-015); a fixed 20-year tenor understates the installment for older buyers and breaks D-004.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-056",
+      "section": "S4",
+      "summary": "Notary/PPAT and insurance estimates have no default: until the owner enters them (F-03), each house's upfront cash shows 'belum lengkap', and no house is marked as passing the upfront-cash rule; such houses are listed in a separate 'Dana tunai belum lengkap' group with the missing items named.",
+      "rationale": "Answered by the owner's delegated test agent (S7.q4). Fixes RV-L01-f3dc2e5c: no sourced figure exists in the plan, and a Rp0 default would let unaffordable houses pass the D-040 drop rule.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-057",
+      "section": "S4",
+      "summary": "CSV import accepts ',' or ';' as the separator (auto-detected from the header row), UTF-8 with or without BOM, and prices as plain digits, 'Rp1.500.000.000' (dots as thousand separators) or '1,5 M' / '850 jt'; any other value makes the row rejected with its reason.",
+      "rationale": "Answered by the owner's delegated test agent (S7.q5). Fixes RV-L02-47261332: spreadsheets set to Indonesian save CSV with ';' and dotted prices.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-058",
+      "section": "S5",
+      "summary": "Install and start in a virtual environment: python3 -m venv .venv; .venv/bin/pip install 'Django==6.1.3'; start with one command that runs .venv/bin/python manage.py runserver 127.0.0.1:8000. Fallback when PyPI is unreachable: a saved Django wheel in the project folder.",
+      "rationale": "Answered by the owner's delegated test agent (S7.q5). Fixes RV-L10-31d97b4b: PEP 668 makes distro Python refuse global pip installs (RQ-015).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-059",
+      "section": "S2",
+      "summary": "BCA administration fee defaults follow the loan size: Rp500.000 up to Rp500 juta, 0,10% of the loan above Rp500 juta up to Rp3 miliar, Rp3.000.000 above Rp3 miliar; editable in F-03.",
+      "rationale": "Answered by the owner's delegated test agent (S7.q5). Fixes RV-L01-be07777c; BCA KPR page re-fetched 2026-11-27 (RQ-015). The LTV end date 31 Dec 2027 is kept and now cites the BI press release of 21 Oct 2026 (RQ-016, fixes RV-L01-c4a7d48b).",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-060",
+      "section": "S1",
+      "summary": "Measurable success (refines D-004): one file of about 200 listings becomes a saved shortlist in under 10 minutes, and a hand check of 5 shortlisted houses against the 30% rule at the floating rate finds 0 over the cap.",
+      "rationale": "Answered by the owner's delegated test agent (S7.q6). Fixes RV-L15-2e67bd28.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-061",
+      "section": "S7",
+      "summary": "Kill criteria per in-MVP feature: F-01 reworked if a 200-row file cannot be shortlisted in under 10 minutes; F-02 reworked if the owner still recomputes affordability by hand; F-03 dropped if no default figure is edited in 3 months; F-04 kept regardless (privacy erasure, D-026); F-05 dropped if no restore is needed in 6 months.",
+      "rationale": "Answered by the owner's delegated test agent (S7.q6). Fixes RV-L04-e7e37a89.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-062",
+      "section": "S7",
+      "summary": "Scope locked: in-MVP F-01, F-02, F-03, F-04, F-05; Parking Lot empty. Scope review run 1 findings fixed through D-055–D-061 before the lock; no risk accepted.",
+      "rationale": "Answered by the owner's delegated test agent (S7.q7), an explicit yes to the lock question.",
+      "status": "user_confirmed"
+    },
+    {
+      "id": "D-063",
+      "section": "S8",
+      "summary": "Milestone order: M0 walking skeleton (start, import, list) -> M1 calculations and profile (F-02) -> M2 full import and ranked shortlist (F-01) -> M3 default figures and reminders (F-03) -> M4 backup, delete, restore and final re-check (F-04, F-05).",
+      "rationale": "Calculations come before the ranked shortlist because F-01 ranks by upfront cash and installment; each milestone fits one builder session. Shown for correction at the S8 review.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-064",
+      "section": "S8",
+      "summary": "Quality targets: current Firefox and Chromium on the owner Linux laptop; labels, keyboard path and visible focus; local log file without finance fields, kept 30 days; dates stored in UTC and shown in WIB.",
+      "rationale": "One user on one Linux laptop (S2.q3, D-047); no data leaves the laptop (D-022). Shown for correction at the S8 review.",
+      "status": "designer_filled"
+    },
+    {
+      "id": "D-065",
+      "section": "S8",
+      "summary": "Review run 2 fixes applied: Global smoke test as 9 numbered steps with expected outputs (RV-L12-122067bb); M0 start.sh runs migrate before runserver (RV-L05-b8ff3174); expired DNS-rebinding cite replaced by Django ALLOWED_HOSTS docs (RV-L01-145bd803).",
+      "rationale": "Source: rekomendasi diterima atas delegasi pemilik (the owner delegated every remaining decision on 2026-11-27). The three fixes are the review recommendations, each mechanical or research, with no change to scope, cost or behavior.",
+      "status": "user_confirmed"
+    }
+  ],
+  "boosters": {
+    "core": [
+      {
+        "name": "pm-skills interview patterns",
+        "repo": "product-on-purpose/pm-skills",
+        "license": "Apache-2.0",
+        "tier": "core",
+        "status": "installed"
+      },
+      {
+        "name": "grilling",
+        "repo": "mattpocock/skills",
+        "license": "MIT",
+        "tier": "core",
+        "status": "installed"
+      },
+      {
+        "name": "planning-and-task-breakdown",
+        "repo": "addyosmani/agent-skills",
+        "license": "MIT",
+        "tier": "core",
+        "status": "installed"
+      },
+      {
+        "name": "ponytail",
+        "repo": "DietrichGebert/ponytail",
+        "license": "MIT",
+        "tier": "core",
+        "status": "installed"
+      },
+      {
+        "name": "anti-slop",
+        "repo": "elithrar/dotfiles",
+        "license": "MIT",
+        "tier": "core",
+        "status": "installed"
+      },
+      {
+        "name": "SimpleEnglish (document-rule subset)",
+        "repo": "AminBlg/SimpleEnglish",
+        "license": "MIT",
+        "tier": "core",
+        "status": "installed"
+      }
+    ],
+    "enhancer": [
+      {
+        "name": "threat-modeling",
+        "repo": "briiirussell/cybersecurity-skills",
+        "license": null,
+        "tier": "enhancer",
+        "status": "installed"
+      },
+      {
+        "name": "mom-test",
+        "repo": "wondelai/skills",
+        "license": null,
+        "tier": "enhancer",
+        "status": "installed"
+      },
+      {
+        "name": "user-stories",
+        "repo": "phuryn/pm-skills",
+        "license": null,
+        "tier": "enhancer",
+        "status": "installed"
+      },
+      {
+        "name": "ux-copy",
+        "repo": "anthropics/knowledge-work-plugins",
+        "license": null,
+        "tier": "enhancer",
+        "status": "installed"
+      },
+      {
+        "name": "architecture-designer",
+        "repo": "jeffallan/claude-skills",
+        "license": null,
+        "tier": "enhancer",
+        "status": "installed"
+      },
+      {
+        "name": "database-schema-designer",
+        "repo": "onewave-ai/claude-skills",
+        "license": null,
+        "tier": "enhancer",
+        "status": "installed"
+      }
+    ],
+    "installed": [
+      {
+        "name": "planning-and-task-breakdown",
+        "kind": "skill",
+        "repo": "addyosmani/agent-skills",
+        "sha": "8c99fa36d90068c82d547f7c12a9d67a3e95f4ee",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/planning-and-task-breakdown",
+        "tier": "core",
+        "section": null,
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-26T08:28:13.264Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "anti-slop",
+        "kind": "skill",
+        "repo": "elithrar/dotfiles",
+        "sha": "eb4f994e0c1ebe1199f032f4e5fe1633d1b8067c",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/anti-slop",
+        "tier": "core",
+        "section": null,
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-26T08:28:14.786Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "threat-modeling",
+        "kind": "skill",
+        "repo": "briiirussell/cybersecurity-skills",
+        "sha": "b19875422c1388db8c14d91ba7c1f8343e98c48b",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/threat-modeling",
+        "tier": "enhancer",
+        "section": "S3",
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-26T13:55:15.391Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "mom-test",
+        "kind": "skill",
+        "repo": "wondelai/skills",
+        "sha": "c37678106e63ef1c5472d848fb3d8b8c5b33fafe",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/mom-test",
+        "tier": "enhancer",
+        "section": "S4",
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-26T14:00:18.221Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "user-stories",
+        "kind": "skill",
+        "repo": "phuryn/pm-skills",
+        "sha": "9af7bfd0bc47fdad43c2eaa7a43cd13918e7aaef",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/user-stories",
+        "tier": "enhancer",
+        "section": "S4",
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-26T14:00:25.151Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "ux-copy",
+        "kind": "skill",
+        "repo": "anthropics/knowledge-work-plugins",
+        "sha": "0e0fcacddcc892eb92a1b7873ff9d68159c47571",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/ux-copy",
+        "tier": "enhancer",
+        "section": "S4",
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-26T14:00:30.787Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "architecture-designer",
+        "kind": "skill",
+        "repo": "jeffallan/claude-skills",
+        "sha": "4b94d98605baf742b751bb82832ace5caf942271",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/architecture-designer",
+        "tier": "enhancer",
+        "section": "S6",
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-27T02:20:04.865Z",
+        "uninstalled_at": null
+      },
+      {
+        "name": "database-schema-designer",
+        "kind": "skill",
+        "repo": "onewave-ai/claude-skills",
+        "sha": "b2267d9171af4f56848d82992381b20b89b44056",
+        "scope": "project",
+        "harness": "claude-code",
+        "path": ".claude/skills/database-schema-designer",
+        "tier": "enhancer",
+        "section": "S6",
+        "consent": false,
+        "status": "installed",
+        "installed_at": "2026-11-27T02:20:10.531Z",
+        "uninstalled_at": null
+      }
+    ]
+  },
+  "model_profile": {
+    "tier": "T1",
+    "probe": "skipped",
+    "declared_at": "2026-11-26T08:27:13.444Z"
+  },
+  "milestones": [
+    {
+      "id": "M0",
+      "goal": "One command starts the app on the laptop (127.0.0.1 only) and an imported CSV shows on the Shortlist page from the real SQLite file",
+      "features": [],
+      "verified": false,
+      "verified_at": null
+    },
+    {
+      "id": "M1",
+      "goal": "Profile, criteria and money calculations: installments during and after promo, age-capped tenor, upfront cash, belum lengkap",
+      "features": [
+        "F-02"
+      ],
+      "verified": false,
+      "verified_at": null
+    },
+    {
+      "id": "M2",
+      "goal": "Full CSV import and the ranked shortlist saved as CSV",
+      "features": [
+        "F-01"
+      ],
+      "verified": false,
+      "verified_at": null
+    },
+    {
+      "id": "M3",
+      "goal": "Default figures with dates and sources, 30-day and backup reminders",
+      "features": [
+        "F-03"
+      ],
+      "verified": false,
+      "verified_at": null
+    },
+    {
+      "id": "M4",
+      "goal": "Backup, delete by typing HAPUS, safe restore, privacy page, and the M0 checks re-run",
+      "features": [
+        "F-04",
+        "F-05"
+      ],
+      "verified": false,
+      "verified_at": null
+    }
+  ],
+  "deployment": null,
+  "handoff": {
+    "status": "done",
+    "completed_at": "2026-11-27T17:16:59.273Z"
+  },
+  "framework_decision": {
+    "slot": "stack",
+    "decision_id": "D-051",
+    "chosen": {
+      "id": "django",
+      "name": "Django",
+      "version": "6.1.3"
+    },
+    "alternatives": [
+      {
+        "id": "fastapi",
+        "score": 66
+      }
+    ],
+    "confidence": "high",
+    "user_override": false,
+    "defaulted": false,
+    "signals_ref": {
+      "path": ".lvr/signals-2026-11-27.json",
+      "sha256": "b59418a9b8657a49c17f03019cdbcc17a09a05bb5839352b04ef7c5a2dc68963"
+    },
+    "recheck_by": "2026-12-11",
+    "section": "S5",
+    "decided_at": "2026-11-27T02:19:24.115Z",
+    "libraries": []
+  },
+  "release_check": {},
+  "review": {
+    "ledger": ".lvr/review/LEDGER.jsonl",
+    "runs": 3,
+    "last": {
+      "run": 3,
+      "scope": "full",
+      "started_at": "2026-11-27T17:15:37.860Z",
+      "done_at": "2026-11-27T17:16:42.680Z",
+      "verdict": "BUILD-READY",
+      "score": 10,
+      "lens_scores": {
+        "L01": 10,
+        "L02": 10,
+        "L03": 10,
+        "L04": 10,
+        "L05": 10,
+        "L06": 10,
+        "L07": 10,
+        "L08": 10,
+        "L09": 10,
+        "L10": 10,
+        "L11": 10,
+        "L12": 10,
+        "L13": 10,
+        "L14": 10,
+        "L15": 10
+      },
+      "open": {
+        "blocking": 0,
+        "major": 0,
+        "minor": 0
+      },
+      "missed_earlier": 0,
+      "report": ".lvr/review/REVIEW-2026-11-27-3.md",
+      "ledger_sha256": "7325446fcd9789cdcffac324fb1e0b2d6c52ccb241fc87d2ef906e9c7cbb5fef"
+    }
+  },
+  "agents_delegated": [],
+  "sessions": [
+    {
+      "start_seq": 1,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-26T08:27:07.907Z",
+      "ended_at": "2026-11-26T08:47:34.583Z",
+      "end_reason": "paused",
+      "end_note": "waiting for S0 confirmations: language, name/slug, market",
+      "sections": [
+        "S0"
+      ],
+      "agents": [],
+      "boosters_installed": [
+        "planning-and-task-breakdown",
+        "anti-slop"
+      ],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 18,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-26T08:49:36.373Z",
+      "ended_at": "2026-11-26T08:56:20.973Z",
+      "end_reason": "paused",
+      "end_note": "S1 first batch asked; waiting for the owner",
+      "sections": [
+        "S0",
+        "S1"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 34,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-26T11:45:05.849Z",
+      "ended_at": "2026-11-26T11:45:20.184Z",
+      "end_reason": "paused",
+      "end_note": "S1 batch 2 asked (web profile pages, end point, screen language)",
+      "sections": [
+        "S1"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 41,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-26T13:46:20.563Z",
+      "ended_at": "2026-11-26T13:49:09.346Z",
+      "end_reason": "paused",
+      "end_note": "S2 batch 1 asked (new vs resale, devices and budget, usage and upkeep)",
+      "sections": [
+        "S1",
+        "S2"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 55,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-26T13:50:12.210Z",
+      "ended_at": "2026-11-26T13:50:15.876Z",
+      "end_reason": "paused",
+      "end_note": "S2 batch 2 asked (usage per month, start method, upkeep time)",
+      "sections": [
+        "S2"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 61,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-26T13:51:16.961Z",
+      "ended_at": "2026-11-26T13:53:34.142Z",
+      "end_reason": "paused",
+      "end_note": "S2 closed; S3 opened, batch 1 asked (data inventory, loss and backup, erasure)",
+      "sections": [
+        "S2",
+        "S3"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 70,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-26T13:54:41.991Z",
+      "ended_at": "2026-11-26T13:55:34.554Z",
+      "end_reason": "paused",
+      "end_note": "S3 batch 2 asked (confirm D-027–D-029, backup reminder, backup file protection)",
+      "sections": [
+        "S3"
+      ],
+      "agents": [],
+      "boosters_installed": [
+        "threat-modeling"
+      ],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 78,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-26T13:59:12.173Z",
+      "ended_at": "2026-11-26T14:01:29.247Z",
+      "end_reason": "paused",
+      "end_note": "S3 closed; S4 opened, batch 1 asked (F-01 script, affordability rule, ranking order)",
+      "sections": [
+        "S3",
+        "S4"
+      ],
+      "agents": [],
+      "boosters_installed": [
+        "mom-test",
+        "user-stories",
+        "ux-copy"
+      ],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 90,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-26T14:02:22.588Z",
+      "ended_at": "2026-11-26T14:02:23.877Z",
+      "end_reason": "paused",
+      "end_note": "S4 batch 2 asked (F-01 priority and defaults, duplicate listings, F-02 script)",
+      "sections": [
+        "S4"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 97,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-26T14:03:39.538Z",
+      "ended_at": "2026-11-26T14:03:40.718Z",
+      "end_reason": "paused",
+      "end_note": "S4 batch 3 asked (F-02 priority and defaults, F-03 defaults update script, F-04 backup and delete script)",
+      "sections": [
+        "S4"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 103,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-26T14:05:14.875Z",
+      "ended_at": "2026-11-27T02:23:43.109Z",
+      "end_reason": "paused",
+      "end_note": "S7 opened after the earlier pause event; proposed split and scope-review offer asked",
+      "sections": [
+        "S4",
+        "S7"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 108,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-27T02:09:22.004Z",
+      "ended_at": "2026-11-27T02:12:25.674Z",
+      "end_reason": "paused",
+      "end_note": "S4 closed; S5 research written (RQ-013, RQ-014, D-048); S5 questions asked",
+      "sections": [
+        "S4",
+        "S5"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 115,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-27T02:13:34.144Z",
+      "ended_at": "2026-11-27T02:15:13.192Z",
+      "end_reason": "paused",
+      "end_note": "S5 framework choice asked (Django vs FastAPI)",
+      "sections": [
+        "S5"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 120,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-27T02:19:23.704Z",
+      "ended_at": "2026-11-27T02:20:42.935Z",
+      "end_reason": "paused",
+      "end_note": "S5 closed (D-051 Django); S6 risks written, no blocking; S6 questions asked (regulated-domain screen, storage, retention)",
+      "sections": [
+        "S5",
+        "S6"
+      ],
+      "agents": [],
+      "boosters_installed": [
+        "architecture-designer",
+        "database-schema-designer"
+      ],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 129,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-27T02:23:25.011Z",
+      "ended_at": "2026-11-27T02:23:36.432Z",
+      "end_reason": "paused",
+      "end_note": "S6 closed; S7 opened, proposed split and scope-review offer asked",
+      "sections": [
+        "S6"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 137,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-27T02:25:15.207Z",
+      "ended_at": "2026-11-27T02:31:40.422Z",
+      "end_reason": "paused",
+      "end_note": "Scope review run 1 done (fix before locking); waiting for owner decisions on 4 major findings and the lock question",
+      "sections": [
+        "S7"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 144,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-27T02:35:38.803Z",
+      "ended_at": null,
+      "end_reason": null,
+      "end_note": null,
+      "sections": [
+        "S7"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 152,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run; previous turn ended by a usage limit after seq 151, answers S7.q3-S7.q7 already recorded",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-27T13:39:29.438Z",
+      "ended_at": "2026-11-27T13:41:13.995Z",
+      "end_reason": "paused",
+      "end_note": "S7 closed; S8 plan drafted (D-063, D-064), waiting for the owner review S8.q1",
+      "sections": [
+        "S7",
+        "S8"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 160,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "the confirmed id source (resume picker or session hook) is not available inside this non-interactive run",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-27T13:43:53.541Z",
+      "ended_at": null,
+      "end_reason": null,
+      "end_note": null,
+      "sections": [
+        "S8",
+        "S9"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 166,
+      "skill": "lvr-init-new-idea",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "not exposed in this non-interactive run; previous turn cut by usage limit during S9 drafting (no events after seq 165)",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-27T17:09:58.142Z",
+      "ended_at": null,
+      "end_reason": null,
+      "end_note": null,
+      "sections": [
+        "S9"
+      ],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 197,
+      "skill": "lvr-review-plan",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "harness does not expose session id to the model",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-27T17:12:32.013Z",
+      "ended_at": null,
+      "end_reason": null,
+      "end_note": null,
+      "sections": [],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    },
+    {
+      "start_seq": 207,
+      "skill": "lvr-handoff",
+      "harness": "claude-code",
+      "session_id": null,
+      "session_id_reason": "harness does not expose session id to the model",
+      "model": "claude-opus-5-5",
+      "tier": "T1",
+      "cwd": "/home/user/lvr-trials/kpr-house-hunter",
+      "started_at": "2026-11-27T17:16:48.508Z",
+      "ended_at": "2026-11-27T17:16:59.553Z",
+      "end_reason": "done",
+      "end_note": "S9 closed, review runs 2-3 done (BUILD-READY 10/10), handoff done; no build started per owner instruction",
+      "sections": [],
+      "agents": [],
+      "boosters_installed": [],
+      "boosters_uninstalled": [],
+      "recovered_error": null
+    }
+  ]
+}

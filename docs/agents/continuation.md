@@ -2,7 +2,7 @@
 
 Use the [repository rules](../../AGENTS.md) and [spec overview](../spec/00-overview.md) when changing Lazy Vibers Recipe. Open the latest `master` and check `git status --short` and `git log --oneline -12` before continuing the release roadmap. Read the ticket and its evidence before changing its status.
 
-**Release roadmap: 38 of 40 tickets complete.**
+**Release roadmap: 39 of 40 tickets complete.**
 
 ## Verified work
 
@@ -23,36 +23,15 @@ A clean public snapshot passed 46 tests, lint, type checking, the production bui
 
 | Ticket | Status and next check |
 | --- | --- |
-| 24 · Real project trials | The owner approved the two trial scopes below. Both fresh folders passed the folder check and the published network policy reaches the Codex model endpoint. Codex rejected its saved login with HTTP 401 and requested sign-in. Resume from the live-search interview preflight after reauthentication. |
-| 25 · v1.0.0 release | Finish ticket 24, then publish and verify the release. Installation from clean `master` passed. Git push and the repository API read succeed. The GitHub integration returns HTTP 403 when updating About or reading branch protection. The tag, release installation, About, topics, and branch protection remain pending. |
+| 24 · Real project trials | Done on 2026-11-27. The owner limited the trial to planning, because Recipe focuses on a thorough plan, so no builder run was made. Both plans reached Build-ready 10/10 on review run 3 with handoff bundles. [Trial evidence](../../examples/trials-2026-11/README.md) |
+| 25 · v1.0.0 release | About, topics, and branch protection (required check `build-and-test`, linear history) are already set. Create the `v1.0.0` tag and the GitHub Release, then verify installation from the tag. |
 
-### Approved trial scopes
+The trial README lists five defects for later fixes. The most useful one is a per-answer source field in the journal script.
 
-| Project | First workflow |
-| --- | --- |
-| KPR House Hunter | Filter a user-provided local listings file into a shortlist. Keep the personal profile and financial inputs local. |
-| Futsal Court Booking | Let a player see an open court slot and reserve it. Store the reservation in Supabase and verify that only one request wins when two players try to reserve the same slot. Use the [recorded Futsal example](../../examples/futsal-booking/README.md) for context during the new interview. |
+## Next session
 
-The database portion of the Futsal booking check passed in a disposable PostgreSQL 17.12 container. With the documented `UNIQUE (court_id, booking_date, slot)` constraint, two overlapping transactions showed that the second insert waited for the first and then failed with SQLSTATE `23505`. Exactly one row persisted. Changing the court, date, or slot allowed a new booking. [Data model](../../examples/futsal-booking/SPEC/data-model.md)
-
-The direct local REST check also passed using the Supabase PostgreSQL `17.12.0.002` and PostgREST `v16.6` images. Two concurrent requests returned HTTP `201` and `409` with one matching row. Booking a different time succeeded and a request without credentials could not read bookings. The full Supabase CLI stack stopped when its local Auth service failed a health check, so the REST check used a disposable role and locally signed token. The Futsal app and independent M0 builder trial remain pending.
-
-For ticket 24, use a fresh folder per project and the [Recipe quickstart](../../README.md#start-a-new-idea). Save the reviewed bundles. Export each bundle to a separate folder that contains no installed Recipe skills and start a fresh builder there with `HANDOFF-PROMPT.md`. Ask it to implement only M0 and run the checks in `VERIFICATION.md`. Record the results, every question and guess, and the scorecard for each bundle. The ticket requires scores of at least 4 on every artifact and at most two builder guesses per milestone. Remove private values before adding approved evidence to `examples/`.
-
-The published cloud network policy reaches the Codex model endpoint, GitHub REST API, and official sources for both trials. A follow-up environment draft adds `auth.openai.com` for `codex login --device-auth` and a personal `LVR_GITHUB_ADMIN_TOKEN` binding scoped to `api.github.com`. After that draft is published, sign in to Codex again and retry a fresh session with live search. For the GitHub settings, bind a fine-grained token restricted to this repository with `Administration` read and write access. The eventual GitHub Release also requires `Contents` write access. Use the bound token for `gh` without printing it, and verify repository permissions before making changes.
-
-## Next session (local Claude Code, 2026-11-26 evening)
-
-Ticket 25: About, topics, and branch protection (required check `build-and-test`, linear history) are already set on GitHub. Only the tag and the GitHub Release remain, after ticket 24.
-
-Ticket 24 is in progress in `~/projects/lvr-trials/` (outside the repo). The owner delegated all remaining interview answers to the testing agent acting for the owner; each answer says so. Both planning runs are headless `claude -p --resume` sessions: KPR `dfc188fd-77c8-476e-b3b7-ad5c4d575e31`, Futsal `c61d40c1-515f-4137-9525-16a1f21462fc`. Replies are in `<project>-turn-N.json` (last good turn 10). Turn 11 hit the 5-hour usage limit after the answers were journaled, so the S4 close-out reply was lost.
-
-Resume in this order:
-
-1. Resume each session in its folder and ask it to summarize where S4 stands and continue: KPR answered F-02 must, F-03 should, F-04 (export/delete must, restore should), "enough features". Futsal answered F-02/F-03 must, two-price F-04 must, "kamu" tone, "enough features". Keep answering as the owner, taking the recommendation unless it conflicts with a recorded decision.
-2. Finish all sections, then `lvr-review-plan` and handoff, then the clean-folder M0 builder run with `VERIFICATION.md`, scorecard, and sanitized evidence under `examples/`.
-3. Record these trial findings: the journal script drops a per-answer source field (KPR); the Futsal planner replied once in English after Indonesian answers; four core boosters were read from the host `~/.agents/skills`; KPR correctly refused to ask for income or savings figures.
-4. Tag and publish v1.0.0 (ticket 25).
+1. Ticket 25: confirm CI passes on `master`, update `CHANGELOG.md` for 1.0.0, create the `v1.0.0` tag and the GitHub Release with `gh`, then install from the tag in a clean folder and record the result.
+2. Optionally open tickets for the five trial defects in `examples/trials-2026-11/README.md`.
 
 ## Recover the working archive
 

@@ -1,0 +1,186 @@
+{
+  "schema_version": 2,
+  "generated_at": "2026-11-27T17:16:54.100Z",
+  "project": {
+    "slug": "kpr-house-hunter",
+    "name": "KPR House Hunter",
+    "user_language": "id",
+    "idea_summary_en": "A local web app for one owner's house search in Indonesia: it imports a hand-made listings CSV, applies the owner's criteria and KPR affordability limits, and shows a ranked shortlist; income and savings never leave the laptop.",
+    "status": "bundled"
+  },
+  "stack": {
+    "primary": "python-django-sqlite",
+    "components": [
+      "Python 3.14",
+      "Django 6.1.3",
+      "SQLite"
+    ],
+    "reasons_ref": "DECISIONS.md#D-051"
+  },
+  "features": [
+    {
+      "id": "F-01",
+      "name": "Import listings and build the shortlist",
+      "in_mvp": true,
+      "flows_ref": "USER_FLOWS.md#F-01"
+    },
+    {
+      "id": "F-02",
+      "name": "Set profile and criteria",
+      "in_mvp": true,
+      "flows_ref": "USER_FLOWS.md#F-02"
+    },
+    {
+      "id": "F-03",
+      "name": "Update default figures",
+      "in_mvp": true,
+      "flows_ref": "USER_FLOWS.md#F-03"
+    },
+    {
+      "id": "F-04",
+      "name": "Export backup and delete data",
+      "in_mvp": true,
+      "flows_ref": "USER_FLOWS.md#F-04"
+    },
+    {
+      "id": "F-05",
+      "name": "Restore from backup",
+      "in_mvp": true,
+      "flows_ref": "USER_FLOWS.md#F-05"
+    }
+  ],
+  "decisions_count": {
+    "confirmed": 42,
+    "assumed": 0,
+    "designer_filled": 23
+  },
+  "milestones": [
+    {
+      "id": "M0",
+      "goal": "One command starts the app on the laptop (127.0.0.1 only) and an imported CSV shows on the Shortlist page from the real SQLite file",
+      "verified": false,
+      "acceptance_count": 6,
+      "ref": "MILESTONES.md#M0"
+    },
+    {
+      "id": "M1",
+      "goal": "Profile, criteria and money calculations: installments during and after promo, age-capped tenor, upfront cash, belum lengkap",
+      "verified": false,
+      "acceptance_count": 7,
+      "ref": "MILESTONES.md#M1"
+    },
+    {
+      "id": "M2",
+      "goal": "Full CSV import and the ranked shortlist saved as CSV",
+      "verified": false,
+      "acceptance_count": 9,
+      "ref": "MILESTONES.md#M2"
+    },
+    {
+      "id": "M3",
+      "goal": "Default figures with dates and sources, 30-day and backup reminders",
+      "verified": false,
+      "acceptance_count": 5,
+      "ref": "MILESTONES.md#M3"
+    },
+    {
+      "id": "M4",
+      "goal": "Backup, delete by typing HAPUS, safe restore, privacy page, and the M0 checks re-run",
+      "verified": false,
+      "acceptance_count": 7,
+      "ref": "MILESTONES.md#M4"
+    }
+  ],
+  "costs": {
+    "monthly_usd": 0,
+    "one_time_usd": 0,
+    "table_ref": "RESEARCH.md#cost-table"
+  },
+  "capabilities": [
+    {
+      "name": "planning-and-task-breakdown",
+      "kind": "skill",
+      "license": "MIT",
+      "nc": false,
+      "install": "npx skills add addyosmani/agent-skills --skill planning-and-task-breakdown"
+    },
+    {
+      "name": "database-schema-designer",
+      "kind": "skill",
+      "license": "MIT",
+      "nc": false,
+      "install": "npx skills add onewave-ai/claude-skills --skill database-schema-designer"
+    },
+    {
+      "name": "threat-modeling",
+      "kind": "skill",
+      "license": "MIT",
+      "nc": false,
+      "install": "npx skills add briiirussell/cybersecurity-skills --skill threat-modeling"
+    },
+    {
+      "name": "ux-copy",
+      "kind": "skill",
+      "license": "Apache-2.0",
+      "nc": false,
+      "install": "npx skills add anthropics/knowledge-work-plugins --skill ux-copy"
+    },
+    {
+      "name": "user-stories",
+      "kind": "skill",
+      "license": "MIT",
+      "nc": false,
+      "install": "npx skills add phuryn/pm-skills --skill user-stories"
+    },
+    {
+      "name": "architecture-designer",
+      "kind": "skill",
+      "license": "MIT",
+      "nc": false,
+      "install": "npx skills add jeffallan/claude-skills --skill architecture-designer"
+    },
+    {
+      "name": "ponytail",
+      "kind": "skill",
+      "license": "MIT",
+      "nc": false,
+      "install": "npx skills add DietrichGebert/ponytail"
+    },
+    {
+      "name": "anti-slop",
+      "kind": "skill",
+      "license": "MIT",
+      "nc": false,
+      "install": "npx skills add elithrar/dotfiles --skill anti-slop"
+    }
+  ],
+  "pointers": {
+    "agents": "AGENTS.md",
+    "overview": "OVERVIEW.md",
+    "verification": "VERIFICATION.md",
+    "state": ".lvr/state.json"
+  },
+  "files": [
+    "AGENTS.md",
+    "OVERVIEW.md",
+    "DECISIONS.md",
+    "SPEC/prd.md",
+    "SPEC/requirements.md",
+    "SPEC/data-model.md",
+    "SPEC/api.md",
+    "SPEC/architecture.md",
+    "USER_FLOWS.md",
+    "CODE_STYLE.md",
+    "SECURITY.md",
+    "RESEARCH.md",
+    "SCOPE.md",
+    "MILESTONES.md",
+    "VERIFICATION.md",
+    "ASSUMPTIONS.md",
+    "HANDOVER.md",
+    "CAPABILITIES.md",
+    "CLAUDE.md",
+    "GEMINI.md",
+    "blueprint.json"
+  ]
+}
