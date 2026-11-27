@@ -30,7 +30,7 @@ const EVENT_TYPES = [
   "feature_started", "feature_captured", "feature_research", "impact_analysis", "feature_scope_decision",
   "feature_applied", "feature_done", "build_started", "milestone_started", "milestone_verified",
   "milestone_failed", "build_blocked", "deployment_verified", "release_checked", "build_done", "framework_selected", "agent_delegated", "brand_started",
-  "brand_file_generated", "brand_done", "error", "resume", "research_logged", "context_research", "schema_migrated",
+  "brand_file_generated", "brand_done", "error", "resume", "research_logged", "context_research", "decision_status_changed", "schema_migrated",
 ];
 const SECTIONS = ["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10"];
 // S9 is the last section pointer: after S9 is done current_section stays "S9". S10 (build) is tracked by project.status
@@ -394,7 +394,7 @@ const KEYS = {
   boosters1: ["core", "enhancer"],
   answer: ["q", "a", "skipped", "source"],
   loop: ["id", "from", "to", "reason", "opened_at", "resolved_at"],
-  decision: ["id", "section", "summary", "rationale", "status"],
+  decision: ["id", "section", "summary", "rationale", "status", "previous_status", "status_changed_at"],
   boosters: ["core", "enhancer", "installed"],
   booster: ["name", "repo", "license", "tier", "status"],
   model: ["tier", "probe", "declared_at"],
@@ -517,6 +517,9 @@ function validateState(s) {
       if (!isStr(d.summary) || d.summary === "") E("E_DECISION", `${dp}/summary`, "summary must be a non-empty string.");
       if (!isStr(d.rationale)) E("E_DECISION", `${dp}/rationale`, "rationale must be a string.");
       if (!DECISION_STATUS.includes(d.status)) E("E_DECISION", `${dp}/status`, `status must be one of ${DECISION_STATUS.join("|")}.`);
+      if (d.previous_status !== undefined && !DECISION_STATUS.includes(d.previous_status)) E("E_DECISION", `${dp}/previous_status`, `previous_status must be one of ${DECISION_STATUS.join("|")}.`);
+      if (d.status_changed_at !== undefined && !isIso(d.status_changed_at)) E("E_DECISION", `${dp}/status_changed_at`, "status_changed_at must be an ISO time.");
+      if ((d.previous_status === undefined) !== (d.status_changed_at === undefined)) E("E_DECISION", dp, "previous_status and status_changed_at go together.");
     });
   }
 
@@ -1068,6 +1071,8 @@ function validateDecisionObj(d, field) {
   if (!isStr(d.summary) || d.summary === "") throw invalid(`${field}.summary`, "a non-empty string");
   if (d.rationale !== undefined && !isStr(d.rationale)) throw invalid(`${field}.rationale`, "a string");
   if (!DECISION_STATUS.includes(d.status)) throw invalid(`${field}.status`, DECISION_STATUS.join("|"));
+  if (d.previous_status !== undefined && !DECISION_STATUS.includes(d.previous_status)) throw invalid(`${field}.previous_status`, DECISION_STATUS.join("|"));
+  if (d.status_changed_at !== undefined && !isIso(d.status_changed_at)) throw invalid(`${field}.status_changed_at`, "an ISO time");
 }
 
 const optStr = (p, k) => { if (p[k] !== undefined && p[k] !== null && !isStr(p[k])) throw invalid(k, "a string"); };
@@ -1197,6 +1202,12 @@ function validatePayload(type, p, opts = {}) {
       needStr("report");
       if (p.lens_scores !== undefined && p.lens_scores !== null && !(isObj(p.lens_scores) && Object.values(p.lens_scores).every((v) => typeof v === "number" && v >= 0 && v <= 10))) throw invalid("lens_scores", "lens id -> 0-10");
       optStr(p, "ledger_sha256");
+      break;
+    case "decision_status_changed":
+      if (!/^D-\d{3,}$/.test(p.id ?? "")) throw invalid("id", "D-NNN");
+      if (!DECISION_STATUS.includes(p.status)) throw invalid("status", DECISION_STATUS.join("|"));
+      if (p.answer_id !== undefined && !ANSWER_ID_RE.test(p.answer_id ?? "")) throw invalid("answer_id", "S<n>.q<n> (the answer where the owner gave the approval)");
+      optStr(p, "note");
       break;
     case "release_checked":
       if (!isStr(p.kind) || !/^[a-z][a-z0-9_]*$/.test(p.kind)) throw invalid("kind", "a lowercase word (url_2xx, package_install, ...)");
@@ -1332,7 +1343,11 @@ const liveCtx = (priorEvents) => ({ mode: "live", priorEvents, preErrorStatus: u
 function upsertDecision(st, d, ctx) {
   const nd = { id: d.id, section: d.section, summary: d.summary, rationale: d.rationale ?? "", status: d.status };
   const i = st.decisions.findIndex((x) => x.id === d.id);
-  if (i >= 0) st.decisions[i] = { ...st.decisions[i], ...nd };
+  const old = i >= 0 ? st.decisions[i] : null;
+  // A status change (decision_status_changed) is kept while the status stays; a full restatement with another status starts over.
+  if (DECISION_STATUS.includes(d.previous_status) && isIso(d.status_changed_at)) { nd.previous_status = d.previous_status; nd.status_changed_at = d.status_changed_at; }
+  else if (old?.previous_status !== undefined && old.status === nd.status) { nd.previous_status = old.previous_status; nd.status_changed_at = old.status_changed_at; }
+  if (i >= 0) st.decisions[i] = nd;
   else { st.decisions.push(nd); st.decisions.sort((a, b) => decNum(a.id) - decNum(b.id)); }
   ctx.decisionFromEvents?.add(d.id);
 }
@@ -1606,6 +1621,12 @@ function applyEvent(st, e, ctx) {
       }
       break;
     }
+    case "decision_status_changed": {
+      const d = st.decisions.find((x) => x.id === p.id);
+      if (!d || !DECISION_STATUS.includes(p.status)) { untr(); break; }
+      if (d.status !== p.status) { d.previous_status = d.status; d.status = p.status; d.status_changed_at = ts; }
+      break;
+    }
     case "release_checked": {
       if (!isStr(p.kind) || !["passed", "failed"].includes(p.status)) { untr(); break; }
       (st.release_check ??= {})[isStr(p.product_type) && p.product_type !== "" ? p.product_type : "default"] = { kind: p.kind, status: p.status, target: isStr(p.target) ? p.target : null, evidence: isStr(p.evidence) ? p.evidence : null, checked_at: ts };
@@ -1724,6 +1745,10 @@ function liveGuard(st, type, p) {
   } else if (type === "review_done") {
     const l = st.review?.last;
     if (!l || l.run !== p.run || l.done_at !== null) throw invalid("run", "the open review run (send review_started first)");
+  } else if (type === "decision_status_changed") {
+    const d = (st.decisions ?? []).find((x) => isObj(x) && x.id === p.id);
+    if (!d) throw invalid("id", "the id of a recorded decision");
+    if (d.status === p.status) throw invalid("status", `a status other than the current one (${p.id} is already ${p.status})`);
   } else if (type === "framework_selected" && isStr(p.slot) && p.slot !== "stack" && !isObj(st.framework_decision)) {
     throw invalid("slot", "stack until a stack decision exists (record the stack pick first)");
   }
@@ -7442,6 +7467,19 @@ async function cmdDecisionRecord({ dir, flags }) {
   });
 }
 
+/** Change a recorded decision's status (for example the owner approves a designer_filled decision). Works after S9 too: the bundle is then out of date until it is compiled again. */
+async function cmdDecisionStatus({ dir, flags }) {
+  needLvr(dir);
+  const id = need(flags, "id");
+  const status = need(flags, "status");
+  const payload = { id, status, ...(flags.answer !== undefined ? { answer_id: flags.answer } : {}), ...(flags.note !== undefined ? { note: flags.note } : {}) };
+  return withLock(dir, "decision status", () => {
+    guardSchema(dir);
+    const r = appendLocked(dir, "decision_status_changed", payload);
+    return { id, status, seq: r.seq, ts: r.ts, state: r.state, journal_warnings: r.journal_warnings };
+  });
+}
+
 /** Re-record what state.json holds but the journal lost, using existing event types, all stamped (and marked `restored`). Never touches state.json.
  *  Only for a journal that is BEHIND state.json (or empty, or missing content state.json holds). It refuses (RESTORE_NOT_NEEDED, nothing written)
  *  when nothing in state.json is missing from the journal, and it only moves `.state-seq` to the journal tail when that is provably right:
@@ -7524,7 +7562,7 @@ function restorePass(dir, st, j0, dry) {
   // events appended above are stamped too and carry no decisions/milestones/project, so the lists computed from `ev` stay valid
   const carrier = {};
   const decs = (st.decisions || []).filter((d) => isObj(d) && isStr(d.id) && !haveDec.has(d.id) && SEC_RE.test(d.section ?? "") && isStr(d.summary) && DECISION_STATUS.includes(d.status));
-  if (decs.length) carrier.decisions = decs.map((d) => ({ id: d.id, section: d.section, summary: d.summary, rationale: d.rationale ?? "", status: d.status }));
+  if (decs.length) carrier.decisions = decs.map((d) => ({ id: d.id, section: d.section, summary: d.summary, rationale: d.rationale ?? "", status: d.status, ...(DECISION_STATUS.includes(d.previous_status) && isIso(d.status_changed_at) ? { previous_status: d.previous_status, status_changed_at: d.status_changed_at } : {}) }));
   const mss = (st.milestones || []).filter((m) => isObj(m) && /^M\d+$/.test(m.id ?? "") && !haveMs.has(m.id) && isStr(m.goal) && Array.isArray(m.features) && m.features.every((f) => /^F-\d{2,}$/.test(f)));
   if (mss.length) carrier.milestones = mss.map((m) => ({ id: m.id, goal: m.goal, features: m.features }));
   const proj = {};
@@ -9045,6 +9083,10 @@ const COMMANDS = {
   "answer record": {
     help: "Record one answer (journal + state). --section S [--id ID] --q TEXT --a TEXT | --in JSON [--skipped] [--source owner|delegated_agent|accepted_recommendation] [--amend]. The JSON may also carry project, product and coverage (payload extensions)",
     flags: ["section", "id", "q", "a", "in", "payload", "skipped", "source", "amend", "decision"], run: cmdAnswerRecord,
+  },
+  "decision status": {
+    help: "Change a recorded decision's status, e.g. when the owner approves a designer_filled or assumed decision. --id D-NNN --status user_confirmed|assumed|designer_filled [--answer S<n>.q<n> (the approving answer)] [--note TEXT]",
+    flags: ["id", "status", "answer", "note"], run: cmdDecisionStatus,
   },
   "decision record": {
     help: "Record decisions on a carrier event. --event T [--payload JSON] --decision JSON (repeatable) | --in JSON [--amend]",

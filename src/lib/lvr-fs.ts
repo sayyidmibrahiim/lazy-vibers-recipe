@@ -60,7 +60,7 @@ export interface LvrState {
     sections: Record<string, LvrSection>;
     loop_backs: Array<{ id: string; reason: string; target_section: string; opened_at: string; resolved_at: string | null }>;
   };
-  decisions: Array<{ id: string; section: string; summary: string; rationale: string; status: DecisionStatus; recorded_at: string }>;
+  decisions: Array<{ id: string; section: string; summary: string; rationale: string; status: DecisionStatus; recorded_at: string; /** Status before the owner changed it later, e.g. designer_filled before approval. */ previousStatus: DecisionStatus | null; statusChangedAt: string | null }>;
   milestones: Array<{ id: string; goal: string; features: string[]; verified: boolean; verified_at: string | null }>;
   deployment: { status: string; url: string | null; verified_at: string | null } | null;
   handoff: { status: string; verified_at: string | null } | null;
@@ -291,7 +291,7 @@ export function parseLvrState(raw: unknown, journal: Fields[] = []): LvrState | 
   for (const entry of values(item.decisions).map(asObject)) {
     const id = text(entry.id);
     if (!id || !decisionStatus.has(String(entry.status))) continue;
-    decisions.push({ id, section: text(entry.section) ?? "", summary: text(entry.summary) ?? "", rationale: text(entry.rationale) ?? "", status: entry.status as DecisionStatus, recorded_at: text(entry.recorded_at) ?? "" });
+    decisions.push({ id, section: text(entry.section) ?? "", summary: text(entry.summary) ?? "", rationale: text(entry.rationale) ?? "", status: entry.status as DecisionStatus, recorded_at: text(entry.recorded_at) ?? "", previousStatus: decisionStatus.has(String(entry.previous_status)) ? entry.previous_status as DecisionStatus : null, statusChangedAt: text(entry.status_changed_at) });
   }
   const milestones: LvrState["milestones"] = [];
   for (const entry of values(item.milestones).map(asObject)) {

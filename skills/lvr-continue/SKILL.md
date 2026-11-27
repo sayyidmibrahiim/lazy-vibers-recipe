@@ -111,7 +111,7 @@ Every run opens with `session_start`, and that event restores the status that wa
 
 ### b. Interviewing (status `interview`, `researching`, or `review`; the current Section S0–S8 is not done)
 
-Script: the same commands as the init skill's Section loop engine: `LVR answer record`, `LVR decision record`, `LVR journal append --type section_done|section_blocked|loop_back_closed`.
+Script: the same commands as the init skill's Section loop engine: `LVR answer record`, `LVR decision record`, `LVR decision status` (owner approval of a recorded decision), `LVR journal append --type section_done|section_blocked|loop_back_closed`.
 
 Order of offers:
 

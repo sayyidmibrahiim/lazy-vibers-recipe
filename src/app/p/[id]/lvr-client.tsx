@@ -453,6 +453,7 @@ function PipelineTab({ detail, openFile }: { detail: LvrProjectDetail; openFile:
                     >
                       {statusText(d.status)}
                     </span>
+                    {d.previousStatus ? <p className="mt-1 text-[11px] text-ink/65">Changed from {statusText(d.previousStatus).toLowerCase()}</p> : null}
                   </td>
                 </tr>
               ))}

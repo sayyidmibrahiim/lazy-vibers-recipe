@@ -28,5 +28,5 @@ The review ran in the same session that wrote each plan, so it is not independen
 1. The journal script has no per-answer source field, so "answered by the testing agent" lives only in answer text and section records. Fixed after the trials: `answer record --source` stores `owner`, `delegated_agent`, or `accepted_recommendation`, and the dashboard counts them per Section.
 2. The Futsal planner replied once in English after Indonesian answers, then corrected itself and recorded the slip.
 3. Four core boosters were read from the host `~/.agents/skills` instead of a project-local install.
-4. Designer-filled decisions cannot change status after approval. The approval is recorded as a separate answer instead.
+4. Designer-filled decisions cannot change status after approval. The approval is recorded as a separate answer instead. Fixed after the trials: `decision status --id D-NNN --status user_confirmed --answer <S>.qN` journals `decision_status_changed`, the decision keeps its earlier status, and the dashboard shows the change.
 5. The KPR review ledger kept a wrong round count for run 2 because the ledger is append-only.

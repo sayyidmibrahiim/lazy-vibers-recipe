@@ -68,6 +68,35 @@ test("an answer keeps who gave it through state, replay and validation", (t) => 
   assert.match(bad.stdout + bad.stderr, /source/);
 });
 
+test("an approved designer-filled decision changes status through state, replay and validation", (t) => {
+  const { dir, run, start } = fixture(t);
+  start();
+  const decision = { section: "S0", summary: "Add a privacy page", rationale: "The law requires one.", status: "designer_filled" };
+  run("answer", "record", "--section", "S0", "--q", "Who books?", "--a", "Players.", "--decision", JSON.stringify(decision));
+  run("answer", "record", "--section", "S0", "--q", "Keep the privacy page?", "--a", "Yes.");
+  const changed = run("decision", "status", "--id", "D-001", "--status", "user_confirmed", "--answer", "S0.q3");
+  assert.equal(changed.status, "user_confirmed");
+  const file = path.join(dir, ".lvr/state.json");
+  const read = () => JSON.parse(fs.readFileSync(file, "utf8")).decisions[0];
+  assert.equal(read().status, "user_confirmed");
+  assert.equal(read().previous_status, "designer_filled");
+  assert.equal(read().status_changed_at, date + "T12:00:00Z");
+  fs.writeFileSync(file, "broken fixture\n");
+  run("replay", "--write");
+  assert.equal(read().status, "user_confirmed");
+  assert.equal(read().previous_status, "designer_filled");
+  assert.deepEqual(run("replay", "--compare").diff, []);
+  assert.equal(run("state", "validate").valid, true);
+  const refuse = (...args) => {
+    const result = spawnSync(process.execPath, [cli, "--dir", dir, "decision", "status", ...args], { encoding: "utf8", env: environment });
+    assert.notEqual(result.status, 0);
+    return result.stdout + result.stderr;
+  };
+  assert.match(refuse("--id", "D-001", "--status", "user_confirmed"), /already user_confirmed/);
+  assert.match(refuse("--id", "D-009", "--status", "user_confirmed"), /recorded decision/);
+  assert.match(refuse("--id", "D-001", "--status", "approved"), /status/);
+});
+
 test("replay distinguishes English summaries from original answers and reads legacy records", (t) => {
   const { dir, run, start } = fixture(t);
   start();

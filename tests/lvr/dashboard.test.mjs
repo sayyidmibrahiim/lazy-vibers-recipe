@@ -26,7 +26,7 @@ const stateInput = {
     status: "in_progress", record: "S4-fitur.md", answers: { "S4.q1": { a: "A booking", skipped: false }, "S4.q2": { skipped: true } }, coverage: { goal: ["S4.q1"], data: [] },
   } } },
   milestones: [{ id: "M0", goal: "Booking \"demo\"", features: ["F-01"], verified: true }],
-  decisions: [{ id: "D-001", section: "S4", summary: "Use calendar", rationale: "Owner choice", status: "user_confirmed" }],
+  decisions: [{ id: "D-001", section: "S4", summary: "Use calendar", rationale: "Owner choice", status: "user_confirmed", previous_status: "designer_filled", status_changed_at: "2026-11-20T10:00:00Z" }],
   review: { last: { run: 1, verdict: "FIX-THEN-BUILD", score: 7.5, missed_earlier: 1, lens_scores: { L01: 8 } } },
 };
 
@@ -60,6 +60,8 @@ test("typed dashboard readers tolerate partial and corrupt data and derive sessi
   const state = parseLvrState(stateInput, journal);
   assert.equal(state.project.user_language, "en");
   assert.equal(state.pipeline.current, "S4");
+  assert.equal(state.decisions[0].previousStatus, "designer_filled");
+  assert.equal(state.decisions[0].statusChangedAt, "2026-11-20T10:00:00Z");
   assert.equal(state.pipeline.sections.S4.answerCount, 1);
   assert.equal(state.pipeline.sections.S4.skippedCount, 1);
   assert.equal(state.pipeline.sections.S4.delegatedCount, 0);

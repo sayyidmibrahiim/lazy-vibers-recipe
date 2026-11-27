@@ -26,16 +26,16 @@ A clean public snapshot passed 46 tests, lint, type checking, the production bui
 | 24 · Real project trials | Done on 2026-11-27. The owner limited the trial to planning, because Recipe focuses on a thorough plan, so no builder run was made. Both plans reached Build-ready 10/10 on review run 3 with handoff bundles. [Trial evidence](../../examples/trials-2026-11/README.md) |
 | 25 · v1.0.0 release | Done on 2026-11-27. CI passed on `822c55a`, tag `v1.0.0` and the [GitHub Release](https://github.com/sayyidmibrahiim/lazy-vibers-recipe/releases/tag/v1.0.0) are published. `npx skills add sayyidmibrahiim/lazy-vibers-recipe#v1.0.0 --skill '*' -a claude-code --copy -y` installed all seven skills in a clean folder, and the helper script reported version 1.0.0. |
 
-The trial README lists five defects for later fixes, tracked locally as `.scratch/trial-defects/issues/01` to `05`. The owner triaged all five as `ready-for-agent` on 2026-11-27, in this order: 1 answer source field (done), 4 decision status after approval, 5 ledger corrections, 2 conversation language drift, 3 host booster reuse. Owner decision for 3: a host copy counts as present, and the run records its version so it stays reproducible.
+The trial README lists five defects for later fixes, tracked locally as `.scratch/trial-defects/issues/01` to `05`. The owner triaged all five as `ready-for-agent` on 2026-11-27, in this order: 1 answer source field (done), 4 decision status after approval (done), 5 ledger corrections, 2 conversation language drift, 3 host booster reuse. Owner decision for 3: a host copy counts as present, and the run records its version so it stays reproducible.
 
 ## Next session
 
 Do one defect per session, in the triage order above. The owner wants a fresh handoff after each fix.
 
-1. Fix defect 4: add a decision status event so an approved designer-filled decision changes status in state, replay, and the dashboard. Read `.scratch/trial-defects/issues/04-decision-status-after-approval.md` (or the trial README if `.scratch` is absent).
-2. Follow the defect 1 pattern: script and reducer in `scripts/lvr.mjs`, `docs/spec/01-state.md`, `skills/lvr-conventions.md`, the skill step that records it, `src/lib/lvr-fs.ts` and the dashboard, then tests in `tests/lvr/`.
+1. Fix defect 5: allow a correction entry in the review ledger that points at the earlier line, so the dashboard shows the corrected value (the KPR run 2 round count). The ledger stays append-only (`docs/spec/08-review.md` §ledger). Read `.scratch/trial-defects/issues/05-ledger-correction.md` (or the trial README if `.scratch` is absent).
+2. Follow the defect 1 and 4 pattern (`029e099`, and the `decision status` commit after it): script in `scripts/lvr.mjs` (ledger code near `ledgerModel`), `docs/spec/08-review.md`, the `lvr-review-plan` skill step that writes it, `src/lib/lvr-fs.ts` and the dashboard, then tests in `tests/lvr/`.
 3. Run `npm run sync:skills`, `npm run check:skills`, `npm test`, `npm run check:language`, `npm run lint`, typecheck, and `npm run build`.
-4. Mark the defect fixed in `examples/trials-2026-11/README.md`, set its local issue to `done`, point this section at the next defect (5, then 2, then 3), commit, and push.
+4. Mark the defect fixed in `examples/trials-2026-11/README.md`, set its local issue to `done`, point this section at the next defect (2, then 3), commit, and push.
 
 ## Recover the working archive
 
