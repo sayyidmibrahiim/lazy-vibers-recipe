@@ -26,16 +26,11 @@ A clean public snapshot passed 46 tests, lint, type checking, the production bui
 | 24 · Real project trials | Done on 2026-11-27. The owner limited the trial to planning, because Recipe focuses on a thorough plan, so no builder run was made. Both plans reached Build-ready 10/10 on review run 3 with handoff bundles. [Trial evidence](../../examples/trials-2026-11/README.md) |
 | 25 · v1.0.0 release | Done on 2026-11-27. CI passed on `822c55a`, tag `v1.0.0` and the [GitHub Release](https://github.com/sayyidmibrahiim/lazy-vibers-recipe/releases/tag/v1.0.0) are published. `npx skills add sayyidmibrahiim/lazy-vibers-recipe#v1.0.0 --skill '*' -a claude-code --copy -y` installed all seven skills in a clean folder, and the helper script reported version 1.0.0. |
 
-The trial README lists five defects for later fixes, tracked locally as `.scratch/trial-defects/issues/01` to `05`. The owner triaged all five as `ready-for-agent` on 2026-11-27, in this order: 1 answer source field (done), 4 decision status after approval (done), 5 ledger corrections (done), 2 conversation language drift (done), 3 host booster reuse. Owner decision for 3: a host copy counts as present, and the run records its version so it stays reproducible.
+The trial README lists five defects for later fixes, tracked locally as `.scratch/trial-defects/issues/01` to `05`. The owner triaged all five as `ready-for-agent` on 2026-11-27, in this order: 1 answer source field (done), 4 decision status after approval (done), 5 ledger corrections (done), 2 conversation language drift (done), 3 host booster reuse (done). All five trial defects are closed. For 3, a host copy counts as present and `booster check --journal` records its source, version and folder hash.
 
 ## Next session
 
-Do one defect per session, in the triage order above. The owner wants a fresh handoff after each fix.
-
-1. Fix defect 3: four core boosters were read from the host `~/.agents/skills` instead of a project-local install. Owner decision: a host copy counts as present, and the run records its version so it stays reproducible. Read `.scratch/trial-defects/issues/03-host-booster-reuse.md` (or the trial README if `.scratch` is absent).
-2. Follow the defect 1, 2, 4 and 5 pattern (`029e099`, `7fb6bbf`, the `review correct` commit, and the `reply_language` commit): script in `scripts/lvr.mjs`, spec, skill step, dashboard only if it shows something new, tests in `tests/lvr/`. Edit canonical sources only.
-3. Run `npm run sync:skills`, `npm run check:skills`, `npm test`, `npm run check:language`, `npm run lint`, typecheck, and `npm run build`.
-4. Mark the defect fixed in `examples/trials-2026-11/README.md`, set its local issue to `done`, record that all five trial defects are closed, commit, and push.
+No open tickets or trial defects remain. Ask the owner what comes next before starting new work, for example a v1.0.1 patch release with the five trial defect fixes. Keep the one-change-per-session pattern and a fresh handoff after each change.
 
 ## Recover the working archive
 

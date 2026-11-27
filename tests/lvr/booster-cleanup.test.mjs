@@ -58,3 +58,43 @@ test("cleanup after reopening uses receipt boundaries and preserves an explicit 
   assert.equal(installed.find((entry) => entry.path === requested).status, "uninstalled");
   assert.deepEqual(run(["replay", "--compare"]).diff, []);
 });
+
+test("a host copy of a core booster counts as present and the check journals its version", (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "lvr-host-booster-"));
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "lvr-host-booster-home-"));
+  t.after(() => {
+    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(home, { recursive: true, force: true });
+  });
+  const env = { ...process.env, HOME: home, USERPROFILE: home };
+  const run = (args, { payload, code = 0 } = {}) => {
+    const result = spawnSync(process.execPath, [cli, "--dir", dir, ...args], { input: JSON.stringify(payload), encoding: "utf8", env });
+    assert.equal(result.status, code, result.stdout + result.stderr);
+    return JSON.parse(result.stdout);
+  };
+  const skill = (root, name, front) => {
+    fs.mkdirSync(path.join(root, name), { recursive: true });
+    fs.writeFileSync(path.join(root, name, "SKILL.md"), `---\nname: ${name}\n${front}---\n`);
+  };
+  skill(path.join(home, ".agents/skills"), "grilling", "metadata:\n  version: \"1.2.0\"\n");
+  skill(path.join(dir, ".claude/skills"), "anti-slop", "");
+  run(["journal", "append", "--type", "session_start", "--in", "-"], { payload: { skill: "lvr-init-new-idea", session_id: null, session_id_reason: "Host booster fixture" } });
+  const checked = run(["booster", "check", "--journal"]);
+  const byId = Object.fromEntries(checked.boosters.map((b) => [b.id, b]));
+  assert.equal(byId.grilling.present, true);
+  assert.equal(byId.grilling.source, "host");
+  assert.equal(byId.grilling.where[0].version, "1.2.0");
+  assert.match(byId.grilling.where[0].hash, /^[0-9a-f]{64}$/);
+  assert.equal(byId["anti-slop"].source, "project");
+  assert.equal(byId.ponytail.source, null);
+  const events = fs.readFileSync(path.join(dir, ".lvr/journal.ndjson"), "utf8").trim().split("\n").map((line) => JSON.parse(line));
+  const grilling = events.find((e) => e.type === "booster_check" && e.payload.name === byId.grilling.name).payload;
+  assert.equal(grilling.source, "host");
+  assert.deepEqual(grilling.copies, [{ scope: "global", path: "~/.agents/skills/grilling/SKILL.md", version: "1.2.0", hash: byId.grilling.where[0].hash }]);
+  run(["journal", "append", "--type", "tier_declared", "--in", "-"], { payload: { tier: "T1" } });
+  run(["journal", "append", "--type", "section_start", "--in", "-"], { payload: { section: "S0" } });
+  const status = run(["state", "get", "--pointer", "/boosters/core"]).value.find((b) => b.name === byId.grilling.name).status;
+  assert.equal(status, "installed");
+  const refused = run(["journal", "append", "--type", "booster_check", "--in", "-"], { payload: { name: "grilling", result: "present", source: "host" }, code: 1 });
+  assert.equal(refused.error.code, "INVALID_PAYLOAD");
+});

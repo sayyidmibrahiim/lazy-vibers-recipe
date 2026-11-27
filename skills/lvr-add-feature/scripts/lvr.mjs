@@ -1241,6 +1241,14 @@ function validatePayload(type, p, opts = {}) {
     case "booster_check":
       needStr("name");
       if (!["present", "missing", "degraded"].includes(p.result)) throw invalid("result", "present|missing|degraded");
+      if (p.source !== undefined && p.source !== null && !["project", "host"].includes(p.source)) throw invalid("source", "project|host or null");
+      if (p.copies !== undefined && !(Array.isArray(p.copies) && p.copies.every((c) => isObj(c) && ["project", "global"].includes(c.scope) && isStr(c.path)
+        && (c.version === null || c.version === undefined || isStr(c.version)) && (c.hash === null || c.hash === undefined || /^[0-9a-f]{64}$/.test(c.hash))))) {
+        throw invalid("copies", "an array of {scope: project|global, path, version, hash}");
+      }
+      if (p.source === "host" && p.result === "present" && !(Array.isArray(p.copies) && p.copies.some((c) => c.scope === "global" && (isStr(c.hash) || isStr(c.version))))) {
+        throw invalid("copies", "a global copy with its version or hash when source is host");
+      }
       break;
     case "booster_install_ok": case "booster_install_failed": needStr("name"); break;
     case "booster_choice":
@@ -2550,11 +2558,11 @@ function detectBoosters(dir, boosters) {
     for (const sd of b.detect.skill_dirs) {
       for (const r of SKILL_ROOTS) {
         const p = path.join(dir, r, sd, "SKILL.md");
-        if (fs.existsSync(p)) { where.push({ scope: "project", path: relPath(dir, p) }); found.add(sd); }
+        if (fs.existsSync(p)) { where.push({ scope: "project", path: relPath(dir, p), ...skillCopyVersion(p) }); found.add(sd); }
       }
       for (const r of [...SKILL_ROOTS, ...GLOBAL_EXTRA_ROOTS]) {
         const p = path.join(homeRoot(r), sd, "SKILL.md");
-        if (fs.existsSync(p)) { where.push({ scope: "global", path: "~/" + relPath(home, p) }); found.add(sd); }
+        if (fs.existsSync(p)) { where.push({ scope: "global", path: "~/" + relPath(home, p), ...skillCopyVersion(p) }); found.add(sd); }
       }
     }
     let mcpConfigured = null, keysPresent = null;
@@ -2567,11 +2575,28 @@ function detectBoosters(dir, boosters) {
       }
     }
     const present = b.kind === "mcp" ? !!mcpConfigured && keysPresent !== false : b.install?.skills ? b.install.skills.every((name) => found.has(name)) : where.length > 0;
+    // A host copy counts as present (owner decision, trial defect 3). source says where the run reads it from.
+    const source = !present ? null : where.some((w) => w.scope === "project") ? "project" : where.length ? "host" : null;
     return {
-      id: b.id, name: b.name, tier: b.tier, kind: b.kind, present, where, mcp_configured: mcpConfigured,
+      id: b.id, name: b.name, tier: b.tier, kind: b.kind, present, source, where, mcp_configured: mcpConfigured,
       keys_present: keysPresent, loadable: "unknown", suggested_status: present ? "installed" : "missing",
     };
   });
+}
+
+/** Version facts for one found SKILL.md: the frontmatter version (if any) and a hash of the whole skill folder. */
+function skillCopyVersion(skillFile) {
+  let version = null;
+  const text = tryReadLF(skillFile);
+  const fm = text?.match(/^---\n([\s\S]*?)\n---/);
+  if (fm) {
+    const top = fm[1].match(/^version:\s*["']?([^"'\n]+?)["']?\s*$/m);
+    const nested = fm[1].match(/^metadata:\s*\n(?:[ \t]+.*\n)*?[ \t]+version:\s*["']?([^"'\n]+?)["']?\s*$/m);
+    version = (top ?? nested)?.[1] ?? null;
+  }
+  let hash = null;
+  try { hash = skillTreeHash(path.dirname(skillFile)); } catch { /* linked or unreadable entries: no hash */ }
+  return { version, hash };
 }
 
 function boosterSkillPath(relative) {
@@ -9227,6 +9252,7 @@ const COMMANDS = {
           const r = appendLocked(dir, "booster_check", {
             name: b.name, repo: rb.repo ?? "", license: rb.license ?? null, tier: rb.tier === "core" ? "core" : "enhancer",
             result: b.present ? "present" : "missing", where_count: b.where.length,
+            source: b.source, copies: b.where.map(({ scope, path: p, version, hash }) => ({ scope, path: p, version, hash })),
           });
           return { id: b.id, seq: r.seq, state: r.state };
         }));
