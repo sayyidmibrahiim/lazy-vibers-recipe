@@ -5198,6 +5198,7 @@ const LEDGER_T = {
   apply: ["run", "id", "files", "result", "decision_id"],
   score: ["run", "scope", "lens_scores", "lens_counts", "na", "unscored", "caps", "min", "overall", "verdict", "open", "accepted", "missed_earlier", "score_if_caught_in_run1", "corrected_history"],
   run_done: ["run", "report", "body_sha256", "verdict"],
+  correction: ["run", "line", "line_t", "field", "from", "to", "reason", "at"],
 };
 const RUN_OWNED = new Set(["run", "finding", "status", "cells", "apology", "approval", "apply"]);
 /** Fields added after a line type first shipped: a line without them reads as null. */
@@ -5899,6 +5900,57 @@ function writeRunLines(dir, n, owned, lines) {
     if (existing.length === want.length) return false;
     ledgerAppend(dir, lines.slice(existing.length));
     return true;
+  });
+}
+
+// ----- corrections (spec 08 §6)
+const isCount = (x) => Number.isInteger(x) && x >= 0;
+/** Fields a `correction` line may change: record-keeping values of a finished run that no id, fold or score reads. */
+const CORRECTABLE = {
+  run: {
+    independence: (v) => ["same-session", "new-session", "subagent"].includes(v),
+    procedure: (v) => ["script", "hand"].includes(v),
+  },
+  cells: {
+    passes: (v) => Array.isArray(v) && v.length > 0 && v.every((x, i) => isObj(x) && Object.keys(x).length === 3 && x.pass === i + 1 && ["forward", "reverse"].includes(x.order) && isCount(x.new)),
+    saturated: (v) => typeof v === "boolean",
+    premortem: (v) => isObj(v) && Object.keys(v).length === 2 && isCount(v.causes) && isCount(v.mapped) && v.mapped <= v.causes,
+  },
+};
+/** The ledger lines with every `correction` applied to the line it points at; the file itself is never rewritten. */
+function correctedLines(L) {
+  const byLine = new Map(L.lines.map((l) => [l._n, { ...l }]));
+  for (const c of L.lines) {
+    if (c.t !== "correction") continue;
+    const target = byLine.get(c.line);
+    if (target && target.t === c.line_t && target.run === c.run && CORRECTABLE[target.t]?.[c.field]) target[c.field] = c.to;
+  }
+  return [...byLine.values()];
+}
+function cmdReviewCorrect({ dir, flags }) {
+  const lineNo = Number(need(flags, "line"));
+  const field = String(need(flags, "field"));
+  const reason = String(need(flags, "reason")).trim();
+  let to;
+  try { to = JSON.parse(String(need(flags, "value"))); } catch { throw fail("BAD_JSON_INPUT", "--value must be JSON, for example '[{\"pass\":1,\"order\":\"forward\",\"new\":5}]'.", { flag: "value" }); }
+  const bad = (message, details) => fail("CORRECTION_INVALID", `${message} Nothing was written.`, details);
+  if (!Number.isInteger(lineNo) || lineNo < 1) throw bad("--line must be a ledger line number (1 or more).", { line: flags.line });
+  if (!reason) throw bad("--reason must say why the earlier value was wrong.", {});
+  return withLock(dir, "review correct", () => {
+    const L = readLedger(dir);
+    if (!L.exists) throw bad("There is no review ledger yet.", {});
+    const target = correctedLines(L).find((l) => l._n === lineNo);
+    if (!target) throw bad(`LEDGER.jsonl has no line ${lineNo}.`, { line: lineNo });
+    const fields = CORRECTABLE[target.t];
+    if (!fields) throw bad(`Line ${lineNo} is a ${target.t} line; only run and cells lines can be corrected (a finding changes through a status line).`, { line: lineNo, line_t: target.t });
+    if (!fields[field]) throw bad(`A ${target.t} line can be corrected only in: ${Object.keys(fields).join(", ")}.`, { line: lineNo, field, allowed: Object.keys(fields) });
+    if (!L.lines.some((l) => l.t === "run_done" && l.run === target.run)) throw bad(`Run ${target.run} is not finished; correct its lines only after run_done.`, { run: target.run });
+    if (!fields[field](to)) throw bad(`The new ${field} value does not have the shape of the ledger schema.`, { field, value: to });
+    const from = target[field] === undefined ? null : target[field];
+    const out = { cmd: "review correct", run: target.run, line: lineNo, line_t: target.t, field, from, to };
+    if (canonJson(from) === canonJson(to)) return { ...out, changed: false };
+    ledgerAppend(dir, [mkLine("correction", { run: target.run, line: lineNo, line_t: target.t, field, from, to, reason, at: now() })]);
+    return { ...out, reason, changed: true };
   });
 }
 
@@ -7364,6 +7416,7 @@ const REVIEW_CMDS = {
   "review score": { help: "Compute lens scores, overall and verdict (a pure function of the fold). --run N [--write]", flags: ["run", "scope", "write", "lenses", "freshness"], run: async (c) => cmdReviewScore(c) },
   "review stability": { help: "Compare run N with the previous scored run: strict lenses must not drift. --run N", flags: ["run", "scope", "lenses", "freshness"], run: async (c) => cmdReviewStability(c) },
   "review render": { help: "Preview or write REVIEW-<date>-<N>.md. --run N [--preview | --checked-sha SHA] [--journal]", flags: ["run", "scope", "preview", "checked-sha", "journal", "lenses", "freshness"], run: async (c) => cmdReviewRender(c) },
+  "review correct": { help: "Append a correction for a finished run's run or cells line (independence, procedure, passes, saturated, premortem); the ledger is never rewritten. --line N --field F --value JSON --reason TEXT", flags: ["line", "field", "value", "reason"], run: async (c) => cmdReviewCorrect(c) },
   "review freshness": { help: "List every cite with its age, limit and expiry; flag the ones that crossed their limit since the last run. --run N [--since YYYY-MM-DD]", flags: ["run", "scope", "since", "lenses", "freshness"], run: async (c) => cmdReviewFreshness(c) },
 };
 

@@ -181,4 +181,4 @@ Each script step has a prose fallback. When `LVR review …` is unavailable (no 
 | `render` | Write the report from section 7, sorted the same way |
 | `freshness` | For each cite tag, take its as-of date by the category's clock (conventions §10: `pub`/`upd`, or `acc` for `live`; regulations by `amend-check` and `acc`). Age = review date − as-of date. Compare the age with `references/freshness.json` |
 
-Ledger lines written by hand follow the contract.md §6 schema, one JSON object per line, appended and never rewritten.
+Ledger lines written by hand follow the contract.md §6 schema, one JSON object per line, appended and never rewritten. A wrong value of a finished run is fixed with a `correction` line (`LVR review correct`, contract.md §6), never by editing the earlier line.

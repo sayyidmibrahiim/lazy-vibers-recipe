@@ -11,6 +11,7 @@ const labels: Record<string, string> = {
   user_confirmed: "Confirmed", assumed: "Assumed", designer_filled: "Proposed by the planner", in_mvp: "In scope", parked: "Parked",
   cancelled: "Canceled", paused: "Paused", context_guard: "Context limit", started: "In progress", failed: "Failed",
   clean: "Passed", findings: "Findings", na: "Not applicable", carried: "Carried from prior review",
+  "BUILD-READY": "Build-ready", "FIX-THEN-BUILD": "Fix, then build", "NOT-READY": "Not ready",
   blocking: "Blocking", major: "Major", minor: "Minor", "missed-earlier": "Missed earlier",
 };
 
@@ -160,6 +161,14 @@ export function MapAndDiagrams({ detail, openFile }: { detail: LvrProjectDetail;
   );
 }
 
+const correctionFields: Record<string, string> = { passes: "review rounds", saturated: "saturated", premortem: "failure scenarios", independence: "independence", procedure: "procedure" };
+
+function correctionValue(field: string, value: unknown) {
+  if (field === "passes" && Array.isArray(value)) return String(value.length);
+  if (field === "premortem" && value && typeof value === "object" && "mapped" in value && "causes" in value) return `${value.mapped} of ${value.causes} mapped`;
+  return typeof value === "string" ? value : JSON.stringify(value);
+}
+
 export function ReviewLedger({ detail, openFile }: { detail: LvrProjectDetail; openFile: (file: string) => void }) {
   const [severity, setSeverity] = useState("");
   const [findingStatus, setFindingStatus] = useState("");
@@ -173,6 +182,12 @@ export function ReviewLedger({ detail, openFile }: { detail: LvrProjectDetail; o
           <select aria-label="Finding status" className="border border-line bg-paper px-2 py-1.5 text-xs" value={findingStatus} onChange={(event) => setFindingStatus(event.target.value)}><option value="">All statuses</option>{[...new Set(detail.findings.map((item) => item.status))].map((item) => <option key={item} value={item}>{statusText(item)}</option>)}</select>
         </div> : null}
       </div>
+      {detail.reviewRuns.length ? <ul className="mt-3 space-y-1 text-sm" aria-label="Review runs">
+        {detail.reviewRuns.map((item) => <li key={item.run}>
+          <span className="font-mono text-blueprint">Run {item.run}</span> · {item.scope === "scope-only" ? "Scope review" : "Full review"} · {statusText(item.verdict)} · {item.score ?? "No score"}/10{item.rounds !== null ? ` · ${item.rounds} review ${item.rounds === 1 ? "round" : "rounds"}` : ""}
+          {item.corrections.map((fix, index) => <p className="text-xs text-ink/65" key={index}>Corrected {correctionFields[fix.field] ?? fix.field} from {correctionValue(fix.field, fix.from)} to {correctionValue(fix.field, fix.to)}{fix.reason ? `: ${fix.reason}` : ""}</p>)}
+        </li>)}
+      </ul> : null}
       {findings.length ? <ul className="mt-3 divide-y divide-line">
         {findings.map((item) => {
           const file = item.locator?.split("#")[0];

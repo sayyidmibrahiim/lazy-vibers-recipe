@@ -106,6 +106,23 @@ export interface LvrMapNode {
   children?: LvrMapNode[];
 }
 
+export interface LvrReviewCorrection {
+  field: string;
+  from: unknown;
+  to: unknown;
+  reason: string | null;
+  at: string | null;
+}
+
+export interface LvrReviewRun {
+  run: number;
+  scope: string | null;
+  verdict: string | null;
+  score: number | null;
+  rounds: number | null;
+  corrections: LvrReviewCorrection[];
+}
+
 export interface LvrProjectDetail {
   folderPath: string;
   legacy: boolean;
@@ -117,6 +134,7 @@ export interface LvrProjectDetail {
   invalidJournalLines: number;
   buildResults: Array<{ milestone: string; result: "PASS" | "FAIL"; line: number }>;
   findings: LvrFinding[];
+  reviewRuns: LvrReviewRun[];
   heatmap: Array<{ lens: string; cells: Record<string, string> }>;
   expiredFacts: number;
   resume: { sessionCommand: string | null; harnessLabel: string | null; nextSkill: string; currentSection: string | null };
@@ -368,6 +386,38 @@ export function parseLvrLedger(raw: string | null): LvrFinding[] {
   return [...findings.values()];
 }
 
+const correctable: Record<string, string[]> = { run: ["independence", "procedure"], cells: ["passes", "saturated", "premortem"] };
+
+/** Scored review runs with each correction line applied to the earlier line it points at. */
+export function parseLvrReviewRuns(raw: string | null): LvrReviewRun[] {
+  const lines = new Map<number, Fields>();
+  (raw ?? "").split(/\r?\n/).forEach((line, index) => {
+    if (!line.trim()) return;
+    const row = asObject(parseLvrJson(line));
+    if (Object.keys(row).length) lines.set(index + 1, row);
+  });
+  const corrections = new Map<number, LvrReviewCorrection[]>();
+  for (const row of lines.values()) {
+    const target = lines.get(number(row.line) ?? 0);
+    const field = text(row.field);
+    if (row.t !== "correction" || !target || !field || target.t !== row.line_t || target.run !== row.run || !correctable[String(target.t)]?.includes(field)) continue;
+    target[field] = row.to;
+    const run = number(row.run) ?? 0;
+    corrections.set(run, [...corrections.get(run) ?? [], { field, from: row.from, to: row.to, reason: text(row.reason), at: text(row.at) }]);
+  }
+  const runs = new Map<number, LvrReviewRun>();
+  for (const row of lines.values()) {
+    const run = number(row.run);
+    if (run === null) continue;
+    const entry = runs.get(run) ?? { run, scope: null, verdict: null, score: null, rounds: null, corrections: corrections.get(run) ?? [] };
+    if (row.t === "run") entry.scope = text(row.scope);
+    if (row.t === "cells") entry.rounds = Array.isArray(row.passes) ? row.passes.length : null;
+    if (row.t === "score") { entry.score = number(row.overall); entry.verdict = text(row.verdict); }
+    runs.set(run, entry);
+  }
+  return [...runs.values()].filter((entry) => entry.score !== null).sort((a, b) => a.run - b.run);
+}
+
 function parseReviewCells(snapshot: unknown, raw: unknown): LvrProjectDetail["heatmap"] {
   const columns = new Map<string, string>();
   for (const entry of values(asObject(snapshot).files).map(asObject)) {
@@ -539,7 +589,9 @@ export function readLvrProject(targetDir: string): LvrProjectDetail | null {
     }
     const brief = disk.read(`${folder}/docs/research/domain-brief.md`);
     if (brief) add(`${folder}/docs/research/domain-brief.md`, "Context research", "section", false);
-    const findings = parseLvrLedger(disk.read(`${folder}/review/LEDGER.jsonl`));
+    const ledger = disk.read(`${folder}/review/LEDGER.jsonl`);
+    const findings = parseLvrLedger(ledger);
+    const reviewRuns = parseLvrReviewRuns(ledger);
     const review = state.review?.run ? `${folder}/review/runs/run-${state.review.run}` : null;
     const heatmap = review ? parseReviewCells(parseLvrJson(disk.read(`${review}/snapshot.json`)), parseLvrJson(disk.read(`${review}/cells.json`))) : [];
     const doc = (file: string) => docs.find((item) => item.relativePath === file && item.available)?.content ?? null;
@@ -553,7 +605,7 @@ export function readLvrProject(targetDir: string): LvrProjectDetail | null {
     const scanned = docs.filter((item) => item.available && markdown(item.relativePath) && !["review", "brand"].includes(item.category)).map((item) => item.content);
     return {
       folderPath, legacy, state, blueprint, docs, overviewMarkdown: doc("OVERVIEW.md"), journalCount: journal.length, invalidJournalLines: events.invalid + events.rows.length - journal.length,
-      buildResults, findings, heatmap, expiredFacts: countExpiredLvrFacts(scanned, journal, new Date().toISOString().slice(0, 10)),
+      buildResults, findings, reviewRuns, heatmap, expiredFacts: countExpiredLvrFacts(scanned, journal, new Date().toISOString().slice(0, 10)),
       resume: { sessionCommand: command.command, harnessLabel: command.label, nextSkill: nextSkill(state), currentSection: state.pipeline.current },
       mindmap: projectMindmap(state, features, findings, doc("RESEARCH.md"), folder), diagrams: buildLvrDiagrams(state, features, doc("SPEC/data-model.md")),
     };

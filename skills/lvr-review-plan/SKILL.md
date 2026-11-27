@@ -110,6 +110,7 @@ Protocol §8: ask per finding (apply, skip, or accept with the cost in the user'
 9. Never score before coverage passes. Never edit the bundle outside `--apply`. Never mark milestones verified.
 10. Talk in the user's language. Findings, the ledger and the report stay English.
 11. The review may withdraw a finding it later proves wrong. The withdrawal is logged with its reason.
+12. When a finished run recorded a wrong value (its pass count, saturation, failure scenarios, independence or procedure), append a correction with `LVR review correct --line <N> --field <field> --value '<json>' --reason "<why>"`. It points at the earlier ledger line, and the dashboard shows the corrected value. Never edit the earlier line or the report.
 
 ## Journal events and idempotency
 

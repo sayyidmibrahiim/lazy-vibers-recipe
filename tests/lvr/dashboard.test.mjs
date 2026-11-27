@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { buildLvrDiagrams, countExpiredLvrFacts, lvrResumeCommand, LvrPathError, parseLvrBlueprint, parseLvrJson, parseLvrLedger, parseLvrLines, parseLvrState, readLvrProject } from "../../src/lib/lvr-fs.ts";
+import { buildLvrDiagrams, countExpiredLvrFacts, lvrResumeCommand, LvrPathError, parseLvrBlueprint, parseLvrJson, parseLvrLedger, parseLvrLines, parseLvrReviewRuns, parseLvrState, readLvrProject } from "../../src/lib/lvr-fs.ts";
 
 const uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
 const day = "2026-11-23";
@@ -34,8 +34,12 @@ const ledger = [
   { t: "finding", run: 1, id: "RV-1", lens: "L01", severity: "major", claim: "Fails if the fee changed.", locator: "RESEARCH.md#price", status: "open", class: "missed-earlier" },
   { t: "apology", run: 1, id: "RV-1", text: "The earlier review missed a changed fee." },
   { t: "status", run: 1, id: "RV-1", status: "fixed" },
-  { t: "score", run: 1, scope: "full" },
+  { t: "run", run: 1, scope: "full" },
+  { t: "cells", run: 1, passes: [{ pass: 1, order: "forward", new: 1 }, { pass: 2, order: "reverse", new: 0 }] },
+  { t: "score", run: 1, scope: "full", overall: 7.5, verdict: "FIX-THEN-BUILD" },
   { t: "finding", run: 2, id: "RV-2" },
+  { t: "correction", run: 1, line: 5, line_t: "cells", field: "passes", from: [{}, {}], to: [{ pass: 1, order: "forward", new: 1 }, { pass: 2, order: "reverse", new: 0 }, { pass: 3, order: "forward", new: 0 }], reason: "Three passes ran.", at: "2026-11-27T10:00:00Z" },
+  { t: "correction", run: 1, line: 6, line_t: "score", field: "overall", from: 7.5, to: 10, reason: "Not allowed.", at: "2026-11-27T10:00:00Z" },
 ].map((value) => JSON.stringify(value)).join("\n");
 
 function event(seq, type, payload) {
@@ -76,6 +80,11 @@ test("typed dashboard readers tolerate partial and corrupt data and derive sessi
   const findings = parseLvrLedger(ledger + "\npartial {");
   assert.equal(findings.length, 1);
   assert.deepEqual([findings[0].status, findings[0].classification, findings[0].apology], ["fixed", "missed-earlier", "The earlier review missed a changed fee."]);
+  const runs = parseLvrReviewRuns(ledger + "\npartial {");
+  assert.equal(runs.length, 1);
+  assert.deepEqual([runs[0].run, runs[0].scope, runs[0].verdict, runs[0].score, runs[0].rounds], [1, "full", "FIX-THEN-BUILD", 7.5, 3]);
+  assert.deepEqual(runs[0].corrections.map((fix) => [fix.field, fix.reason]), [["passes", "Three passes ran."]]);
+  assert.deepEqual(parseLvrReviewRuns(null), []);
 });
 
 test("resume commands use the platform catalog and only safe genuine-looking IDs", () => {
@@ -112,6 +121,7 @@ test("a v2 project shows only the declared plan files, ledger, and build history
   assert.deepEqual(detail.buildResults, [{ milestone: "M0", result: "PASS", line: 1 }]);
   assert.deepEqual(detail.heatmap, [{ lens: "L01", cells: { "OVERVIEW.md": "findings" } }]);
   assert.equal(detail.findings[0].id, "RV-1");
+  assert.equal(detail.reviewRuns[0].rounds, 3);
   assert.equal(detail.resume.sessionCommand, `codex resume ${uuid}`);
   assert.deepEqual(fs.readFileSync(path.join(dir, ".lvr/journal.ndjson")), journalBytes);
 });

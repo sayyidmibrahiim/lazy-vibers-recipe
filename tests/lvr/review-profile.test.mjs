@@ -106,6 +106,62 @@ test("review previews English prose separately from verbatim evidence and reject
   assert.equal(run(command("render", "--preview")).completed, true);
 });
 
+test("a correction points at an earlier ledger line of a finished run and never rewrites it", (t) => {
+  const { dir, run, write } = review(t, 1);
+  const lenses = {
+    schema_version: 1,
+    columns: { full: [{ col: "OVERVIEW", path: "OVERVIEW.md" }], scope_only: [] },
+    lenses: [{
+      id: "L01", name: "Evidence", owner_section: "S0", applies: "always", scope_only: false, checks: [],
+      core: { full: ["OVERVIEW"], scope_only: null }, cells: { full: { R: ["OVERVIEW"], o: [] }, scope_only: null },
+    }],
+  };
+  write("lenses.json", JSON.stringify(lenses));
+  const command = (action, ...flags) => ["review", action, "--run", "1", "--lenses", path.join(dir, "lenses.json"), ...flags];
+  const quote = "The owner checks the booking list.";
+  write("OVERVIEW.md", `# Booking\n\n${quote}\n`);
+  run(command("snapshot"));
+  run(command("claims"));
+  const work = ".lvr/review/runs/run-1";
+  write(`${work}/findings.json`, JSON.stringify({ run: 1, findings: [] }));
+  write(`${work}/cells.json`, JSON.stringify({
+    run: 1,
+    lenses: { L01: { cells: { OVERVIEW: { state: "clean", quote, tried: "Checked that the owner reviews bookings." } } } },
+    premortem: ["first-session", "launch", "month-6"].map((horizon) => ({ horizon, cause: "The owner could skip the review.", maps_to: "handled", quote, file: "OVERVIEW.md" })),
+    passes: [{ pass: 1, order: "forward", new: 0 }, { pass: 2, order: "reverse", new: 0 }],
+  }));
+  run(command("ledger-diff", "--write"));
+  run(command("score", "--write"));
+  const ledgerFile = path.join(dir, ".lvr/review/LEDGER.jsonl");
+  const lines = () => fs.readFileSync(ledgerFile, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+  const cellsLine = lines().findIndex((line) => line.t === "cells") + 1;
+  const scoreLine = lines().findIndex((line) => line.t === "score") + 1;
+  const passes = [{ pass: 1, order: "forward", new: 0 }, { pass: 2, order: "reverse", new: 0 }, { pass: 3, order: "forward", new: 0 }];
+  const correct = (line, field, value, status = 0) => run(["review", "correct", "--line", String(line), "--field", field, "--value", JSON.stringify(value), "--reason", "The run made three passes."], undefined, status);
+  assert.match(correct(cellsLine, "passes", passes, 1).error.message, /not finished/);
+  run(command("render", "--checked-sha", run(command("render", "--preview")).draft_sha256));
+  const before = fs.readFileSync(ledgerFile, "utf8");
+
+  const fixed = correct(cellsLine, "passes", passes);
+  assert.deepEqual([fixed.changed, fixed.from.length, fixed.to.length], [true, 2, 3]);
+  const after = fs.readFileSync(ledgerFile, "utf8");
+  assert.ok(after.startsWith(before));
+  const added = lines().at(-1);
+  assert.deepEqual([added.t, added.run, added.line, added.line_t, added.field, added.reason], ["correction", 1, cellsLine, "cells", "passes", "The run made three passes."]);
+  assert.equal(correct(cellsLine, "passes", passes).changed, false);
+  assert.equal(fs.readFileSync(ledgerFile, "utf8"), after);
+
+  assert.equal(correct(scoreLine, "overall", 10, 1).error.code, "CORRECTION_INVALID");
+  assert.match(correct(cellsLine, "counts", {}, 1).error.message, /passes, saturated, premortem/);
+  assert.equal(correct(cellsLine, "passes", [{ pass: 2, order: "forward", new: 0 }], 1).error.code, "CORRECTION_INVALID");
+  assert.equal(correct(999, "passes", passes, 1).error.code, "CORRECTION_INVALID");
+  assert.equal(fs.readFileSync(ledgerFile, "utf8"), after);
+
+  assert.equal(run(command("ledger-diff", "--write")).changed, false);
+  assert.equal(run(command("render", "--preview")).completed, true);
+  assert.equal(run(["state", "validate"]).valid, true);
+});
+
 test("a declared profile symlink cannot expose a file outside the project", { skip: process.platform === "win32" }, (t) => {
   const { dir, run } = review(t, 2);
   const outside = fs.mkdtempSync(path.join(os.tmpdir(), "lvr-review-outside-"));
