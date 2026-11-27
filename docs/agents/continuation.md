@@ -2,7 +2,7 @@
 
 Use the [repository rules](../../AGENTS.md) and [spec overview](../spec/00-overview.md) when changing Lazy Vibers Recipe. Open the latest `master` and check `git status --short` and `git log --oneline -12` before continuing the release roadmap. Read the ticket and its evidence before changing its status.
 
-**Release roadmap: 39 of 40 tickets complete.**
+**Release roadmap: all 40 tickets complete. v1.0.0 released on 2026-11-27.**
 
 ## Verified work
 
@@ -24,14 +24,13 @@ A clean public snapshot passed 46 tests, lint, type checking, the production bui
 | Ticket | Status and next check |
 | --- | --- |
 | 24 · Real project trials | Done on 2026-11-27. The owner limited the trial to planning, because Recipe focuses on a thorough plan, so no builder run was made. Both plans reached Build-ready 10/10 on review run 3 with handoff bundles. [Trial evidence](../../examples/trials-2026-11/README.md) |
-| 25 · v1.0.0 release | About, topics, and branch protection (required check `build-and-test`, linear history) are already set. Create the `v1.0.0` tag and the GitHub Release, then verify installation from the tag. |
+| 25 · v1.0.0 release | Done on 2026-11-27. CI passed on `822c55a`, tag `v1.0.0` and the [GitHub Release](https://github.com/sayyidmibrahiim/lazy-vibers-recipe/releases/tag/v1.0.0) are published. `npx skills add sayyidmibrahiim/lazy-vibers-recipe#v1.0.0 --skill '*' -a claude-code --copy -y` installed all seven skills in a clean folder, and the helper script reported version 1.0.0. |
 
 The trial README lists five defects for later fixes, tracked locally as `.scratch/trial-defects/issues/01` to `05` (status `needs-triage`): answer source field, conversation language drift, host booster reuse, decision status after approval, and ledger corrections.
 
 ## Next session
 
-1. Ticket 25: confirm CI passes on `master`, update `CHANGELOG.md` for 1.0.0, create the `v1.0.0` tag and the GitHub Release with `gh`, then install from the tag in a clean folder and record the result.
-2. Optionally open tickets for the five trial defects in `examples/trials-2026-11/README.md`.
+The release roadmap is finished. Triage the five trial defects in `.scratch/trial-defects/issues/` with the owner, then fix the ones marked `ready-for-agent`, starting with the answer source field.
 
 ## Recover the working archive
 
