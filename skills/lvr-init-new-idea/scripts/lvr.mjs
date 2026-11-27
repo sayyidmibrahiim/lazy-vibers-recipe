@@ -15,7 +15,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 // ---------------------------------------------------------------- 1. constants
-const VERSION = "1.0.0";
+const VERSION = "1.0.1";
 const LVR_SCHEMA = 2;
 const SELF = fileURLToPath(import.meta.url);
 const SCRIPT_DIR = path.dirname(SELF);

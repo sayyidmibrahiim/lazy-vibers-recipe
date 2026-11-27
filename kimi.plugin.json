@@ -1,6 +1,6 @@
 {
   "name": "lazy-vibers-recipe",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Model-agnostic interview pipeline that turns a raw product idea from a non-technical owner into a verified Blueprint Bundle (spec, data model, milestones, costs), then builds it. Seven skills: lvr-init-new-idea, lvr-continue, lvr-handoff, lvr-review-plan, lvr-add-feature, lvr-build, lvr-personal-brand.",
   "license": "MIT",
   "homepage": "https://github.com/sayyidmibrahiim/lazy-vibers-recipe",

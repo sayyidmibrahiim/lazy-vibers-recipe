@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.1 - 2026-11-27
+
+Fixes for the five defects found in the real-project planning trials.
+
+### Added
+
+- `answer record --source` stores who gave each answer (`owner`, `delegated_agent`, or `accepted_recommendation`). The dashboard counts the sources per Section.
+- `decision status` lets an approved decision change status through a journaled `decision_status_changed` event. The dashboard shows the change.
+- `review correct` appends a correction to an earlier review ledger line with a reason, so the append-only ledger can be fixed without rewriting it. The dashboard shows the corrected round count.
+- `booster check` records where each core booster is read from (`project` or `host`) and each copy's version and folder hash. A copy in the user's home skill folder counts as present.
+
+### Changed
+
+- The interview skills resolve the conversation language again before each question batch and after each recorded answer batch. `answer record` returns `reply_language` as a reminder.
+
 ## 1.0.0 - 2026-11-27
 
 ### Added

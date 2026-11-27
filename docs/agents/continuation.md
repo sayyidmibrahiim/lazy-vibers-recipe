@@ -2,7 +2,7 @@
 
 Use the [repository rules](../../AGENTS.md) and [spec overview](../spec/00-overview.md) when changing Lazy Vibers Recipe. Open the latest `master` and check `git status --short` and `git log --oneline -12` before continuing the release roadmap. Read the ticket and its evidence before changing its status.
 
-**Release roadmap: all 40 tickets complete. v1.0.0 released on 2026-11-27.**
+**Release roadmap: all 40 tickets complete. v1.0.0 released on 2026-11-27. v1.0.1, with the five trial defect fixes, prepared on 2026-11-27.**
 
 ## Verified work
 
@@ -30,7 +30,7 @@ The trial README lists five defects for later fixes, tracked locally as `.scratc
 
 ## Next session
 
-No open tickets or trial defects remain. Ask the owner what comes next before starting new work, for example a v1.0.1 patch release with the five trial defect fixes. Keep the one-change-per-session pattern and a fresh handoff after each change.
+No open tickets or trial defects remain. Check that CI passed on the v1.0.1 release commit and that tag `v1.0.1` and its GitHub Release exist. Then ask the owner what comes next. Keep the one-change-per-session pattern and a fresh handoff after each change.
 
 ## Recover the working archive
 
